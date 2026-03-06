@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cellar — Winery Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --darlington: #ACCAB2;
+      --beeswax:    #E9A752;
+      --grenadine:  #D44720;
+      --latte:      #786140;
+      --latte-dark: #4a3a26;
+      --cream:      #F5EFE4;
+      --white:      #ffffff;
+      --dark:       #1e1710;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; }
+
+    /* TOPBAR */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 32px; gap:20px; position:sticky; top:0; z-index:100; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); }
+    .topbar-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; }
+    .topbar-section { color:rgba(255,255,255,0.35); }
+    .topbar-current { color:var(--beeswax); }
+    .topbar-arrow { color:rgba(255,255,255,0.2); }
+    .topbar-spacer { flex:1; }
+    .topbar-btn { height:32px; padding:0 14px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; font-weight:600; letter-spacing:0.08em; cursor:pointer; border:none; display:flex; align-items:center; gap:6px; transition:all 0.18s; }
+    .topbar-btn.primary { background:var(--grenadine); color:#fff; }
+    .topbar-btn.primary:hover { background:#c03d1a; }
+    .topbar-btn.ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.1); }
+    .topbar-btn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
+
+    /* PAGE */
+    .page { padding:32px 40px; max-width:1400px; margin:0 auto; }
+
+    /* HEADER */
+    .page-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:28px; }
+    .page-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .page-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
+    .page-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; }
+
+    /* STAT STRIP */
+    .stat-strip { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:28px; }
+    .stat-pill { background:var(--white); border-radius:10px; border:1px solid rgba(120,97,64,0.1); padding:16px 18px; position:relative; overflow:hidden; }
+    .stat-pill::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
+    .stat-pill.c1::before { background:var(--grenadine); }
+    .stat-pill.c2::before { background:var(--beeswax); }
+    .stat-pill.c3::before { background:var(--darlington); }
+    .stat-pill.c4::before { background:var(--latte); }
+    .stat-pill.c5::before { background:#c4956a; }
+    .stat-pill-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:8px; }
+    .stat-pill-value { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--dark); line-height:1; }
+    .stat-pill-sub { font-size:11px; color:rgba(30,23,16,0.35); margin-top:4px; }
+
+    /* VIEW TOGGLE */
+    .view-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .view-toggle { display:flex; background:var(--white); border:1px solid rgba(120,97,64,0.12); border-radius:8px; overflow:hidden; }
+    .view-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; padding:7px 16px; cursor:pointer; border:none; background:transparent; color:rgba(30,23,16,0.45); transition:all 0.18s; display:flex; align-items:center; gap:6px; }
+    .view-btn.active { background:var(--dark); color:var(--cream); }
+
+    .filter-bar { display:flex; gap:8px; flex-wrap:wrap; }
+    .filter-chip { font-family:'Barlow Condensed',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:5px 12px; border-radius:20px; cursor:pointer; border:1px solid rgba(120,97,64,0.2); color:rgba(30,23,16,0.5); background:transparent; transition:all 0.18s; }
+    .filter-chip:hover { border-color:var(--grenadine); color:var(--grenadine); }
+    .filter-chip.active { background:var(--grenadine); border-color:var(--grenadine); color:#fff; }
+
+    /* ── LOT CARDS VIEW ── */
+    .lots-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+
+    .lot-card { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; cursor:pointer; transition:all 0.2s; }
+    .lot-card:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(30,23,16,0.1); }
+    .lot-card.expanded { border-color:var(--grenadine); box-shadow:0 0 0 3px rgba(212,71,32,0.1); }
+
+    .lot-card-header { padding:16px 18px 12px; border-bottom:1px solid rgba(120,97,64,0.07); display:flex; align-items:flex-start; justify-content:space-between; }
+    .lot-card-id { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:var(--dark); letter-spacing:0.06em; }
+    .lot-card-harvest { font-size:11px; color:rgba(30,23,16,0.4); margin-top:2px; }
+
+    .stage-badge { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:4px 9px; border-radius:5px; white-space:nowrap; }
+    .stage-fermentation { background:rgba(212,71,32,0.1);  color:var(--grenadine); }
+    .stage-aging        { background:rgba(233,167,82,0.15); color:#9a6010; }
+    .stage-racking      { background:rgba(172,202,178,0.25); color:#3a7a50; }
+    .stage-finished     { background:rgba(120,97,64,0.12);  color:var(--latte); }
+    .stage-blending     { background:rgba(120,97,64,0.08);  color:#7a5a90; }
+
+    .lot-card-body { padding:14px 18px; }
+    .lot-metrics { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
+    .lot-metric-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
+    .lot-metric-value { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; color:var(--dark); line-height:1; }
+    .lot-metric-unit { font-size:9px; font-weight:400; color:rgba(30,23,16,0.4); }
+
+    /* Volume bar */
+    .vol-bar-wrap { margin-bottom:12px; }
+    .vol-bar-labels { display:flex; justify-content:space-between; margin-bottom:4px; }
+    .vol-bar-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
+    .vol-bar-track { height:5px; background:rgba(120,97,64,0.1); border-radius:3px; overflow:hidden; }
+    .vol-bar-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+
+    /* Vessels list */
+    .vessel-chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .vessel-chip { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.06em; padding:3px 9px; border-radius:4px; background:rgba(120,97,64,0.08); color:var(--latte); border:1px solid rgba(120,97,64,0.12); }
+
+    .lot-card-footer { padding:10px 18px; border-top:1px solid rgba(120,97,64,0.07); display:flex; align-items:center; justify-content:space-between; }
+    .lot-cost { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; color:var(--latte); }
+    .lot-cost-label { font-size:9px; color:rgba(30,23,16,0.3); text-transform:uppercase; letter-spacing:0.1em; }
+    .lot-cost-per-gal { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; color:var(--dark); }
+
+    /* Expand detail */
+    .lot-detail { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.35s ease, padding 0.2s; }
+    .lot-card.expanded .lot-detail { max-height:300px; padding:14px 18px; border-top:1px solid rgba(120,97,64,0.07); }
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .detail-item-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:2px; }
+    .detail-item-value { font-size:12.5px; color:var(--dark); font-weight:500; }
+    .detail-actions { display:flex; gap:8px; margin-top:14px; }
+    .detail-btn { flex:1; height:33px; border-radius:7px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; border:none; transition:all 0.18s; }
+    .detail-btn.primary { background:var(--grenadine); color:#fff; }
+    .detail-btn.primary:hover { background:#c03d1a; }
+    .detail-btn.ghost { background:transparent; color:var(--latte); border:1px solid rgba(120,97,64,0.2); }
+    .detail-btn.ghost:hover { border-color:var(--latte); background:rgba(120,97,64,0.06); }
+
+    /* ── VESSEL MAP VIEW ── */
+    .vessel-map { display:none; }
+    .vessel-map.active { display:block; }
+    .lots-grid.active { display:grid; }
+    .lots-grid.hidden { display:none; }
+
+    .vessel-section-title { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(30,23,16,0.4); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(120,97,64,0.1); }
+
+    .vessel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:28px; }
+
+    .vessel-card { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); padding:14px 14px 12px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+    .vessel-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(30,23,16,0.08); }
+    .vessel-card.occupied { border-color:rgba(120,97,64,0.2); }
+    .vessel-card.empty { opacity:0.6; }
+
+    .vessel-card-icon { font-size:22px; margin-bottom:8px; }
+    .vessel-card-id { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; color:var(--dark); letter-spacing:0.04em; margin-bottom:2px; }
+    .vessel-card-lot { font-size:10.5px; color:rgba(30,23,16,0.5); margin-bottom:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Fill meter */
+    .fill-meter { margin-bottom:8px; }
+    .fill-meter-track { height:6px; background:rgba(120,97,64,0.1); border-radius:3px; overflow:hidden; }
+    .fill-meter-bar { height:100%; border-radius:3px; transition:width 0.6s ease; }
+    .fill-pct { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; margin-top:3px; }
+
+    .vessel-status-badge { position:absolute; top:10px; right:10px; width:8px; height:8px; border-radius:50%; }
+    .vessel-status-badge.full    { background:var(--grenadine); }
+    .vessel-status-badge.aging   { background:var(--beeswax); }
+    .vessel-status-badge.empty   { background:rgba(120,97,64,0.25); }
+    .vessel-status-badge.dirty   { background:#b0855a; }
+
+    .vessel-card-meta { display:flex; align-items:center; justify-content:space-between; }
+    .vessel-cap { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(30,23,16,0.4); }
+    .vessel-type-tag { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; background:rgba(120,97,64,0.08); color:var(--latte); }
+
+    /* Varietal fill colors — used on fill bars */
+    :root {
+      --wine-pinot:  #6B2D3E;
+      --wine-chard:  #C8922A;
+      --wine-ries:   #8FA832;
+      --wine-rose:   #D4827A;
+      --wine-mixed:  #786140;
+    }
+
+    /* CSS Tank icon — cylindrical winery tank */
+    .tank-icon {
+      width: 32px; height: 38px;
+      margin-bottom: 8px;
+      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .tank-icon-body {
+      width: 28px; flex: 1;
+      background: rgba(120,97,64,0.12);
+      border-left: 2px solid rgba(120,97,64,0.25);
+      border-right: 2px solid rgba(120,97,64,0.25);
+      position: relative; overflow: hidden;
+    }
+    .tank-icon-fill {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      transition: height 0.5s ease;
+      opacity: 0.7;
+    }
+    .tank-icon-top {
+      width: 32px; height: 7px;
+      background: rgba(120,97,64,0.18);
+      border-radius: 50%;
+      border: 2px solid rgba(120,97,64,0.25);
+    }
+    .tank-icon-bottom {
+      width: 32px; height: 5px;
+      background: rgba(120,97,64,0.18);
+      border-radius: 50%;
+      border: 2px solid rgba(120,97,64,0.25);
+    }
+    /* Barrel icon stays as text but sized right */
+    .vessel-card-icon { font-size:26px; margin-bottom:6px; }
+
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(10,6,2,0.72); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+    .modal-overlay.open { opacity:1; pointer-events:all; }
+    .modal { background:var(--dark); border-radius:18px; width:500px; max-width:95vw; border:1px solid rgba(255,255,255,0.08); transform:translateY(16px); transition:transform 0.25s; overflow:hidden; }
+    .modal-overlay.open .modal { transform:translateY(0); }
+    .modal-header { padding:24px 28px 16px; border-bottom:1px solid rgba(255,255,255,0.07); }
+    .modal-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:4px; }
+    .modal-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--cream); }
+    .modal-body { padding:20px 28px; display:flex; flex-direction:column; gap:14px; }
+    .modal-footer { padding:0 28px 24px; display:flex; gap:10px; }
+    .modal-row { display:grid; gap:12px; }
+    .modal-row.two { grid-template-columns:1fr 1fr; }
+    .modal-row.three { grid-template-columns:1fr 1fr 1fr; }
+    .field-group { display:flex; flex-direction:column; gap:6px; }
+    .field-label { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+    .field-req { color:var(--grenadine); }
+    .field-input { width:100%; height:40px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:0 13px; font-family:'Barlow',sans-serif; font-size:13px; color:var(--cream); outline:none; transition:all 0.18s; -webkit-appearance:none; }
+    .field-input:focus { border-color:var(--grenadine); background:rgba(255,255,255,0.09); box-shadow:0 0 0 3px rgba(212,71,32,0.12); }
+    .field-input::placeholder { color:rgba(255,255,255,0.2); }
+    select.field-input { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px; }
+    select.field-input option { background:#2a1f14; color:var(--cream); }
+    textarea.field-input { height:72px; padding:10px 13px; resize:none; line-height:1.5; }
+    .submit-btn { flex:1; height:44px; background:var(--grenadine); color:#fff; border:none; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+    .submit-btn:hover { background:#c03d1a; }
+    .cancel-btn { width:90px; height:44px; background:transparent; color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.08em; cursor:pointer; transition:all 0.18s; }
+    .cancel-btn:hover { color:rgba(255,255,255,0.6); border-color:rgba(255,255,255,0.2); }
+
+    /* Stage update inline */
+    .stage-update-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+    .stage-pill-btn { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:5px 11px; border-radius:20px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.45); background:transparent; transition:all 0.18s; }
+    .stage-pill-btn:hover { border-color:rgba(255,255,255,0.3); color:#fff; }
+    .stage-pill-btn.sel { border-color:var(--grenadine); color:var(--grenadine); background:rgba(212,71,32,0.1); }
+
+    /* Toast */
+    .toast { position:fixed; bottom:28px; right:28px; color:#fff; padding:14px 20px; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; box-shadow:0 8px 28px rgba(0,0,0,0.25); transform:translateY(80px); opacity:0; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index:999; }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+    .stat-strip  { animation:fadeUp 0.35s ease both; }
+    .view-bar    { animation:fadeUp 0.35s 0.05s ease both; }
+    .lots-grid   { animation:fadeUp 0.4s 0.1s ease both; }
+    .vessel-map  { animation:fadeUp 0.4s 0.1s ease both; }
+  
+  /* ── Shared Nav Drawer ── */
+  .nav-toggle {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: all 0.18s; flex-shrink: 0;
+  }
+  .nav-toggle:hover { background: rgba(255,255,255,0.13); color: #fff; }
+  .nav-toggle.open { background: var(--grenadine); border-color: var(--grenadine); color: #fff; }
+
+  .nav-overlay {
+    display: none; position: fixed; inset: 0; z-index: 490;
+    background: rgba(0,0,0,0.45);
+  }
+  .nav-overlay.visible { display: block; }
+
+  .nav-drawer {
+    position: fixed; top: 0; left: -280px; width: 280px; height: 100vh;
+    background: var(--dark); z-index: 500;
+    display: flex; flex-direction: column;
+    transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+  }
+  .nav-drawer.open { left: 0; }
+
+  .nav-header {
+    height: 58px; display: flex; align-items: center;
+    padding: 0 20px; gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  .nav-header-logo {
+    font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 900;
+    color: var(--cream); flex: 1;
+  }
+  .nav-header-logo span { color: var(--grenadine); }
+  .nav-close {
+    width: 28px; height: 28px; border-radius: 5px;
+    background: rgba(255,255,255,0.07); border: none;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .nav-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+  .nav-section-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    padding: 20px 20px 6px;
+  }
+  .nav-section-label:first-of-type { padding-top: 16px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; cursor: pointer;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-left-color: rgba(255,255,255,0.15);
+  }
+  .nav-item.active {
+    background: rgba(233,167,82,0.1);
+    border-left-color: var(--beeswax);
+  }
+  .nav-item-icon {
+    font-size: 16px; width: 22px; text-align: center; flex-shrink: 0;
+    opacity: 0.75;
+  }
+  .nav-item.active .nav-item-icon { opacity: 1; }
+  .nav-item-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    transition: color 0.15s;
+  }
+  .nav-item:hover .nav-item-label { color: rgba(255,255,255,0.85); }
+  .nav-item.active .nav-item-label { color: var(--beeswax); }
+
+  .nav-footer {
+    margin-top: auto; padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="nav-toggle" id="navToggleBtn" onclick="openNav()" title="Navigation">&#9776;</button>
+  <div class="topbar-logo">Lifecycle<span>.</span></div>
+  <div class="topbar-sep"></div>
+  <span class="topbar-label topbar-section">Operations</span>
+  <span class="topbar-arrow">›</span>
+  <span class="topbar-label topbar-current">Cellar</span>
+  <div class="topbar-spacer"></div>
+  <button class="topbar-btn ghost" onclick="openModal('vessel')">+ Add Vessel</button>
+  <button class="topbar-btn primary" onclick="openModal('lot')">+ New Lot</button>
+</div>
+
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item" href="Vineyard_1.0.html">
+    <span class="nav-item-icon">🌿</span>
+    <span class="nav-item-label">Vineyard</span>
+  </a>
+  <a class="nav-item" href="Harvest_1.0.html">
+    <span class="nav-item-icon">⚖</span>
+    <span class="nav-item-label">Harvest</span>
+  </a>
+  <div class="nav-section-label">Packaging</div>
+  <a class="nav-item" href="SKUs_1.0.html">
+    <span class="nav-item-icon">📦</span>
+    <span class="nav-item-label">SKUs</span>
+  </a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item active" href="Cellar_1.0.html">
+    <span class="nav-item-icon">🍷</span>
+    <span class="nav-item-label">Cellar</span>
+  </a>
+  <a class="nav-item" href="BlendingLab_1.0.html">
+    <span class="nav-item-icon">🧪</span>
+    <span class="nav-item-label">Blending Lab</span>
+  </a>
+  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+</div>
+
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-eyebrow">2026 · Multi-Vintage Active</div>
+      <div class="page-title">Cellar</div>
+      <div class="page-subtitle">Wine lots, vessel map, and stage tracking across all active vintages.</div>
+    </div>
+  </div>
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="stat-pill c1">
+      <div class="stat-pill-label">Active Lots</div>
+      <div class="stat-pill-value" id="stat-lots">5</div>
+      <div class="stat-pill-sub">Across 2 vintages</div>
+    </div>
+    <div class="stat-pill c2">
+      <div class="stat-pill-label">Total Bulk Gallons</div>
+      <div class="stat-pill-value" id="stat-gal">2,872</div>
+      <div class="stat-pill-sub">Live wine volume</div>
+    </div>
+    <div class="stat-pill c3">
+      <div class="stat-pill-label">In Fermentation</div>
+      <div class="stat-pill-value" id="stat-ferm">2</div>
+      <div class="stat-pill-sub">Lots active</div>
+    </div>
+    <div class="stat-pill c4">
+      <div class="stat-pill-label">Vessels Occupied</div>
+      <div class="stat-pill-value" id="stat-vessels">7 / 12</div>
+      <div class="stat-pill-sub">4 available</div>
+    </div>
+    <div class="stat-pill c5">
+      <div class="stat-pill-label">Avg Cost / Gal</div>
+      <div class="stat-pill-value" id="stat-cpg">$18.40</div>
+      <div class="stat-pill-sub">Blended avg</div>
+    </div>
+  </div>
+
+  <!-- View bar -->
+  <div class="view-bar">
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-lots" onclick="setView('lots')">☰ Wine Lots</button>
+      <button class="view-btn" id="btn-vessels" onclick="setView('vessels')">⊞ Vessel Map</button>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-chip active" onclick="filterLots(this,'all')">All</button>
+      <button class="filter-chip" onclick="filterLots(this,'Fermentation')">🔴 Fermentation</button>
+      <button class="filter-chip" onclick="filterLots(this,'Aging')">🟡 Aging</button>
+      <button class="filter-chip" onclick="filterLots(this,'Racking')">🟢 Racking</button>
+      <button class="filter-chip" onclick="filterLots(this,'Finished')">⚫ Finished</button>
+    </div>
+  </div>
+
+  <!-- WINE LOTS VIEW -->
+  <div class="lots-grid active" id="lots-view">
+    <!-- Rendered by JS -->
+  </div>
+
+  <!-- VESSEL MAP VIEW -->
+  <div class="vessel-map" id="vessel-view">
+    <div class="vessel-section-title">🛢 Tanks — Stainless Steel</div>
+    <div class="vessel-grid" id="vessel-tanks"></div>
+    <div class="vessel-section-title">🪵 Barrels — Oak</div>
+    <div class="vessel-grid" id="vessel-barrels"></div>
+    <div class="vessel-section-title">📦 Other Vessels</div>
+    <div class="vessel-grid" id="vessel-other"></div>
+  </div>
+
+</div>
+
+<!-- NEW LOT MODAL -->
+<div class="modal-overlay" id="modal-lot" onclick="closeModalOutside(event,'modal-lot')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-eyebrow">Cellar</div>
+      <div class="modal-title">New Wine Lot</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label">Lot ID <span class="field-req">✦</span></label>
+          <input type="text" class="field-input" id="lot-id" placeholder="e.g. 2026-PN-NORTH" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Stage <span class="field-req">✦</span></label>
+          <select class="field-input" id="lot-stage">
+            <option>Fermentation</option>
+            <option>Aging</option>
+            <option>Racking</option>
+            <option>Finished</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label">Processing Style</label>
+          <select class="field-input" id="lot-style">
+            <option value="">Select…</option>
+            <option>Red — Native</option>
+            <option>Red — Inoculated</option>
+            <option>White — Press</option>
+            <option>White — Skin Contact</option>
+            <option>Rosé</option>
+            <option>Pét-Nat</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Release Year</label>
+          <input type="number" class="field-input" id="lot-release" placeholder="e.g. 2028" />
+        </div>
+      </div>
+      <div class="modal-row three">
+        <div class="field-group">
+          <label class="field-label">Live Volume (Gal) <span class="field-req">✦</span></label>
+          <input type="number" class="field-input" id="lot-vol" placeholder="e.g. 620" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Allocated (Gal)</label>
+          <input type="number" class="field-input" id="lot-alloc" placeholder="e.g. 0" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Total Loaded Cost</label>
+          <input type="number" class="field-input" id="lot-cost" placeholder="e.g. 11000" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Notes</label>
+        <textarea class="field-input" id="lot-notes" placeholder="Winemaker observations…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="submit-btn" onclick="addLot()">✦ Create Lot</button>
+      <button class="cancel-btn" onclick="closeModal('modal-lot')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW VESSEL MODAL -->
+<div class="modal-overlay" id="modal-vessel" onclick="closeModalOutside(event,'modal-vessel')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-eyebrow">Cellar</div>
+      <div class="modal-title">Add Vessel</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label">Vessel ID <span class="field-req">✦</span></label>
+          <input type="text" class="field-input" id="v-id" placeholder="e.g. Tank 04" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Type <span class="field-req">✦</span></label>
+          <select class="field-input" id="v-type">
+            <option>Stainless Steel</option>
+            <option>French Oak</option>
+            <option>American Oak</option>
+            <option>Concrete Egg</option>
+            <option>Foudre</option>
+            <option>Bin</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-row three">
+        <div class="field-group">
+          <label class="field-label">Capacity (Gal)</label>
+          <input type="number" class="field-input" id="v-cap" placeholder="e.g. 264" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Status</label>
+          <select class="field-input" id="v-status">
+            <option>Empty</option>
+            <option>Full</option>
+            <option>Dirty</option>
+            <option>Under Repair</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Times Filled</label>
+          <select class="field-input" id="v-fills">
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5+</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label">Oak Type</label>
+          <select class="field-input" id="v-oak">
+            <option value="">N/A</option>
+            <option>French</option><option>American</option><option>Hungarian</option><option>Neutral</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Wine Type</label>
+          <select class="field-input" id="v-wine-type">
+            <option value="">N/A</option>
+            <option>Red</option><option>White</option><option>Rosé</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="submit-btn" onclick="addVessel()">✦ Add Vessel</button>
+      <button class="cancel-btn" onclick="closeModal('modal-vessel')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Airtable config ──────────────────────────────────────────────────────
+  const BASE_ID        = 'appJNEHG8sqXmdYGe';
+  const TBL_LOTS       = 'tblcBMCwq1ng8ykMb';
+  const TBL_VESSELS    = 'tblWyQjpgBOWutl7s';
+
+  // Wine Lots field IDs
+  const F_LOT_NAME     = 'fldRib6w2mJcyYnji';
+  const F_LOT_TYPE     = 'fldDtMoBcZWh6m6Z8';   // singleSelect
+  const F_LOT_STAGE    = 'fldv75LnMHiMhqwVU';   // singleSelect
+  const F_LOT_VOL      = 'fldEeGD6o6zxIV3gb';   // gallons in
+  const F_LOT_OUT      = 'fldZZHpkUCOh6xzA1';   // gallons out
+  const F_LOT_YEAR     = 'flddMBBo3WnnatiGR';   // harvest year (number)
+
+  // Vessels field IDs
+  const F_VES_NAME     = 'fldDhAufJsJl0s0iv';
+  const F_VES_WOODTYPE = 'fldHirheYksCMA7nU';   // singleSelect (French Oak, American Oak, Stainless Tank…)
+  const F_VES_CAP      = 'fldNXZjyMBgZ1628m';
+  const F_VES_STATUS   = 'fldEppZEJwIoDsKpk';   // singleSelect
+  const F_VES_LOT      = 'fldIOTW3Kvc9yPaPa';   // linked → Lots
+  const F_VES_FILLS    = 'fldqIYagDhgJqqoJB';   // number
+  const F_VES_OAKAGE   = 'fldl2WK6Bw11PyL5X';   // singleSelect (Neutral, 1yr…)
+  const F_VES_ORIGIN   = 'fldE2nTeb3d6YxEak';   // singleSelect (FRENCH, AMERICAN)
+  const F_VES_WINETYPE = 'fldtYJ2mqDxYbnfHF';   // singleSelect (Red, White, Port…)
+
+  const PROXY = '/api/airtable';
+
+  async function airtableGet(tableId, fields) {
+    const params = new URLSearchParams({ baseId: BASE_ID, tableId });
+    fields.forEach(f => params.append('fields[]', f));
+    const res = await fetch(`${PROXY}?${params}`);
+    if (!res.ok) throw new Error(`Airtable error ${res.status}`);
+    const data = await res.json();
+    return data.records || [];
+  }
+
+  async function airtableCreate(tableId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+    });
+    if (!res.ok) throw new Error(`Airtable create error ${res.status}`);
+    return await res.json();
+  }
+
+  async function airtablePatch(tableId, recordId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, recordId, fields })
+    });
+    if (!res.ok) throw new Error(`Airtable patch error ${res.status}`);
+    return await res.json();
+  }
+
+  // ─── App state ────────────────────────────────────────────────────────────
+  let lots    = [];
+  let vessels = [];
+  let currentFilter = 'all';
+  let expandedLot   = null;
+
+  // ─── Init: load from Airtable ─────────────────────────────────────────────
+  async function initApp() {
+    showLoading(true);
+    try {
+      const [lotRecs, vesselRecs] = await Promise.all([
+        airtableGet(TBL_LOTS, [F_LOT_NAME, F_LOT_TYPE, F_LOT_STAGE, F_LOT_VOL, F_LOT_OUT, F_LOT_YEAR]),
+        airtableGet(TBL_VESSELS, [F_VES_NAME, F_VES_WOODTYPE, F_VES_CAP, F_VES_STATUS, F_VES_LOT, F_VES_FILLS, F_VES_OAKAGE, F_VES_ORIGIN, F_VES_WINETYPE])
+      ]);
+
+      // Map lot records → app model
+      // Build a recordId→name map for vessel→lot linking
+      const lotById = {};
+      lots = lotRecs.map(r => {
+        const f = r.cellValuesByFieldId || {};
+        const obj = {
+          _id:    r.id,
+          id:     f[F_LOT_NAME] || r.id,
+          stage:  f[F_LOT_STAGE]?.name || 'Unknown',
+          style:  f[F_LOT_TYPE]?.name  || '—',
+          vintage: f[F_LOT_YEAR] || null,
+          vol:    f[F_LOT_VOL]  || 0,
+          alloc:  f[F_LOT_OUT]  || 0,
+          cost:   0,
+          releaseYear: null,
+          vessels: [],
+          notes: ''
+        };
+        lotById[r.id] = obj.id;
+        return obj;
+      });
+
+      // Map vessel records → app model
+      vessels = vesselRecs.map(r => {
+        const f = r.cellValuesByFieldId || {};
+        const woodType = f[F_VES_WOODTYPE]?.name || '';
+        const statusRaw = f[F_VES_STATUS]?.name || '';
+
+        // Normalise status to short form
+        let status = 'Empty';
+        if (statusRaw.toLowerCase().includes('full') || statusRaw.toLowerCase().includes('contains')) status = 'Full';
+        else if (statusRaw.toLowerCase().includes('dirty')) status = 'Dirty';
+        else if (statusRaw.toLowerCase().includes('ready') || statusRaw.toLowerCase().includes('clean')) status = 'Empty';
+
+        // Resolve linked lot name
+        const linkedLotRecId = f[F_VES_LOT]?.[0]?.id || null;
+        const lotName = linkedLotRecId ? (lotById[linkedLotRecId] || f[F_VES_LOT]?.[0]?.name || null) : null;
+
+        // Calculate fill %
+        const cap = f[F_VES_CAP] || 60;
+        const fillPct = status === 'Full' ? 100 : 0;
+
+        // Derive vessel type for rendering
+        let type = 'French Oak';
+        if (woodType.toLowerCase().includes('stainless') || woodType.toLowerCase().includes('tank')) type = 'Stainless Steel';
+        else if (woodType.toLowerCase().includes('american')) type = 'American Oak';
+        else if (woodType.toLowerCase().includes('french')) type = 'French Oak';
+        else if (woodType.toLowerCase().includes('concrete') || woodType.toLowerCase().includes('egg')) type = 'Concrete Egg';
+        else if (woodType.toLowerCase().includes('foudre')) type = 'Foudre';
+
+        // Add to lot's vessel list
+        if (lotName) {
+          const lot = lots.find(l => l.id === lotName);
+          if (lot && !lot.vessels.includes(f[F_VES_NAME])) lot.vessels.push(f[F_VES_NAME]);
+        }
+
+        return {
+          _id:     r.id,
+          id:      f[F_VES_NAME] || r.id,
+          type,
+          woodType,
+          cap,
+          status,
+          fills:   f[F_VES_FILLS] || 0,
+          lot:     lotName,
+          fillPct,
+          wineType: f[F_VES_WINETYPE]?.name || '',
+          oakAge:   f[F_VES_OAKAGE]?.name   || ''
+        };
+      });
+
+      renderLots();
+      updateStats();
+    } catch(err) {
+      console.error(err);
+      showToast('Failed to load Airtable data. Check proxy.', true);
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  function showLoading(on) {
+    document.getElementById('lots-view').innerHTML = on
+      ? '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(30,23,16,0.35);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;letter-spacing:0.1em">LOADING CELLAR DATA…</div>'
+      : '';
+  }
+
+  // ─── Render lots ──────────────────────────────────────────────────────────
+  function renderLots() {
+    const grid = document.getElementById('lots-view');
+    const filtered = currentFilter === 'all' ? lots : lots.filter(l => l.stage === currentFilter);
+
+    grid.innerHTML = filtered.map(l => {
+      const remaining = l.vol - l.alloc;
+      const allocPct = l.vol > 0 ? Math.round((l.alloc / l.vol) * 100) : 0;
+      const cpg = l.vol > 0 ? (l.cost / l.vol).toFixed(2) : '—';
+      const isExpanded = expandedLot === l.id;
+      const fillColor = allocPct > 80 ? 'var(--grenadine)' : allocPct > 40 ? 'var(--beeswax)' : 'var(--darlington)';
+
+      return `
+        <div class="lot-card ${isExpanded ? 'expanded' : ''}" onclick="toggleExpand('${l.id}')">
+          <div class="lot-card-header">
+            <div>
+              <div class="lot-card-id">${l.id}</div>
+              <div class="lot-card-harvest">${l.style} · ${l.vintage}</div>
+            </div>
+            <div class="stage-badge ${stageClass(l.stage)}">${l.stage}</div>
+          </div>
+          <div class="lot-card-body">
+            <div class="lot-metrics">
+              <div>
+                <div class="lot-metric-label">Volume</div>
+                <div class="lot-metric-value">${l.vol.toLocaleString()}<span class="lot-metric-unit"> gal</span></div>
+              </div>
+              <div>
+                <div class="lot-metric-label">Allocated</div>
+                <div class="lot-metric-value">${l.alloc.toLocaleString()}<span class="lot-metric-unit"> gal</span></div>
+              </div>
+              <div>
+                <div class="lot-metric-label">Remaining</div>
+                <div class="lot-metric-value">${remaining.toLocaleString()}<span class="lot-metric-unit"> gal</span></div>
+              </div>
+            </div>
+            <div class="vol-bar-wrap">
+              <div class="vol-bar-labels">
+                <span class="vol-bar-label">Allocated</span>
+                <span class="vol-bar-label">${allocPct}%</span>
+              </div>
+              <div class="vol-bar-track">
+                <div class="vol-bar-fill" style="width:${allocPct}%; background:${fillColor}"></div>
+              </div>
+            </div>
+            ${l.vessels.length ? `<div class="vessel-chips">${l.vessels.map(v=>`<span class="vessel-chip">${v}</span>`).join('')}</div>` : ''}
+          </div>
+          <div class="lot-card-footer">
+            <div>
+              <div class="lot-cost-label">Total Loaded Cost</div>
+              <div class="lot-cost">$${l.cost.toLocaleString()}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="lot-cost-label">Cost / Gal</div>
+              <div class="lot-cost-per-gal">$${cpg}</div>
+            </div>
+          </div>
+          <div class="lot-detail">
+            <div class="detail-grid">
+              <div>
+                <div class="detail-item-label">Release Year</div>
+                <div class="detail-item-value">${l.releaseYear || '—'}</div>
+              </div>
+              <div>
+                <div class="detail-item-label">Vessels</div>
+                <div class="detail-item-value">${l.vessels.join(', ') || '—'}</div>
+              </div>
+              <div style="grid-column:1/-1">
+                <div class="detail-item-label">Notes</div>
+                <div class="detail-item-value">${l.notes || '—'}</div>
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="detail-item-label" style="margin-bottom:6px">Update Stage</div>
+              <div class="stage-update-row">
+                ${['Fermentation','Aging','Racking','Finished'].map(s =>
+                  `<button class="stage-pill-btn ${l.stage===s?'sel':''}" onclick="updateStage(event,'${l.id}','${s}')">${s}</button>`
+                ).join('')}
+              </div>
+            </div>
+            <div class="detail-actions">
+              <button class="detail-btn primary" onclick="event.stopPropagation()">📋 Log Cellar Work</button>
+              <button class="detail-btn ghost" onclick="event.stopPropagation()">🧪 Send to Blend Lab</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    updateStats();
+  }
+
+  function stageClass(s) {
+    if (s==='Fermentation') return 'stage-fermentation';
+    if (s==='Aging')        return 'stage-aging';
+    if (s==='Racking')      return 'stage-racking';
+    if (s==='Finished')     return 'stage-finished';
+    return 'stage-blending';
+  }
+
+  function toggleExpand(id) {
+    expandedLot = expandedLot === id ? null : id;
+    renderLots();
+  }
+
+  function updateStage(e, lotId, stage) {
+    e.stopPropagation();
+    const lot = lots.find(l => l.id === lotId);
+    if (lot) { lot.stage = stage; renderLots(); showToast(`${lotId} → ${stage}`); }
+  }
+
+  // ─── Render vessels ───────────────────────────────────────────────────────
+  function renderVessels() {
+    const tanks   = vessels.filter(v => v.type === 'Stainless Steel');
+    const barrels = vessels.filter(v => v.type.includes('Oak'));
+    const other   = vessels.filter(v => !v.type.includes('Oak') && v.type !== 'Stainless Steel');
+
+    document.getElementById('vessel-tanks').innerHTML   = tanks.map(vesselCard).join('');
+    document.getElementById('vessel-barrels').innerHTML = barrels.map(vesselCard).join('');
+    document.getElementById('vessel-other').innerHTML   = other.map(vesselCard).join('') || '<div style="color:rgba(30,23,16,0.3);font-size:13px;padding:10px 0">No other vessels added yet.</div>';
+  }
+
+  // Derive fill color from the lot's varietal / style
+  function varietalColor(lotId) {
+    if (!lotId) return 'rgba(120,97,64,0.15)';
+    const lot = lots.find(l => l.id === lotId);
+    if (!lot) return '#786140';
+    const s = (lot.id + ' ' + lot.style).toLowerCase();
+    if (s.includes('pinot') || s.includes('red'))   return '#6B2D3E';
+    if (s.includes('chardonnay') || s.includes('chard') || s.includes('white')) return '#C8922A';
+    if (s.includes('riesling') || s.includes('ries')) return '#8FA832';
+    if (s.includes('rose') || s.includes('rosé'))   return '#D4827A';
+    return '#786140';
+  }
+
+  function vesselCard(v) {
+    const isSteel  = v.type === 'Stainless Steel';
+    const isOak    = v.type.includes('Oak');
+    const isConcrete = v.type.includes('Concrete') || v.type === 'Foudre';
+    const statusClass = v.status === 'Full' ? 'full' : v.status === 'Empty' ? 'empty' : 'dirty';
+    const typeTag = isSteel ? 'Steel' : v.type.includes('French') ? 'Fr. Oak' : v.type.includes('American') ? 'Am. Oak' : v.type;
+    const wineColor = varietalColor(v.lot);
+    const fillPct = v.fillPct || 0;
+
+    // Tank: CSS cylindrical icon. Barrel/other: emoji
+    const iconHTML = isSteel ? `
+      <div class="tank-icon">
+        <div class="tank-icon-top"></div>
+        <div class="tank-icon-body">
+          <div class="tank-icon-fill" style="height:${fillPct}%; background:${wineColor};"></div>
+        </div>
+        <div class="tank-icon-bottom"></div>
+      </div>` :
+      `<div class="vessel-card-icon">${isOak ? '🪵' : isConcrete ? '🥚' : '📦'}</div>`;
+
+    return `
+      <div class="vessel-card ${v.lot ? 'occupied' : 'empty'}">
+        <div class="vessel-status-badge ${statusClass}"></div>
+        ${iconHTML}
+        <div class="vessel-card-id">${v.id}</div>
+        <div class="vessel-card-lot">${v.lot || 'Available'}</div>
+        <div class="fill-meter">
+          <div class="fill-meter-track">
+            <div class="fill-meter-bar" style="width:${fillPct}%; background:${wineColor};"></div>
+          </div>
+          <div class="fill-pct" style="color:${wineColor}">${fillPct}%</div>
+        </div>
+        <div class="vessel-card-meta">
+          <span class="vessel-cap">${v.cap} gal</span>
+          <span class="vessel-type-tag">${typeTag}</span>
+        </div>
+      </div>`;
+  }
+
+  // ─── Stats ────────────────────────────────────────────────────────────────
+  function updateStats() {
+    const totalGal   = lots.reduce((s,l) => s+l.vol, 0);
+    const fermCount  = lots.filter(l => l.stage==='Fermentation').length;
+    const occupied   = vessels.filter(v => v.lot).length;
+    const totalCost  = lots.reduce((s,l) => s+l.cost, 0);
+    const cpg = totalGal > 0 ? (totalCost/totalGal).toFixed(2) : '—';
+
+    document.getElementById('stat-lots').textContent    = lots.length;
+    document.getElementById('stat-gal').textContent     = totalGal.toLocaleString();
+    document.getElementById('stat-ferm').textContent    = fermCount;
+    document.getElementById('stat-vessels').textContent = `${occupied} / ${vessels.length}`;
+    document.getElementById('stat-cpg').textContent     = `$${cpg}`;
+  }
+
+  // ─── Filters ──────────────────────────────────────────────────────────────
+  function filterLots(el, f) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentFilter = f;
+    expandedLot = null;
+    renderLots();
+  }
+
+  // ─── View toggle ──────────────────────────────────────────────────────────
+  function setView(v) {
+    document.getElementById('btn-lots').classList.toggle('active', v==='lots');
+    document.getElementById('btn-vessels').classList.toggle('active', v==='vessels');
+    document.getElementById('lots-view').classList.toggle('active', v==='lots');
+    document.getElementById('lots-view').classList.toggle('hidden', v!=='lots');
+    document.getElementById('vessel-view').style.display = v==='vessels' ? 'block' : 'none';
+    document.getElementById('filter-bar').style.display  = v==='lots' ? 'flex' : 'none';
+    if (v==='vessels') renderVessels();
+  }
+
+  // ─── Add lot (with Airtable write) ───────────────────────────────────────
+  async function addLot() {
+    const name    = document.getElementById('lot-id').value.trim();
+    const stage   = document.getElementById('lot-stage').value;
+    const style   = document.getElementById('lot-style').value;
+    const vol     = parseFloat(document.getElementById('lot-vol').value) || 0;
+
+    if (!name || !vol) { showToast('Lot ID and volume are required.', true); return; }
+
+    // Optimistic UI
+    const tempObj = { _id: 'temp-' + Date.now(), id: name, stage, style, vintage: new Date().getFullYear(), vol, alloc: 0, cost: 0, releaseYear: null, vessels: [], notes: '' };
+    lots.unshift(tempObj);
+    renderLots();
+    updateStats();
+    showToast(`Lot "${name}" created`);
+    closeModal('modal-lot');
+    ['lot-id','lot-style','lot-release','lot-vol','lot-alloc','lot-cost','lot-notes'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
+
+    // Write to Airtable
+    try {
+      const fields = {};
+      fields[F_LOT_NAME]  = name;
+      fields[F_LOT_STAGE] = stage;
+      fields[F_LOT_TYPE]  = style;
+      fields[F_LOT_VOL]   = vol;
+      const created = await airtableCreate(TBL_LOTS, fields);
+      tempObj._id = created.id || tempObj._id;
+    } catch(err) {
+      console.error('Airtable lot create failed:', err);
+      showToast('Lot saved locally — sync failed.', true);
+    }
+  }
+
+  // ─── Add vessel (with Airtable write) ────────────────────────────────────
+  async function addVessel() {
+    const name   = document.getElementById('v-id').value.trim();
+    const type   = document.getElementById('v-type').value;
+    const cap    = parseFloat(document.getElementById('v-cap').value) || 0;
+    const status = document.getElementById('v-status').value;
+
+    if (!name) { showToast('Vessel ID is required.', true); return; }
+
+    // Map UI type to Airtable wood type values
+    const woodMap = { 'Stainless Steel': 'Stainless Tank', 'French Oak': 'French Oak', 'American Oak': 'American Oak', 'Concrete Egg': 'Concrete Egg', 'Foudre': 'Foudre' };
+    const statusMap = { 'Empty': 'Ready/Clean (Empty, Sanitized and Ready for Wine)', 'Full': 'Full (Contains Wine)', 'Dirty': 'Dirty (Empty, Needs Cleaning)' };
+
+    const tempObj = { _id: 'temp-' + Date.now(), id: name, type, woodType: woodMap[type] || type, cap, status, fills: 0, lot: null, fillPct: 0, wineType: '', oakAge: '' };
+    vessels.push(tempObj);
+    updateStats();
+    showToast(`Vessel "${name}" added`);
+    closeModal('modal-vessel');
+    if (document.getElementById('vessel-view').style.display !== 'none') renderVessels();
+
+    try {
+      const fields = {};
+      fields[F_VES_NAME]   = name;
+      fields[F_VES_CAP]    = cap;
+      fields[F_VES_STATUS] = statusMap[status] || status;
+      if (woodMap[type]) fields[F_VES_WOODTYPE] = woodMap[type];
+      const created = await airtableCreate(TBL_VESSELS, fields);
+      tempObj._id = created.id || tempObj._id;
+    } catch(err) {
+      console.error('Airtable vessel create failed:', err);
+      showToast('Vessel saved locally — sync failed.', true);
+    }
+  }
+
+  // ─── Modal helpers ────────────────────────────────────────────────────────
+  function openModal(type) {
+    document.getElementById(`modal-${type}`).classList.add('open');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  function closeModalOutside(e, id) {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  }
+
+  function showToast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = (isError ? '⚠️ ' : '✅ ') + msg;
+    t.style.background = isError ? '#7a2d1a' : '#2d5a3d';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  initApp();
+
+  // ── Shared Nav Drawer ──
+  function openNav() {
+    document.getElementById('navDrawer').classList.add('open');
+    document.getElementById('navOverlay').classList.add('visible');
+    document.getElementById('navToggleBtn').classList.add('open');
+  }
+  function closeNav() {
+    document.getElementById('navDrawer').classList.remove('open');
+    document.getElementById('navOverlay').classList.remove('visible');
+    document.getElementById('navToggleBtn').classList.remove('open');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeNav();
+  });
+
+</script>
+</body>
+</html>
