@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harvest — Winery Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --darlington: #ACCAB2;
+      --beeswax:    #E9A752;
+      --grenadine:  #D44720;
+      --latte:      #786140;
+      --cream:      #F5EFE4;
+      --white:      #ffffff;
+      --dark:       #1e1710;
+      --wine-pinot: #6B2D3E;
+      --wine-chard: #C8922A;
+      --wine-ries:  #8FA832;
+      --wine-rose:  #D4827A;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; }
+
+    /* TOPBAR */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 28px; gap:18px; position:sticky; top:0; z-index:100; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); }
+    .t-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; }
+    .t-dim { color:rgba(255,255,255,0.35); }
+    .t-active { color:var(--beeswax); }
+    .t-arrow { color:rgba(255,255,255,0.2); }
+    .topbar-spacer { flex:1; }
+    .tbtn { height:32px; padding:0 14px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; font-weight:600; letter-spacing:0.08em; cursor:pointer; border:none; display:flex; align-items:center; gap:6px; transition:all 0.18s; }
+    .tbtn.primary { background:var(--grenadine); color:#fff; }
+    .tbtn.primary:hover { background:#c03d1a; }
+    .tbtn.ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.1); }
+    .tbtn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
+
+    /* VIEW TABS */
+    .view-tabs { height:44px; background:var(--dark); border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; padding:0 28px; gap:4px; }
+    .view-tab { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; padding:6px 14px; border-radius:6px; cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,0.35); transition:all 0.18s; }
+    .view-tab.active { background:rgba(255,255,255,0.1); color:var(--cream); }
+    .view-tab:hover:not(.active) { color:rgba(255,255,255,0.6); }
+
+    /* VIEWS */
+    .view { display:none; }
+    .view.active { display:flex; min-height:calc(100vh - 102px); }
+
+    /* ═══════════════════════════════
+       SCALE HOUSE VIEW
+    ═══════════════════════════════ */
+    .scale-layout { display:grid; grid-template-columns:1fr 400px; width:100%; }
+
+    /* LEFT — scale logger */
+    .scale-main { padding:28px 32px; display:flex; flex-direction:column; gap:22px; }
+
+    /* Active event banner */
+    .active-banner { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.12); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .active-banner-left { display:flex; align-items:center; gap:14px; }
+    .active-dot { width:10px; height:10px; border-radius:50%; background:var(--grenadine); box-shadow:0 0 0 3px rgba(212,71,32,0.2); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(212,71,32,0.2);} 50%{box-shadow:0 0 0 6px rgba(212,71,32,0.1);} }
+    .active-event-name { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--dark); }
+    .active-event-meta { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(30,23,16,0.4); margin-top:2px; }
+    .active-banner-stats { display:flex; gap:24px; }
+    .abs-stat { text-align:right; }
+    .abs-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:var(--dark); line-height:1; }
+    .abs-stat-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-top:2px; }
+    .no-event-banner { background:rgba(120,97,64,0.06); border-radius:12px; border:2px dashed rgba(120,97,64,0.18); padding:16px 20px; display:flex; align-items:center; gap:12px; }
+    .no-event-text { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
+    .no-event-btn { margin-left:auto; height:30px; padding:0 14px; background:var(--grenadine); color:#fff; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; cursor:pointer; }
+
+    /* SCALE TICKET ENTRY */
+    .scale-ticket-entry { background:var(--dark); border-radius:16px; padding:22px 24px; }
+    .ste-title { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.35); margin-bottom:16px; }
+
+    /* Big weight display */
+    .weight-display { display:grid; grid-template-columns:1fr 40px 1fr 40px 1fr; align-items:center; gap:0; margin-bottom:20px; }
+    .weight-box { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px 16px; }
+    .weight-box-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:6px; }
+    .weight-box-input { width:100%; background:transparent; border:none; outline:none; font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:700; color:var(--cream); line-height:1; }
+    .weight-box-input::placeholder { color:rgba(255,255,255,0.15); }
+    .weight-box-unit { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.1em; color:rgba(255,255,255,0.25); margin-top:4px; }
+    .weight-op { text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:rgba(255,255,255,0.2); }
+    .weight-box.net { background:rgba(233,167,82,0.08); border-color:rgba(233,167,82,0.2); }
+    .weight-box.net .weight-box-input { color:var(--beeswax); }
+    .weight-box.net .weight-box-unit { color:rgba(233,167,82,0.4); }
+
+    /* Bin type selector */
+    .bin-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+    .bin-type-grid { display:flex; flex-wrap:wrap; gap:7px; }
+    .bin-chip { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:7px 13px; border-radius:7px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); background:transparent; transition:all 0.18s; white-space:nowrap; }
+    .bin-chip:hover { border-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.7); }
+    .bin-chip.selected { background:rgba(233,167,82,0.15); border-color:var(--beeswax); color:var(--beeswax); }
+
+    /* Brix/pH row */
+    .reading-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+    .reading-field { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; }
+    .reading-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:5px; }
+    .reading-input { width:100%; background:transparent; border:none; outline:none; font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:var(--cream); line-height:1; }
+    .reading-input::placeholder { color:rgba(255,255,255,0.12); font-size:18px; }
+    .reading-unit { font-size:10px; color:rgba(255,255,255,0.2); margin-top:2px; }
+
+    /* Record button */
+    .record-btn { width:100%; height:52px; background:var(--grenadine); color:#fff; border:none; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .record-btn:hover { background:#c03d1a; transform:translateY(-1px); box-shadow:0 6px 20px rgba(212,71,32,0.35); }
+    .record-btn:active { transform:translateY(0); }
+    .record-btn:disabled { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.25); cursor:not-allowed; transform:none; box-shadow:none; }
+
+    /* TICKET LOG TABLE */
+    .ticket-log { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
+    .ticket-log-header { display:grid; grid-template-columns:36px 50px 1fr 90px 90px 80px 70px 70px 44px; padding:10px 16px; background:rgba(120,97,64,0.05); border-bottom:1px solid rgba(120,97,64,0.1); align-items:center; }
+    .th { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.4); }
+    .ticket-row { display:grid; grid-template-columns:36px 50px 1fr 90px 90px 80px 70px 70px 44px; padding:11px 16px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; }
+    .ticket-row:last-child { border-bottom:none; }
+    .ticket-row:hover { background:rgba(120,97,64,0.03); }
+    .ticket-row.new-flash { animation:rowFlash 0.6s ease; }
+    @keyframes rowFlash { 0%{background:rgba(212,71,32,0.08);} 100%{background:transparent;} }
+    .td { font-size:12.5px; color:var(--dark); }
+    .td.num { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; }
+    .td.net-weight { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:var(--latte); }
+    .td.muted { color:rgba(30,23,16,0.4); font-size:11.5px; }
+    .td.brix { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; color:var(--grenadine); }
+    .td.ph { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; color:#5a8a6a; }
+    .delete-btn { width:26px; height:26px; border-radius:6px; background:transparent; border:1px solid rgba(120,97,64,0.15); color:rgba(30,23,16,0.3); cursor:pointer; font-size:12px; transition:all 0.18s; display:flex; align-items:center; justify-content:center; }
+    .delete-btn:hover { background:rgba(212,71,32,0.08); border-color:var(--grenadine); color:var(--grenadine); }
+    .ticket-empty { padding:32px 20px; text-align:center; color:rgba(30,23,16,0.3); font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* Totals bar */
+    .totals-bar { display:grid; grid-template-columns:repeat(5,1fr); gap:0; border-top:2px solid rgba(120,97,64,0.1); }
+    .total-cell { padding:12px 16px; }
+    .total-cell-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
+    .total-cell-value { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:700; color:var(--dark); }
+    .total-cell-value.tons { color:var(--latte); font-size:20px; }
+    .total-cell-value.highlight { color:var(--grenadine); }
+
+    /* ─── RIGHT PANEL (EVENT FORM) ─── */
+    .event-form-panel { background:var(--dark); border-left:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; position:sticky; top:102px; height:calc(100vh - 102px); overflow-y:auto; }
+    .event-form-panel::-webkit-scrollbar { width:4px; }
+    .event-form-panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+    .efp-header { padding:24px 24px 16px; border-bottom:1px solid rgba(255,255,255,0.07); }
+    .efp-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--beeswax); margin-bottom:4px; }
+    .efp-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--cream); }
+    .efp-sub { font-size:11.5px; color:rgba(255,255,255,0.25); margin-top:4px; }
+
+    .efp-body { padding:16px 24px; display:flex; flex-direction:column; gap:12px; flex:1; }
+    .esec-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.2); padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06); }
+
+    .eform-row { display:grid; gap:10px; }
+    .eform-row.two { grid-template-columns:1fr 1fr; }
+    .eform-row.three { grid-template-columns:1fr 1fr 1fr; }
+    .fg { display:flex; flex-direction:column; gap:5px; }
+    .fl { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+    .fl .req { color:var(--grenadine); }
+    .fi { width:100%; height:38px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:0 11px; font-family:'Barlow',sans-serif; font-size:13px; color:var(--cream); outline:none; transition:all 0.18s; -webkit-appearance:none; }
+    .fi:focus { border-color:var(--beeswax); background:rgba(255,255,255,0.09); box-shadow:0 0 0 3px rgba(233,167,82,0.1); }
+    .fi::placeholder { color:rgba(255,255,255,0.2); }
+    select.fi { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+    select.fi option { background:#2a1f14; color:var(--cream); }
+    textarea.fi { height:56px; padding:8px 11px; resize:none; line-height:1.5; }
+
+    /* Brix/pH at pick */
+    .brix-ph-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .brix-ph-field { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; }
+    .brix-ph-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:4px; }
+    .brix-ph-input { width:100%; background:transparent; border:none; outline:none; font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:700; color:var(--cream); }
+    .brix-ph-input::placeholder { color:rgba(255,255,255,0.12); font-size:20px; }
+    .brix-ph-unit { font-size:10px; color:rgba(255,255,255,0.2); margin-top:2px; }
+
+    /* Lot creation toggle */
+    .lot-toggle { display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; cursor:pointer; user-select:none; transition:all 0.18s; }
+    .lot-toggle.on { background:rgba(172,202,178,0.1); border-color:rgba(172,202,178,0.3); }
+    .lt-switch { width:30px; height:16px; border-radius:8px; background:rgba(255,255,255,0.15); position:relative; transition:background 0.2s; flex-shrink:0; }
+    .lot-toggle.on .lt-switch { background:var(--darlington); }
+    .lt-knob { width:10px; height:10px; border-radius:50%; background:#fff; position:absolute; top:3px; left:3px; transition:transform 0.2s; }
+    .lot-toggle.on .lt-knob { transform:translateX(14px); }
+    .lt-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.07em; color:rgba(255,255,255,0.45); }
+    .lot-toggle.on .lt-label { color:var(--darlington); }
+
+    .lot-fields-wrap { overflow:hidden; max-height:0; opacity:0; transition:max-height 0.3s ease, opacity 0.25s ease; pointer-events:none; }
+    .lot-fields-wrap.open { max-height:300px; opacity:1; pointer-events:all; }
+    .lot-fields-inner { padding-top:4px; display:flex; flex-direction:column; gap:10px; }
+
+    /* Advanced / farming cost */
+    .advanced-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 0; user-select:none; }
+    .advanced-toggle-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.2); }
+    .advanced-arrow { font-size:10px; color:rgba(255,255,255,0.2); transition:transform 0.2s; }
+    .advanced-toggle.open .advanced-arrow { transform:rotate(180deg); }
+    .advanced-fields { overflow:hidden; max-height:0; opacity:0; transition:max-height 0.25s ease, opacity 0.2s; pointer-events:none; }
+    .advanced-fields.open { max-height:120px; opacity:1; pointer-events:all; }
+
+    .efp-footer { padding:0 24px 20px; display:flex; flex-direction:column; gap:8px; }
+    .efp-submit { width:100%; height:44px; background:var(--beeswax); color:var(--dark); border:none; border-radius:9px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+    .efp-submit:hover { background:#d4971e; transform:translateY(-1px); box-shadow:0 5px 18px rgba(233,167,82,0.3); }
+    .efp-clear { width:100%; height:32px; background:transparent; color:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.07); border-radius:7px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.18s; }
+    .efp-clear:hover { color:rgba(255,255,255,0.4); }
+
+    /* ═══════════════════════════════
+       OVERVIEW VIEW
+    ═══════════════════════════════ */
+    .overview-layout { display:block; padding:28px 36px; width:100%; }
+
+    .season-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+    .season-stat { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); padding:16px 18px; position:relative; overflow:hidden; }
+    .season-stat::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
+    .season-stat.s1::after { background:var(--grenadine); }
+    .season-stat.s2::after { background:var(--beeswax); }
+    .season-stat.s3::after { background:var(--darlington); }
+    .season-stat.s4::after { background:var(--latte); }
+    .ss-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:8px; }
+    .ss-value { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:var(--dark); line-height:1; }
+    .ss-sub { font-size:11px; color:rgba(30,23,16,0.35); margin-top:4px; }
+
+    /* Timeline */
+    .timeline-wrap { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); padding:20px 24px; margin-bottom:24px; }
+    .tl-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .tl-title { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.4); }
+    .tl-legend { display:flex; gap:14px; }
+    .tl-leg { display:flex; align-items:center; gap:5px; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; color:rgba(30,23,16,0.45); }
+    .tl-dot { width:8px; height:8px; border-radius:50%; }
+    .timeline-track { position:relative; height:42px; }
+    .timeline-axis { position:absolute; bottom:8px; left:0; right:0; height:1px; background:rgba(120,97,64,0.12); }
+    .tl-months { display:flex; justify-content:space-between; margin-top:6px; }
+    .tl-month { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.3); }
+    .tl-pip-wrap { position:absolute; bottom:14px; transform:translateX(-50%); cursor:pointer; }
+    .tl-pip { width:14px; height:14px; border-radius:50%; border:2px solid var(--white); box-shadow:0 2px 8px rgba(0,0,0,0.18); transition:transform 0.18s; }
+    .tl-pip-wrap:hover .tl-pip { transform:scale(1.4); }
+    .tl-pip-label { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); white-space:nowrap; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; background:var(--dark); color:var(--cream); padding:2px 7px; border-radius:4px; opacity:0; transition:opacity 0.18s; pointer-events:none; }
+    .tl-pip-wrap:hover .tl-pip-label { opacity:1; }
+
+    /* Block progress */
+    .blocks-progress { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+    .bpc { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); padding:16px 18px; overflow:hidden; position:relative; }
+    .bpc-stripe { position:absolute; top:0; left:0; bottom:0; width:4px; }
+    .bpc-body { padding-left:10px; }
+    .bpc-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:var(--dark); margin-bottom:1px; }
+    .bpc-variety { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:10px; }
+    .bpc-nums { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+    .bpn-label { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:2px; }
+    .bpn-val { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--dark); line-height:1; }
+    .bpn-unit { font-size:9px; font-weight:400; color:rgba(30,23,16,0.4); }
+    .prog-labels { display:flex; justify-content:space-between; margin-bottom:4px; }
+    .prog-label-text { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
+    .prog-track { height:5px; background:rgba(120,97,64,0.1); border-radius:3px; overflow:hidden; }
+    .prog-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+
+    /* Event cards */
+    .event-list { display:flex; flex-direction:column; gap:10px; }
+    .event-card { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; cursor:pointer; transition:all 0.2s; }
+    .event-card:hover { box-shadow:0 5px 18px rgba(30,23,16,0.08); transform:translateY(-1px); }
+    .event-card.expanded { border-color:rgba(120,97,64,0.3); }
+    .ec-main { display:grid; grid-template-columns:80px 1fr repeat(6,auto); align-items:center; gap:20px; padding:14px 20px; }
+    .ec-date-day { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--dark); line-height:1; }
+    .ec-date-mon { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.4); margin-top:2px; }
+    .ec-name { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:var(--dark); letter-spacing:0.04em; margin-bottom:3px; }
+    .ec-block { display:flex; align-items:center; gap:5px; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.5); }
+    .ec-dot { width:7px; height:7px; border-radius:50%; }
+    .ec-metric { text-align:right; }
+    .ec-metric-val { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; color:var(--dark); line-height:1; }
+    .ec-metric-unit { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-top:2px; }
+    .ec-metric.brix .ec-metric-val { color:var(--grenadine); }
+    .ec-metric.ph .ec-metric-val { color:#5a8a6a; }
+    .ec-metric.tons .ec-metric-val { color:var(--latte); }
+    .ec-lot-badge { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.08em; padding:4px 10px; border-radius:5px; white-space:nowrap; }
+    .ec-lot-badge.linked { background:rgba(172,202,178,0.2); color:#3a7a50; border:1px solid rgba(172,202,178,0.4); }
+    .ec-lot-badge.unlinked { background:rgba(120,97,64,0.08); color:rgba(30,23,16,0.4); border:1px solid rgba(120,97,64,0.12); }
+
+    /* Expand detail */
+    .ec-detail { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
+    .event-card.expanded .ec-detail { max-height:300px; }
+    .ec-detail-inner { padding:0 20px 16px; border-top:1px solid rgba(120,97,64,0.07); }
+    .ec-detail-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; padding-top:14px; margin-bottom:14px; }
+    .edg-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
+    .edg-val { font-size:13px; font-weight:500; color:var(--dark); }
+    .edg-val.money { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:var(--latte); }
+    .ec-tickets-summary { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; color:rgba(30,23,16,0.4); margin-bottom:12px; }
+    .ec-actions { display:flex; gap:8px; }
+    .ecbtn { height:32px; padding:0 14px; border-radius:7px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all 0.18s; border:none; }
+    .ecbtn.primary { background:var(--grenadine); color:#fff; }
+    .ecbtn.primary:hover { background:#c03d1a; }
+    .ecbtn.ghost { background:transparent; color:var(--latte); border:1px solid rgba(120,97,64,0.2); }
+
+    /* Toast */
+    .toast { position:fixed; bottom:24px; right:24px; color:#fff; padding:13px 18px; border-radius:9px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; box-shadow:0 8px 28px rgba(0,0,0,0.25); transform:translateY(70px); opacity:0; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index:999; }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+    .scale-main { animation:fadeUp 0.35s ease both; }
+    .overview-layout { animation:fadeUp 0.35s ease both; }
+  
+  /* ── Shared Nav Drawer ── */
+  .nav-toggle {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: all 0.18s; flex-shrink: 0;
+  }
+  .nav-toggle:hover { background: rgba(255,255,255,0.13); color: #fff; }
+  .nav-toggle.open { background: var(--grenadine); border-color: var(--grenadine); color: #fff; }
+
+  .nav-overlay {
+    display: none; position: fixed; inset: 0; z-index: 490;
+    background: rgba(0,0,0,0.45);
+  }
+  .nav-overlay.visible { display: block; }
+
+  .nav-drawer {
+    position: fixed; top: 0; left: -280px; width: 280px; height: 100vh;
+    background: var(--dark); z-index: 500;
+    display: flex; flex-direction: column;
+    transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+  }
+  .nav-drawer.open { left: 0; }
+
+  .nav-header {
+    height: 58px; display: flex; align-items: center;
+    padding: 0 20px; gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  .nav-header-logo {
+    font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 900;
+    color: var(--cream); flex: 1;
+  }
+  .nav-header-logo span { color: var(--grenadine); }
+  .nav-close {
+    width: 28px; height: 28px; border-radius: 5px;
+    background: rgba(255,255,255,0.07); border: none;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .nav-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+  .nav-section-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    padding: 20px 20px 6px;
+  }
+  .nav-section-label:first-of-type { padding-top: 16px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; cursor: pointer;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-left-color: rgba(255,255,255,0.15);
+  }
+  .nav-item.active {
+    background: rgba(233,167,82,0.1);
+    border-left-color: var(--beeswax);
+  }
+  .nav-item-icon {
+    font-size: 16px; width: 22px; text-align: center; flex-shrink: 0;
+    opacity: 0.75;
+  }
+  .nav-item.active .nav-item-icon { opacity: 1; }
+  .nav-item-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    transition: color 0.15s;
+  }
+  .nav-item:hover .nav-item-label { color: rgba(255,255,255,0.85); }
+  .nav-item.active .nav-item-label { color: var(--beeswax); }
+
+  .nav-footer {
+    margin-top: auto; padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="nav-toggle" id="navToggleBtn" onclick="openNav()" title="Navigation">&#9776;</button>
+  <div class="topbar-logo">Lifecycle<span>.</span></div>
+  <div class="topbar-sep"></div>
+  <span class="t-label t-dim">Operations</span>
+  <span class="t-arrow">›</span>
+  <span class="t-label t-active">Harvest</span>
+  <div class="topbar-spacer"></div>
+  <button class="tbtn ghost">↗ Export Season</button>
+</div>
+
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item" href="Vineyard_1.0.html">
+    <span class="nav-item-icon">🌿</span>
+    <span class="nav-item-label">Vineyard</span>
+  </a>
+  <a class="nav-item active" href="Harvest_1.0.html">
+    <span class="nav-item-icon">⚖</span>
+    <span class="nav-item-label">Harvest</span>
+  </a>
+  <div class="nav-section-label">Packaging</div>
+  <a class="nav-item" href="SKUs_1.0.html">
+    <span class="nav-item-icon">📦</span>
+    <span class="nav-item-label">SKUs</span>
+  </a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item" href="Cellar_1.0.html">
+    <span class="nav-item-icon">🍷</span>
+    <span class="nav-item-label">Cellar</span>
+  </a>
+  <a class="nav-item" href="BlendingLab_1.0.html">
+    <span class="nav-item-icon">🧪</span>
+    <span class="nav-item-label">Blending Lab</span>
+  </a>
+  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+</div>
+
+
+<div class="view-tabs">
+  <button class="view-tab active" onclick="setView('scale')">⚖ Scale House</button>
+  <button class="view-tab" onclick="setView('overview')">📊 Season Overview</button>
+</div>
+
+<!-- ═══════════════ SCALE HOUSE VIEW ═══════════════ -->
+<div class="view active" id="view-scale">
+  <div class="scale-layout">
+
+    <!-- LEFT: scale logger -->
+    <div class="scale-main">
+
+      <!-- Active event banner -->
+      <div id="active-banner-wrap">
+        <div class="no-event-banner" id="no-event-banner">
+          <span style="font-size:20px">⚖️</span>
+          <span class="no-event-text">No active harvest event — create one to start logging scale tickets</span>
+          <button class="no-event-btn" onclick="setView('overview');setTimeout(()=>document.getElementById('efp-form').scrollIntoView({behavior:'smooth'}),100)">+ New Event</button>
+        </div>
+        <div class="active-banner" id="active-banner" style="display:none">
+          <div class="active-banner-left">
+            <div class="active-dot"></div>
+            <div>
+              <div class="active-event-name" id="banner-name">—</div>
+              <div class="active-event-meta" id="banner-meta">—</div>
+            </div>
+          </div>
+          <div class="active-banner-stats">
+            <div class="abs-stat">
+              <div class="abs-stat-val" id="banner-bins">0</div>
+              <div class="abs-stat-label">Bins</div>
+            </div>
+            <div class="abs-stat">
+              <div class="abs-stat-val" id="banner-lbs">0</div>
+              <div class="abs-stat-label">Net lbs</div>
+            </div>
+            <div class="abs-stat">
+              <div class="abs-stat-val" id="banner-tons">0.00</div>
+              <div class="abs-stat-label">Tons</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scale ticket entry -->
+      <div class="scale-ticket-entry">
+        <div class="ste-title">⚖ Scale Ticket Entry</div>
+
+        <!-- Weight inputs -->
+        <div class="weight-display">
+          <div class="weight-box">
+            <div class="weight-box-label">Gross Weight</div>
+            <input type="number" class="weight-box-input" id="gross-weight" placeholder="0" oninput="calcNet()" />
+            <div class="weight-box-unit">pounds</div>
+          </div>
+          <div class="weight-op">−</div>
+          <div class="weight-box">
+            <div class="weight-box-label">Tare (Bin)</div>
+            <input type="number" class="weight-box-input" id="tare-weight" placeholder="0" oninput="calcNet()" />
+            <div class="weight-box-unit">pounds</div>
+          </div>
+          <div class="weight-op">=</div>
+          <div class="weight-box net">
+            <div class="weight-box-label">Net Weight</div>
+            <input type="number" class="weight-box-input" id="net-weight" placeholder="0" readonly />
+            <div class="weight-box-unit">pounds · <span id="net-tons-inline">0.000 tons</span></div>
+          </div>
+        </div>
+
+        <!-- Bin type chips -->
+        <div style="margin-bottom:14px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Bin Type — tap to auto-fill tare</div>
+          <div class="bin-type-grid" id="bin-chips">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Brix / pH / Temp per ticket -->
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Sample Readings (optional)</div>
+        <div class="reading-row">
+          <div class="reading-field">
+            <div class="reading-label">Brix</div>
+            <input type="number" class="reading-input" id="ticket-brix" placeholder="—" step="0.1" />
+            <div class="reading-unit">°Bx</div>
+          </div>
+          <div class="reading-field">
+            <div class="reading-label">pH</div>
+            <input type="number" class="reading-input" id="ticket-ph" placeholder="—" step="0.01" />
+            <div class="reading-unit">pH</div>
+          </div>
+          <div class="reading-field">
+            <div class="reading-label">Temp</div>
+            <input type="number" class="reading-input" id="ticket-temp" placeholder="—" step="0.5" />
+            <div class="reading-unit">°F</div>
+          </div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="record-btn" id="record-btn" onclick="recordTicket()" disabled>
+          ⚖ Record Ticket
+        </button>
+      </div>
+
+      <!-- Ticket log table -->
+      <div class="ticket-log">
+        <div class="ticket-log-header">
+          <div class="th">#</div>
+          <div class="th">Time</div>
+          <div class="th">Bin Type</div>
+          <div class="th">Gross (lb)</div>
+          <div class="th">Tare (lb)</div>
+          <div class="th">Net (lb)</div>
+          <div class="th">Brix</div>
+          <div class="th">pH</div>
+          <div class="th"></div>
+        </div>
+        <div id="ticket-rows">
+          <div class="ticket-empty">No tickets yet — weigh a bin above to start</div>
+        </div>
+        <div class="totals-bar" id="totals-bar" style="display:none">
+          <div class="total-cell">
+            <div class="total-cell-label">Tickets</div>
+            <div class="total-cell-value" id="tot-tickets">0</div>
+          </div>
+          <div class="total-cell">
+            <div class="total-cell-label">Total Gross</div>
+            <div class="total-cell-value" id="tot-gross">0 lb</div>
+          </div>
+          <div class="total-cell">
+            <div class="total-cell-label">Total Tare</div>
+            <div class="total-cell-value" id="tot-tare">0 lb</div>
+          </div>
+          <div class="total-cell">
+            <div class="total-cell-label">Total Net</div>
+            <div class="total-cell-value highlight" id="tot-net">0 lb</div>
+          </div>
+          <div class="total-cell">
+            <div class="total-cell-label">Total Tons</div>
+            <div class="total-cell-value tons" id="tot-tons">0.000</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: event form -->
+    <div class="event-form-panel" id="efp-form">
+      <div class="efp-header">
+        <div class="efp-eyebrow">Harvest Event</div>
+        <div class="efp-title">Open an Event</div>
+        <div class="efp-sub">Create or activate an event to start logging scale tickets against it.</div>
+      </div>
+
+      <div class="efp-body">
+        <div class="esec-label">Pick Details</div>
+
+        <div class="fg">
+          <label class="fl">Event Name <span class="req">✦</span></label>
+          <input type="text" class="fi" id="ef-name" placeholder="e.g. 2026 PN1 — Pick 1" />
+        </div>
+
+        <div class="eform-row two">
+          <div class="fg">
+            <label class="fl">Date <span class="req">✦</span></label>
+            <input type="date" class="fi" id="ef-date" />
+          </div>
+          <div class="fg">
+            <label class="fl">Block <span class="req">✦</span></label>
+            <select class="fi" id="ef-block" onchange="onEventBlockChange()">
+              <option value="">Select…</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Brix / pH at pick -->
+        <div class="esec-label" style="margin-top:4px">Readings at Pick</div>
+        <div class="brix-ph-row">
+          <div class="brix-ph-field">
+            <div class="brix-ph-label">Brix at Pick</div>
+            <input type="number" class="brix-ph-input" id="ef-brix" placeholder="—" step="0.1" />
+            <div class="brix-ph-unit">°Bx — target 23–26°</div>
+          </div>
+          <div class="brix-ph-field">
+            <div class="brix-ph-label">pH at Pick</div>
+            <input type="number" class="brix-ph-input" id="ef-ph" placeholder="—" step="0.01" />
+            <div class="brix-ph-unit">pH — target 3.2–3.6</div>
+          </div>
+        </div>
+
+        <!-- Juice yield -->
+        <div class="esec-label" style="margin-top:4px">Juice Yield</div>
+        <div class="eform-row three">
+          <div class="fg">
+            <label class="fl">Est. Gal/Ton</label>
+            <input type="number" class="fi" id="ef-est-gpt" placeholder="155" />
+          </div>
+          <div class="fg">
+            <label class="fl">Act. Gal/Ton</label>
+            <input type="number" class="fi" id="ef-act-gpt" placeholder="—" />
+          </div>
+          <div class="fg">
+            <label class="fl">Actual Gal</label>
+            <input type="number" class="fi" id="ef-act-juice" placeholder="—" />
+          </div>
+        </div>
+
+        <!-- Lot creation -->
+        <div class="esec-label" style="margin-top:4px">Wine Lot</div>
+        <div class="lot-toggle" id="lot-toggle" onclick="toggleLot()">
+          <div class="lt-switch"><div class="lt-knob"></div></div>
+          <div class="lt-label">Create Wine Lot from this pick</div>
+        </div>
+        <div class="lot-fields-wrap" id="lot-fields-wrap">
+          <div class="lot-fields-inner">
+            <div class="eform-row two">
+              <div class="fg">
+                <label class="fl">Lot ID <span class="req">✦</span></label>
+                <input type="text" class="fi" id="ef-lot-id" placeholder="e.g. 2026-PN1-P1" />
+              </div>
+              <div class="fg">
+                <label class="fl">Style</label>
+                <select class="fi" id="ef-lot-style">
+                  <option value="">Select…</option>
+                  <option>Red — Native</option>
+                  <option>Red — Inoculated</option>
+                  <option>White — Press</option>
+                  <option>White — Skin Contact</option>
+                  <option>Rosé</option>
+                  <option>Pét-Nat</option>
+                </select>
+              </div>
+            </div>
+            <div class="eform-row two">
+              <div class="fg">
+                <label class="fl">Release Year</label>
+                <input type="number" class="fi" id="ef-release" placeholder="e.g. 2028" />
+              </div>
+              <div class="fg">
+                <label class="fl">Initial Stage</label>
+                <select class="fi" id="ef-stage">
+                  <option>Fermentation</option>
+                  <option>Aging</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">Notes</label>
+          <textarea class="fi" id="ef-notes" placeholder="Pick conditions, crew, observations…"></textarea>
+        </div>
+
+        <!-- Advanced: farming cost -->
+        <div class="advanced-toggle" id="adv-toggle" onclick="toggleAdvanced()">
+          <span class="advanced-arrow">▼</span>
+          <span class="advanced-toggle-label">Advanced — Farming Cost</span>
+        </div>
+        <div class="advanced-fields" id="adv-fields">
+          <div class="fg" style="padding-top:6px">
+            <label class="fl">Farming Cost ($)</label>
+            <input type="number" class="fi" id="ef-cost" placeholder="e.g. 4200 — rolls into financial dashboard" />
+          </div>
+        </div>
+
+      </div>
+
+      <div class="efp-footer">
+        <button class="efp-submit" onclick="saveEvent()">⚖ Open Harvest Event</button>
+        <button class="efp-clear" onclick="clearEventForm()">Clear</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ OVERVIEW VIEW ═══════════════ -->
+<div class="view" id="view-overview">
+  <div class="overview-layout">
+
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--grenadine);margin-bottom:5px">Scale House</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:900;color:var(--dark);line-height:1;margin-bottom:4px">Season Overview</div>
+      <div style="font-size:13px;color:rgba(30,23,16,0.4);font-weight:300">All harvest events, block progress, and season totals at a glance.</div>
+    </div>
+
+    <div class="season-strip">
+      <div class="season-stat s1"><div class="ss-label">Tons Picked</div><div class="ss-value" id="ov-tons">0.0</div><div class="ss-sub" id="ov-tons-sub">of 19t estimated</div></div>
+      <div class="season-stat s2"><div class="ss-label">Picks Logged</div><div class="ss-value" id="ov-picks">0</div><div class="ss-sub">events this season</div></div>
+      <div class="season-stat s3"><div class="ss-label">Juice Yielded</div><div class="ss-value" id="ov-juice">0</div><div class="ss-sub">actual gallons</div></div>
+      <div class="season-stat s4"><div class="ss-label">Avg Brix</div><div class="ss-value" id="ov-brix">—</div><div class="ss-sub">across all picks</div></div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrap">
+      <div class="tl-head">
+        <div class="tl-title">Season Timeline — 2026</div>
+        <div class="tl-legend">
+          <div class="tl-leg"><div class="tl-dot" style="background:var(--wine-pinot)"></div>Pinot Noir</div>
+          <div class="tl-leg"><div class="tl-dot" style="background:var(--wine-chard)"></div>Chardonnay</div>
+          <div class="tl-leg"><div class="tl-dot" style="background:var(--wine-ries)"></div>Riesling</div>
+        </div>
+      </div>
+      <div class="timeline-track" id="ov-timeline">
+        <div class="timeline-axis"></div>
+      </div>
+      <div class="tl-months">
+        <span class="tl-month">Aug</span>
+        <span class="tl-month">Sep</span>
+        <span class="tl-month">Oct</span>
+        <span class="tl-month">Nov</span>
+      </div>
+    </div>
+
+    <!-- Block progress -->
+    <div class="blocks-progress" id="ov-blocks"></div>
+
+    <!-- Events -->
+    <div style="margin-bottom:14px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--grenadine);margin-bottom:4px">Pick Log</div>
+      <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--dark)">All Events</div>
+    </div>
+    <div class="event-list" id="ov-event-list"></div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Bin types ────────────────────────────────────────────────────────────
+  const BIN_TYPES = [
+    { name:'Half-Ton Bin',   tare: 185 },
+    { name:'Quarter-Ton Bin',tare: 105 },
+    { name:'Macro Bin',      tare: 220 },
+    { name:'Lug',            tare:  30 },
+    { name:'1-Ton Bin',      tare: 280 },
+  ];
+
+  // ─── Blocks ───────────────────────────────────────────────────────────────
+  // ─── Airtable config ──────────────────────────────────────────────────────
+  const BASE_ID     = 'appJNEHG8sqXmdYGe';
+  const TBL_EVENTS  = 'tblTDMmErrAssEEAB';
+  const TBL_BLOCKS  = 'tblPuFD0fbiLmITXK';
+  const PROXY       = '/api/airtable';
+
+  // Harvest Events field IDs
+  const F_EV_NAME     = 'fldXOkkkUQfnHxFch';
+  const F_EV_DATE     = 'fldPgGScnLa6Kxsuf';
+  const F_EV_TONS     = 'fldJpcLea721sfUV3';
+  const F_EV_BLOCK    = 'fldkbAGjU0G9X3YF6';  // linked → Vineyard Blocks
+  const F_EV_CPT      = 'fld2ohbBe49Wh1eaa';  // Cost Per Ton (formula)
+  const F_EV_LOT      = 'fldpL19WBD43Qg3iA';  // linked → Wine Lots
+  const F_EV_ESTGPT   = 'fldffVZ7y9dEyRlOv';
+  const F_EV_ACTGPT   = 'fldtacFWgfrUTIu9U';
+  const F_EV_ESTJUICE = 'fldv9ktm5fGTqfXMk';
+  const F_EV_ACTJUICE = 'fldZ3d9frKyssJ8QR';
+  const F_EV_VARIANCE = 'fldVHsjXmrdwmUE02';
+
+  // Vineyard Blocks field IDs
+  const F_BL_NAME    = 'fld3BU2ADl8oypAWe';
+  const F_BL_ACRES   = 'fldmXtigs8eGYXN5Z';
+  const F_BL_ESTTONS = 'fld5REiPH0brFntsK';
+
+  async function airtableGet(tableId) {
+    const params = new URLSearchParams({ baseId: BASE_ID, tableId });
+    const res = await fetch(`${PROXY}?${params}`);
+    if (!res.ok) throw new Error(`Proxy error ${res.status}`);
+    const data = await res.json();
+    return data.records || [];
+  }
+
+  async function airtableCreate(tableId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+    });
+    if (!res.ok) throw new Error(`Create error ${res.status}`);
+    return res.json();
+  }
+
+  // ─── State ────────────────────────────────────────────────────────────────
+  let BLOCKS = [];
+  let events = [];
+  let activeEventId = null;
+  let currentTickets = [];
+  let ticketCounter = 1;
+  let createLot = false;
+  let advancedOpen = false;
+  let expandedEvent = null;
+  let selectedBinType = null;
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  document.getElementById('ef-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ef-est-gpt').value = 155;
+  renderBinChips();
+
+  async function initApp() {
+    try {
+      const [blockRecs, eventRecs] = await Promise.all([
+        airtableGet(TBL_BLOCKS),
+        airtableGet(TBL_EVENTS)
+      ]);
+
+      // Map blocks
+      BLOCKS = blockRecs.map(r => {
+        const f = r.fields || r.cellValuesByFieldId || {};
+        const name = f[F_BL_NAME] || '';
+        return {
+          _id:     r.id,
+          name,
+          variety: guessVariety(name),
+          acres:   f[F_BL_ACRES]   || 0,
+          estTons: f[F_BL_ESTTONS] || 0,
+          key:     blockKey(name),
+          color:   blockColor(blockKey(name))
+        };
+      });
+
+      // Map events — Harvest Events don't have scale tickets in Airtable,
+      // so tickets array is empty for existing records (tickets are entered live)
+      events = eventRecs
+        .filter(r => {
+          const f = r.fields || r.cellValuesByFieldId || {};
+          return f[F_EV_NAME]; // skip blank records
+        })
+        .map(r => {
+          const f = r.fields || r.cellValuesByFieldId || {};
+          const blockLink = f[F_EV_BLOCK];
+          const blockName = Array.isArray(blockLink) ? (blockLink[0]?.name || '') : '';
+          const lotLink   = f[F_EV_LOT];
+          const lotName   = Array.isArray(lotLink)   ? (lotLink[0]?.name   || '') : '';
+          const tons      = f[F_EV_TONS] || 0;
+          return {
+            _id:      r.id,
+            id:       r.id,
+            name:     f[F_EV_NAME]     || '',
+            date:     f[F_EV_DATE]     || '',
+            block:    blockName,
+            blockKey: blockKey(blockName),
+            brixAtPick: null,
+            phAtPick:   null,
+            estGpt:   f[F_EV_ESTGPT]   || 0,
+            actGpt:   f[F_EV_ACTGPT]   || 0,
+            actJuice: f[F_EV_ACTJUICE] || 0,
+            lotId:    lotName,
+            lotStyle: '',
+            cost:     f[F_EV_CPT]      || 0,
+            notes:    '',
+            // Reconstruct a synthetic "total tons" ticket so overview math works
+            tickets:  tons > 0 ? [{ id:1, time:'—', binType:'Scale Total', gross: tons*2000, tare:0, net: tons*2000, brix:null, ph:null, temp:null }] : []
+          };
+        });
+
+      // Populate block dropdown from live data
+      const sel = document.getElementById('ef-block');
+      sel.innerHTML = '<option value="">Select…</option>' +
+        BLOCKS.map(b => `<option value="${b.name}|${b.key}">${b.name}</option>`).join('');
+
+      renderOverview();
+    } catch(err) {
+      console.error('Harvest init failed:', err);
+    }
+  }
+
+  function guessVariety(name) {
+    const n = name.toLowerCase();
+    if (n.includes('pinot')) return 'Pinot Noir';
+    if (n.includes('chardonnay') || n.includes('chard')) return 'Chardonnay';
+    if (n.includes('riesling') || n.includes('ries')) return 'Riesling';
+    if (n.includes('rosé') || n.includes('rose')) return 'Rosé';
+    return name;
+  }
+
+  function blockKey(name) {
+    const n = (name||'').toLowerCase();
+    if (n.includes('pinot')) return 'pinot';
+    if (n.includes('chard')) return 'chard';
+    if (n.includes('ries'))  return 'ries';
+    if (n.includes('rose') || n.includes('rosé')) return 'rose';
+    return 'mixed';
+  }
+
+  initApp();
+
+  // ─── View switching ───────────────────────────────────────────────────────
+  function setView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.view-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+    document.querySelector(`.view-tab[onclick*="'${v}'"]`).classList.add('active');
+    if (v === 'overview') renderOverview();
+  }
+
+  // ─── Bin chips ────────────────────────────────────────────────────────────
+  function renderBinChips() {
+    document.getElementById('bin-chips').innerHTML = BIN_TYPES.map((b,i) => `
+      <button class="bin-chip ${selectedBinType===i?'selected':''}" onclick="selectBin(${i})">
+        ${b.name}<br><span style="font-size:9px;opacity:0.6">${b.tare} lb tare</span>
+      </button>`).join('');
+  }
+
+  function selectBin(i) {
+    selectedBinType = selectedBinType === i ? null : i;
+    renderBinChips();
+    if (selectedBinType !== null) {
+      document.getElementById('tare-weight').value = BIN_TYPES[i].tare;
+      calcNet();
+    } else {
+      document.getElementById('tare-weight').value = '';
+      calcNet();
+    }
+  }
+
+  // ─── Net weight calc ──────────────────────────────────────────────────────
+  function calcNet() {
+    const gross = parseFloat(document.getElementById('gross-weight').value) || 0;
+    const tare  = parseFloat(document.getElementById('tare-weight').value)  || 0;
+    const net   = Math.max(0, gross - tare);
+    document.getElementById('net-weight').value = net > 0 ? net : '';
+    document.getElementById('net-tons-inline').textContent = net > 0 ? (net/2000).toFixed(3)+' tons' : '0.000 tons';
+    // Enable record button only if active event + valid net
+    document.getElementById('record-btn').disabled = !(activeEventId && net > 0);
+  }
+
+  // ─── Record ticket ────────────────────────────────────────────────────────
+  function recordTicket() {
+    const gross = parseFloat(document.getElementById('gross-weight').value);
+    const tare  = parseFloat(document.getElementById('tare-weight').value) || 0;
+    const net   = gross - tare;
+    const brix  = parseFloat(document.getElementById('ticket-brix').value) || null;
+    const ph    = parseFloat(document.getElementById('ticket-ph').value)   || null;
+    const temp  = parseFloat(document.getElementById('ticket-temp').value) || null;
+    const binName = selectedBinType !== null ? BIN_TYPES[selectedBinType].name : 'Custom';
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+
+    ticketCounter++;
+    const ticket = { id: ticketCounter, time, binType: binName, gross, tare, net, brix, ph, temp };
+    currentTickets.push(ticket);
+
+    // Flash animation
+    renderTickets();
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.ticket-row');
+      if (rows.length) rows[0].classList.add('new-flash');
+    }, 10);
+
+    // Update banner
+    updateBanner();
+
+    // Clear inputs
+    document.getElementById('gross-weight').value = '';
+    document.getElementById('ticket-brix').value  = '';
+    document.getElementById('ticket-ph').value    = '';
+    document.getElementById('ticket-temp').value  = '';
+    document.getElementById('net-weight').value   = '';
+    document.getElementById('net-tons-inline').textContent = '0.000 tons';
+    document.getElementById('record-btn').disabled = true;
+    // Keep bin selection and tare for speed
+    document.getElementById('gross-weight').focus();
+
+    showToast(`Ticket #${ticketCounter} recorded — ${net.toLocaleString()} lb net`);
+  }
+
+  function renderTickets() {
+    const tbody = document.getElementById('ticket-rows');
+    const bar   = document.getElementById('totals-bar');
+
+    if (!currentTickets.length) {
+      tbody.innerHTML = '<div class="ticket-empty">No tickets yet — weigh a bin above to start</div>';
+      bar.style.display = 'none'; return;
+    }
+
+    bar.style.display = 'grid';
+    const sorted = [...currentTickets].reverse();
+    tbody.innerHTML = sorted.map(t => `
+      <div class="ticket-row">
+        <div class="td num">#${t.id}</div>
+        <div class="td muted">${t.time}</div>
+        <div class="td">${t.binType}</div>
+        <div class="td num">${t.gross.toLocaleString()}</div>
+        <div class="td muted">${t.tare}</div>
+        <div class="td net-weight">${t.net.toLocaleString()}</div>
+        <div class="td brix">${t.brix !== null ? t.brix+'°' : '—'}</div>
+        <div class="td ph">${t.ph !== null ? t.ph : '—'}</div>
+        <div class="td"><button class="delete-btn" onclick="deleteTicket(${t.id})" title="Remove">✕</button></div>
+      </div>`).join('');
+
+    // Totals
+    const totGross = currentTickets.reduce((s,t) => s+t.gross, 0);
+    const totTare  = currentTickets.reduce((s,t) => s+t.tare, 0);
+    const totNet   = currentTickets.reduce((s,t) => s+t.net, 0);
+    document.getElementById('tot-tickets').textContent = currentTickets.length;
+    document.getElementById('tot-gross').textContent   = totGross.toLocaleString()+' lb';
+    document.getElementById('tot-tare').textContent    = totTare.toLocaleString()+' lb';
+    document.getElementById('tot-net').textContent     = totNet.toLocaleString()+' lb';
+    document.getElementById('tot-tons').textContent    = (totNet/2000).toFixed(3);
+  }
+
+  function deleteTicket(id) {
+    currentTickets = currentTickets.filter(t => t.id !== id);
+    renderTickets();
+    updateBanner();
+  }
+
+  function updateBanner() {
+    const totNet  = currentTickets.reduce((s,t) => s+t.net, 0);
+    document.getElementById('banner-bins').textContent = currentTickets.length;
+    document.getElementById('banner-lbs').textContent  = totNet.toLocaleString();
+    document.getElementById('banner-tons').textContent = (totNet/2000).toFixed(2);
+  }
+
+  // ─── Event form ───────────────────────────────────────────────────────────
+  function onEventBlockChange() {
+    const val = document.getElementById('ef-block').value;
+    if (!val) return;
+    const [name] = val.split('|');
+    const yr = document.getElementById('ef-date').value.split('-')[0] || new Date().getFullYear();
+    const code = name.replace('Pinot Noir','PN').replace('Chardonnay','CH').replace('Riesling','RS').replace(/\s+/g,'').replace(/[^A-Z0-9]/g,'');
+    document.getElementById('ef-lot-id').value  = `${yr}-${code}-P1`;
+    document.getElementById('ef-name').value    = `${yr} ${name} — Pick 1`;
+  }
+
+  function toggleLot() {
+    createLot = !createLot;
+    document.getElementById('lot-toggle').classList.toggle('on', createLot);
+    document.getElementById('lot-fields-wrap').classList.toggle('open', createLot);
+  }
+
+  function toggleAdvanced() {
+    advancedOpen = !advancedOpen;
+    document.getElementById('adv-toggle').classList.toggle('open', advancedOpen);
+    document.getElementById('adv-fields').classList.toggle('open', advancedOpen);
+  }
+
+  async function saveEvent() {
+    const name  = document.getElementById('ef-name').value.trim();
+    const date  = document.getElementById('ef-date').value;
+    const blockRaw = document.getElementById('ef-block').value;
+    if (!name || !date || !blockRaw) { showToast('Name, date, and block are required.', true); return; }
+    if (createLot && !document.getElementById('ef-lot-id').value.trim()) {
+      showToast('Lot ID required when creating a lot.', true); return;
+    }
+
+    const [block, bKey] = blockRaw.split('|');
+    const ev = {
+      _id:    'temp-'+Date.now(),
+      id:     'temp-'+Date.now(),
+      name, date, block, blockKey: bKey,
+      brixAtPick: parseFloat(document.getElementById('ef-brix').value) || null,
+      phAtPick:   parseFloat(document.getElementById('ef-ph').value)   || null,
+      estGpt:     parseFloat(document.getElementById('ef-est-gpt').value) || 155,
+      actGpt:     parseFloat(document.getElementById('ef-act-gpt').value) || null,
+      actJuice:   parseFloat(document.getElementById('ef-act-juice').value) || null,
+      lotId:      createLot ? document.getElementById('ef-lot-id').value.trim() : null,
+      lotStyle:   document.getElementById('ef-lot-style').value || null,
+      cost:       parseFloat(document.getElementById('ef-cost').value) || 0,
+      notes:      document.getElementById('ef-notes').value,
+      tickets:    []
+    };
+
+    events.unshift(ev);
+    activeEventId = ev.id;
+
+    // Write to Airtable in background
+    try {
+      const blockRec = BLOCKS.find(b => b.name === block);
+      const fields = {};
+      fields[F_EV_NAME]   = name;
+      fields[F_EV_DATE]   = date;
+      if (ev.estGpt)  fields[F_EV_ESTGPT]  = ev.estGpt;
+      if (ev.actGpt)  fields[F_EV_ACTGPT]  = ev.actGpt;
+      if (ev.actJuice) fields[F_EV_ACTJUICE] = ev.actJuice;
+      if (blockRec)   fields[F_EV_BLOCK]   = [blockRec._id];
+      const created = await airtableCreate(TBL_EVENTS, fields);
+      ev._id = created.id || ev._id;
+      ev.id  = ev._id;
+      activeEventId = ev.id;
+    } catch(err) {
+      console.error('Airtable event create failed:', err);
+    }
+    currentTickets = [];
+    ticketCounter = 0;
+
+    // Show active banner
+    document.getElementById('no-event-banner').style.display = 'none';
+    document.getElementById('active-banner').style.display = 'flex';
+    document.getElementById('banner-name').textContent = ev.name;
+    document.getElementById('banner-meta').textContent = ev.block + ' · ' + fmtDate(ev.date);
+    updateBanner();
+    renderTickets();
+
+    showToast(`"${ev.name}" opened — start scanning bins`);
+    setView('scale');
+  }
+
+  function clearEventForm() {
+    ['ef-name','ef-brix','ef-ph','ef-act-gpt','ef-act-juice','ef-cost','ef-notes','ef-lot-id','ef-release'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('ef-block').value = '';
+    document.getElementById('ef-est-gpt').value = 155;
+    document.getElementById('ef-date').value = new Date().toISOString().split('T')[0];
+    createLot = false;
+    document.getElementById('lot-toggle').classList.remove('on');
+    document.getElementById('lot-fields-wrap').classList.remove('open');
+  }
+
+  // ─── Overview ─────────────────────────────────────────────────────────────
+  function renderOverview() {
+    // Stats
+    const totalTons  = events.reduce((s,e) => {
+      const t = e.tickets.reduce((ts,t) => ts + t.net/2000, 0);
+      return s + t;
+    }, 0);
+    const brixReadings = events.filter(e => e.brixAtPick).map(e => e.brixAtPick);
+    const avgBrix = brixReadings.length ? (brixReadings.reduce((s,b) => s+b, 0) / brixReadings.length).toFixed(1) : null;
+    const totalJuice = events.reduce((s,e) => s+(e.actJuice||0), 0);
+
+    document.getElementById('ov-tons').textContent  = totalTons.toFixed(1);
+    document.getElementById('ov-picks').textContent = events.length;
+    document.getElementById('ov-juice').textContent = totalJuice > 0 ? totalJuice.toLocaleString() : '0';
+    document.getElementById('ov-brix').textContent  = avgBrix ? avgBrix+'°' : '—';
+
+    // Timeline
+    const track = document.getElementById('ov-timeline');
+    track.querySelectorAll('.tl-pip-wrap').forEach(e => e.remove());
+    const seasonStart = new Date('2026-08-01');
+    const seasonEnd   = new Date('2026-11-30');
+    const seasonDays  = (seasonEnd - seasonStart) / 86400000;
+    events.forEach(ev => {
+      const d = new Date(ev.date+'T12:00:00');
+      if (d < seasonStart || d > seasonEnd) return;
+      const pct = Math.min(98, Math.max(2, ((d - seasonStart) / 86400000) / seasonDays * 100));
+      const color = blockColor(ev.blockKey);
+      const pip = document.createElement('div');
+      pip.className = 'tl-pip-wrap';
+      pip.style.left = pct+'%';
+      const tons = ev.tickets.reduce((s,t) => s+t.net/2000, 0);
+      pip.innerHTML = `<div class="tl-pip-label">${ev.name} · ${tons.toFixed(2)}t</div><div class="tl-pip" style="background:${color}"></div>`;
+      track.appendChild(pip);
+    });
+
+    // Blocks
+    document.getElementById('ov-blocks').innerHTML = BLOCKS.map(b => {
+      const picked = events.filter(e => e.block === b.name)
+        .reduce((s,e) => s + e.tickets.reduce((ts,t) => ts+t.net/2000,0), 0);
+      const pct = b.estTons > 0 ? Math.min(100, Math.round(picked/b.estTons*100)) : 0;
+      const remain = Math.max(0, b.estTons - picked);
+      return `
+        <div class="bpc">
+          <div class="bpc-stripe" style="background:${b.color}"></div>
+          <div class="bpc-body">
+            <div class="bpc-name">${b.name}</div>
+            <div class="bpc-variety">${b.variety} · ${b.acres} ac</div>
+            <div class="bpc-nums">
+              <div><div class="bpn-label">Estimated</div><div class="bpn-val">${b.estTons}<span class="bpn-unit">t</span></div></div>
+              <div><div class="bpn-label">Picked</div><div class="bpn-val">${picked.toFixed(2)}<span class="bpn-unit">t</span></div></div>
+              <div><div class="bpn-label">Remaining</div><div class="bpn-val">${remain.toFixed(2)}<span class="bpn-unit">t</span></div></div>
+            </div>
+            <div class="prog-labels"><span class="prog-label-text">Harvest Progress</span><span class="prog-label-text">${pct}%</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${b.color}"></div></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Events
+    const list = document.getElementById('ov-event-list');
+    if (!events.length) {
+      list.innerHTML = '<div style="padding:40px;text-align:center;color:rgba(30,23,16,0.3);font-family:Barlow Condensed,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase">No events logged yet</div>';
+      return;
+    }
+    list.innerHTML = events.map(ev => {
+      const d = new Date(ev.date+'T12:00:00');
+      const tons = ev.tickets.reduce((s,t) => s+t.net/2000, 0);
+      const brixReadings = ev.tickets.filter(t => t.brix).map(t => t.brix);
+      const avgBrix = brixReadings.length ? (brixReadings.reduce((s,b)=>s+b,0)/brixReadings.length).toFixed(1) : (ev.brixAtPick || null);
+      const phReadings = ev.tickets.filter(t => t.ph).map(t => t.ph);
+      const avgPh = phReadings.length ? (phReadings.reduce((s,p)=>s+p,0)/phReadings.length).toFixed(2) : (ev.phAtPick || null);
+      const color = blockColor(ev.blockKey);
+      const isExp = expandedEvent === ev.id;
+      const yieldVar = ev.actGpt && ev.estGpt ? ((ev.actGpt-ev.estGpt)/ev.estGpt*100).toFixed(1) : null;
+      return `
+        <div class="event-card ${isExp?'expanded':''}" onclick="toggleExpandEvent('${ev.id}')">
+          <div class="ec-main">
+            <div>
+              <div class="ec-date-day">${d.getDate()}</div>
+              <div class="ec-date-mon">${d.toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</div>
+            </div>
+            <div>
+              <div class="ec-name">${ev.name}</div>
+              <div class="ec-block"><div class="ec-dot" style="background:${color}"></div>${ev.block}</div>
+            </div>
+            <div class="ec-metric tons">
+              <div class="ec-metric-val">${tons.toFixed(2)}</div>
+              <div class="ec-metric-unit">Tons</div>
+            </div>
+            <div class="ec-metric" style="text-align:right">
+              <div class="ec-metric-val">${ev.tickets.length}</div>
+              <div class="ec-metric-unit">Tickets</div>
+            </div>
+            <div class="ec-metric brix">
+              <div class="ec-metric-val">${avgBrix ? avgBrix+'°' : '—'}</div>
+              <div class="ec-metric-unit">Brix</div>
+            </div>
+            <div class="ec-metric ph">
+              <div class="ec-metric-val">${avgPh || '—'}</div>
+              <div class="ec-metric-unit">pH</div>
+            </div>
+            <div class="ec-lot-badge ${ev.lotId?'linked':'unlinked'}">${ev.lotId ? '→ '+ev.lotId : 'No Lot'}</div>
+          </div>
+          <div class="ec-detail">
+            <div class="ec-detail-inner">
+              <div class="ec-detail-grid">
+                <div><div class="edg-label">Est. Gal/Ton</div><div class="edg-val">${ev.estGpt||'—'}</div></div>
+                <div><div class="edg-label">Act. Gal/Ton</div><div class="edg-val">${ev.actGpt||'—'}</div></div>
+                <div><div class="edg-label">Yield Variance</div><div class="edg-val" style="color:${yieldVar>0?'#3a7a50':yieldVar<0?'var(--grenadine)':'inherit'}">${yieldVar?(yieldVar>0?'+':'')+yieldVar+'%':'—'}</div></div>
+                <div><div class="edg-label">Actual Juice</div><div class="edg-val">${ev.actJuice?ev.actJuice.toLocaleString()+' gal':'—'}</div></div>
+                <div><div class="edg-label">Farming Cost</div><div class="edg-val money">${ev.cost>0?'$'+ev.cost.toLocaleString():'—'}</div></div>
+              </div>
+              ${ev.notes?`<div style="font-size:12px;color:rgba(30,23,16,0.5);margin-bottom:12px;font-style:italic">"${ev.notes}"</div>`:''}
+              <div class="ec-tickets-summary">${ev.tickets.length} scale tickets · ${tons.toFixed(3)} tons total</div>
+              <div class="ec-actions">
+                <button class="ecbtn primary" onclick="event.stopPropagation();activateEvent('${ev.id}');setView('scale')">⚖ Resume on Scale</button>
+                <button class="ecbtn ghost" onclick="event.stopPropagation()">🍷 View in Cellar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleExpandEvent(id) {
+    expandedEvent = expandedEvent === id ? null : id;
+    renderOverview();
+  }
+
+  function activateEvent(id) {
+    const ev = events.find(e => e.id === id);
+    if (!ev) return;
+    activeEventId = id;
+    currentTickets = [...ev.tickets];
+    ticketCounter = currentTickets.length;
+    document.getElementById('no-event-banner').style.display = 'none';
+    document.getElementById('active-banner').style.display   = 'flex';
+    document.getElementById('banner-name').textContent = ev.name;
+    document.getElementById('banner-meta').textContent = ev.block + ' · ' + fmtDate(ev.date);
+    updateBanner();
+    renderTickets();
+    showToast(`"${ev.name}" activated`);
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  function blockColor(key) {
+    if (key==='pinot') return '#6B2D3E';
+    if (key==='chard') return '#C8922A';
+    if (key==='ries')  return '#8FA832';
+    if (key==='rose')  return '#D4827A';
+    return '#786140';
+  }
+  function fmtDate(d) {
+    return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  function showToast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = (isError ? '⚠️ ' : '✅ ') + msg;
+    t.style.background = isError ? '#7a2d1a' : '#2d5a3d';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ── Shared Nav Drawer ──
+  function openNav() {
+    document.getElementById('navDrawer').classList.add('open');
+    document.getElementById('navOverlay').classList.add('visible');
+    document.getElementById('navToggleBtn').classList.add('open');
+  }
+  function closeNav() {
+    document.getElementById('navDrawer').classList.remove('open');
+    document.getElementById('navOverlay').classList.remove('visible');
+    document.getElementById('navToggleBtn').classList.remove('open');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeNav();
+  });
+
+</script>
+</body>
+</html>
