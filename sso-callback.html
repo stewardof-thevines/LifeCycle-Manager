@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Signing In… — Lifecycle Manager</title>
+  <style>
+    body{margin:0;background:#1e1710;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Barlow Condensed',sans-serif;color:rgba(245,239,228,0.5);font-size:13px;letter-spacing:0.1em;text-transform:uppercase;}
+  </style>
+</head>
+<body>
+  Completing sign-in…
+
+  <script>
+    const CLERK_PUBLISHABLE_KEY = 'YOUR_CLERK_PUBLISHABLE_KEY'; // same key as login.html
+
+    async function handleCallback() {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
+      document.head.appendChild(script);
+      await new Promise(resolve => script.onload = resolve);
+      await window.Clerk.load();
+      // Handle the OAuth callback — Clerk reads URL params automatically
+      await window.Clerk.handleRedirectCallback();
+    }
+
+    handleCallback().catch(() => { window.location.href = '/login.html'; });
+  </script>
+</body>
+</html>
