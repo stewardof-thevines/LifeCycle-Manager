@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    { "source": "/api/airtable", "destination": "/api/airtable" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
+  ]
+}
