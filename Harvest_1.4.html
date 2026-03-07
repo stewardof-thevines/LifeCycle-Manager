@@ -832,7 +832,7 @@
   let events = [];
   let activeEventId = null;
   let currentTickets = [];
-  let ticketCounter = 1;
+  let ticketCounter = 0;
   let createLot = false;
   let advancedOpen = false;
   let expandedEvent = null;
@@ -1110,7 +1110,8 @@
 
     events.unshift(ev);
     activeEventId = ev.id;
-
+    currentTickets = [];
+    ticketCounter = 0;
     // Write to Airtable in background
     try {
       const blockRec = BLOCKS.find(b => b.name === block);
@@ -1128,8 +1129,7 @@
     } catch(err) {
       console.error('Airtable event create failed:', err);
     }
-    currentTickets = [];
-    ticketCounter = 0;
+
 
     // Show active banner
     document.getElementById('no-event-banner').style.display = 'none';
