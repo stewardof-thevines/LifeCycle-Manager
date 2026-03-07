@@ -1353,27 +1353,30 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
   });
 
 </script>
-  <script>
-    // ── Clerk session guard ─────────────────────────────────────────────────
-    const CLERK_PK = 'YOUR_CLERK_PUBLISHABLE_KEY';
-    (async () => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-      s.setAttribute('data-clerk-publishable-key', CLERK_PK);
-      document.head.appendChild(s);
-      await new Promise(r => s.onload = r);
-      await window.Clerk.load();
-      if (!window.Clerk.user) { window.location.href = '/login.html'; return; }
-      const _fetch = window.fetch;
-      window.fetch = async (url, opts = {}) => {
-        if (typeof url === 'string' && url.includes('/api/')) {
-          const token = await window.Clerk.session.getToken();
-          opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
-        }
-        return _fetch(url, opts);
-      };
-    })();
-  </script>
+<script>
+  // — Clerk session guard (disabled) —
+  // Re-enable when custom domain + Clerk production keys are ready
+  /*
+  const CLERK_PK = 'YOUR_CLERK_PUBLISHABLE_KEY';
+  (async () => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+    s.setAttribute('data-clerk-publishable-key', CLERK_PK);
+    document.head.appendChild(s);
+    await new Promise(r => s.onload = r);
+    await window.Clerk.load();
+    if (!window.Clerk.user) { window.location.href = '/login.html'; return; }
+    const _fetch = window.fetch;
+    window.fetch = async (url, opts = {}) => {
+      if (typeof url === 'string' && url.includes('/api/')) {
+        const token = await window.Clerk.session.getToken();
+        opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
+      }
+      return _fetch(url, opts);
+    };
+  })();
+  */
+</script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
