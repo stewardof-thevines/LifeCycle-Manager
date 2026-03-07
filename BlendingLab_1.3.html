@@ -305,6 +305,17 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.18);
   }
+      @media (max-width: 768px) 
+  {
+    body { overflow-x: hidden; }
+    .layout { grid-template-columns: 1fr; }
+    .main { padding: 16px 20px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .rc-metrics { grid-template-columns: repeat(2, 1fr); }
+    .tf-grid { grid-template-columns: 1fr 1fr; }
+    .trial-row { grid-template-columns: 1fr; }
+    .ec-detail-grid { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
 </head>
 <body>
