@@ -708,8 +708,8 @@
         else if (statusRaw.toLowerCase().includes('ready') || statusRaw.toLowerCase().includes('clean')) status = 'Empty';
 
         // Resolve linked lot name
-        const linkedLotRecId = f[F_VES_LOT]?.[0]?.id || null;
-        const lotName = linkedLotRecId ? (lotById[linkedLotRecId] || f[F_VES_LOT]?.[0]?.name || null) : null;
+        const linkedLotRecId = Array.isArray(f[F_VES_LOT]) ? f[F_VES_LOT][0] : null;
+        const lotName = linkedLotRecId ? (lotById[linkedLotRecId] || null) : null;
 
         // Calculate fill %
         const cap = f[F_VES_CAP] || 60;
