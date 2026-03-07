@@ -1192,8 +1192,9 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
     // Timeline
     const track = document.getElementById('ov-timeline');
     track.querySelectorAll('.tl-pip-wrap').forEach(e => e.remove());
-    const seasonStart = new Date('2026-08-01');
-    const seasonEnd   = new Date('2026-11-30');
+    const dates = events.map(e => new Date(e.date + 'T12:00:00')).filter(d => !isNaN(d));
+    const seasonStart = dates.length ? new Date(Math.min(...dates) - 7*86400000) : new Date('2026-08-01');
+    const seasonEnd   = dates.length ? new Date(Math.max(...dates) + 7*86400000) : new Date('2026-11-30');
     const seasonDays  = (seasonEnd - seasonStart) / 86400000;
     events.forEach(ev => {
       const d = new Date(ev.date+'T12:00:00');
