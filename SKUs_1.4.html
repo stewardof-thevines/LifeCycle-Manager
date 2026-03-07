@@ -897,17 +897,16 @@
   }
 
   // ─── Tab switching ────────────────────────────────────────────────────────
-  function switchTab(skuId, tab) {
-    expandedTab[skuId] = tab;
-    // Just toggle visibility without re-rendering everything
-    ['overview','channels'].forEach(t => {
-      const el = document.getElementById(`tab-${t}-${skuId}`);
-      if (el) el.classList.toggle('active', t === tab);
-    });
-    document.querySelectorAll(`#sku-${skuId} .exp-tab, .sku-card .exp-tab`).forEach(() => {});
-    // Re-render just that card's tabs
-    renderSKUs();
-  }
+function switchTab(skuId, tab) {
+  expandedTab[skuId] = tab;
+  ['overview','channels'].forEach(t => {
+    const el = document.getElementById(`tab-${t}-${skuId}`);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+  document.querySelectorAll(`.exp-tab`).forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().includes(tab));
+  });
+}
 
   function toggleExpand(id) {
     if (expandedSKU === id) { expandedSKU = null; } else { expandedSKU = id; }
