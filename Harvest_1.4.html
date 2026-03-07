@@ -877,7 +877,7 @@
           const blockLink = f[F_EV_BLOCK];
           const blockName = Array.isArray(blockLink) ? (BLOCKS.find(b => b._id === blockLink[0])?.name || blockLink[0] || '') : '';
           const lotLink   = f[F_EV_LOT];
-          const lotName   = Array.isArray(lotLink)   ? (lotLink[0]?.name   || '') : '';
+          const lotName = Array.isArray(lotLink) ? (lotLink[0] || '') : '';
           const tons      = f[F_EV_TONS] || 0;
           return {
             _id:      r.id,
