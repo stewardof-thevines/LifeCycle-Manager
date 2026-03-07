@@ -869,7 +869,7 @@
       const newLotFields={};
       newLotFields['fldRib6w2mJcyYnji'] = lotId;         // Lot ID
       newLotFields['fldv75LnMHiMhqwVU'] = 'Estimate';    // Stage
-      if(vol) newLotFields['fldEeGD6o6zxIV3gb'] = vol;   // Total Loaded Cost placeholder
+      if(vol) newLotFields['fldZZHpkUCOh6xzA1'] = vol;   // Total Loaded Cost placeholder
       if(r._recId) newLotFields['fldrvl1LVhb6rZRT6'] = [r._recId]; // Blend Recipes link
       await atCreate(TBL_LOTS_W, newLotFields);
     } catch(err){ console.error('commitBlend Airtable write failed:',err); }
