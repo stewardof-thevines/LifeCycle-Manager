@@ -863,11 +863,22 @@
     expandedLot = expandedLot === id ? null : id;
     renderLots();
   }
-
-  function updateStage(e, lotId, stage) {
-    e.stopPropagation();
-    const lot = lots.find(l => l.id === lotId);
-    if (lot) { lot.stage = stage; renderLots(); showToast(`${lotId} → ${stage}`); }
+async function updateStage(e, lotId, stage) {
+  e.stopPropagation();
+  const lot = lots.find(l => l.id === lotId);
+  if (!lot) return;
+  lot.stage = stage;
+  renderLots();
+  showToast(`${lotId} → ${stage}`);
+  if (lot._id && !lot._id.startsWith('temp-')) {
+    try {
+      await airtablePatch(TBL_LOTS, lot._id, { [F_LOT_STAGE]: stage });
+    } catch(err) {
+      showToast(`Stage updated locally — Airtable sync failed.`, true);
+      console.error(err);
+    }
+  }
+}
   }
 
   // ─── Render vessels ───────────────────────────────────────────────────────
@@ -1075,7 +1086,7 @@
 </script>
   <script>
     // ── Clerk session guard ─────────────────────────────────────────────────
-    const CLERK_PK = 'YOUR_CLERK_PUBLISHABLE_KEY';
+    const CLERK_PK = 'pk_test_c21vb3RoLXN0YWxsaW9uLTkzLmNsZXJrLmFjY291bnRzLmRldiQ';
     (async () => {
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
