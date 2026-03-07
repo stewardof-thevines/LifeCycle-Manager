@@ -338,6 +338,16 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.18);
   }
+      @media (max-width: 768px) 
+  {
+    body { overflow-x: hidden; }
+    .layout { grid-template-columns: 1fr; }
+    .main { padding: 16px 20px; }
+    .stat-strip { grid-template-columns: repeat(2, 1fr); }
+    .sku-metrics { grid-template-columns: repeat(2, 1fr); }
+    .modal-row.two { grid-template-columns: 1fr; }
+    .modal-row.three { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
