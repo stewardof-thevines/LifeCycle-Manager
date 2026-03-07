@@ -409,7 +409,7 @@
       </div>
       <div class="vol-row">
         <div class="vc"><div class="vc-lbl">Target Vol.</div><input type="number" class="vc-in" id="b-vol" placeholder="500" oninput="updateVolumes()"/><div class="vc-unit">gallons</div></div>
-        <div class="vc"><div class="vc-lbl">Est. Bottles</div><div class="vc-val" id="b-bottles">—</div><div class="vc-unit">@ 750ml</div></div>
+        <div class="vc"><div class="vc-lbl">Est. Bottles</div><div class="vc-val" id="b-bottles">—</div><div class="vc-unit"><select id="b-bottle-format" onchange="updateVolumes()" style="background:transparent;border:none;color:inherit;font-family:'Barlow Condensed',sans-serif;font-size:11px;cursor:pointer"><option value="750">@ 750ml</option><option value="375">@ 375ml</option><option value="1500">@ 1500ml</option></select></div></div>
         <div class="vc"><div class="vc-lbl">Avg $/Gal</div><div class="vc-val" id="b-cpg">—</div><div class="vc-unit">blended cost</div></div>
       </div>
       <div class="comp-wrap">
@@ -640,7 +640,8 @@
 
   function updateVolumes(){
     const vol=parseFloat(document.getElementById('b-vol').value)||0;
-    document.getElementById('b-bottles').textContent=vol>0?Math.floor(vol*3.78541*1000/750).toLocaleString():'—';
+    const bottleMl = parseFloat(document.getElementById('b-bottle-format')?.value) || 750;
+    document.getElementById('b-bottles').textContent=vol>0?Math.floor(vol*3.78541*1000/bottleMl).toLocaleString():'—';
     let wc=0;
     rows.filter(r=>r.pct>0&&r.lotId).forEach(r=>{const l=LOTS.find(x=>x.id===r.lotId);if(l&&l.cost>0&&l.vol>0)wc+=(l.cost/l.vol)*(r.pct/100);});
     document.getElementById('b-cpg').textContent=wc>0?'$'+wc.toFixed(2):'—';
