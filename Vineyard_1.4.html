@@ -1156,7 +1156,7 @@
           [F_LOG_DATE]:    date,
           [F_LOG_WORKERS]: workers,
           [F_LOG_HOURS]:   hours,
-          [F_LOG_NOTES]:   notes || undefined,
+          ...(notes ? { [F_LOG_NOTES]: notes } : {}),
           [F_LOG_HARVEST]: harvestOn,
         };
         if (catId) fields[F_LOG_CATEGORY] = [catId];
