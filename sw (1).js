@@ -8,7 +8,6 @@ const SHELL = [
   '/Harvest_1.4.html',
   '/SKUs_1.4.html',
   '/BlendingLab_1.3.html',
-  '/login.disabled.html',
   '/manifest.json',
 ];
 
