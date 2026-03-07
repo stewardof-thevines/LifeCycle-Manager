@@ -53,10 +53,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // ── Auth check ───────────────────────────────────────────────────────────
-  const auth = await verifyClerkToken(req);
-  if (auth.error) {
-    return res.status(401).json({ error: 'Unauthorized', detail: auth.error });
-  }
+// Auth disabled — re-enable when custom domain + Clerk production keys are ready
+// const auth = await verifyClerkToken(req);
+// if (auth.error) {
+//   return res.status(401).json({ error: 'Unauthorized', detail: auth.error });
+// }
 
   const API_KEY = process.env.AIRTABLE_API_KEY;
   if (!API_KEY) {
