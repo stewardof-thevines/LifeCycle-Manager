@@ -379,6 +379,25 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.18);
   }
+      @media (max-width: 768px) 
+  {
+    body { overflow-x: hidden; }
+    .scale-layout { grid-template-columns: 1fr; }
+    .scale-main { padding: 16px 20px; }
+    .event-form-panel { position: relative; top: auto; height: auto; }
+    .weight-display { grid-template-columns: 1fr 40px 1fr; }
+    .bin-row { grid-template-columns: 1fr; }
+    .reading-row { grid-template-columns: 1fr; }
+    .ticket-log-header { grid-template-columns: 32px 50px 1fr 80px 44px; }
+    .ticket-row { grid-template-columns: 32px 50px 1fr 80px 44px; }
+    .eform-row.two { grid-template-columns: 1fr; }
+    .eform-row.three { grid-template-columns: 1fr; }
+    .brix-ph-row { grid-template-columns: 1fr; }
+    .modal { max-width: 96vw; }
+    .overview-layout { padding: 16px 20px; }
+    .season-strip { grid-template-columns: repeat(2, 1fr); }
+    .blocks-progress { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
