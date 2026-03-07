@@ -1,6 +1,6 @@
 // Lifecycle Manager — Service Worker v2
 // Cache version — bump this number any time you deploy new files
-const CACHE = 'lifecycle-v2';
+const CACHE = 'lifecycle-v3';
 
 const SHELL = [
   '/Vineyard_1.4.html',
