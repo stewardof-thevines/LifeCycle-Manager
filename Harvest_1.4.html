@@ -1009,6 +1009,23 @@
     document.getElementById('gross-weight').focus();
 
     showToast(`Ticket #${ticketCounter} recorded — ${net.toLocaleString()} lb net`);
+    
+    // Update running total on Airtable event record
+if (activeEventId && !activeEventId.startsWith('temp-')) {
+  const totNet = currentTickets.reduce((s,t) => s+t.net, 0);
+  const totTons = totNet / 2000;
+  airtableCreate; // placeholder — see below
+  fetch('/api/airtable', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      baseId: BASE_ID,
+      tableId: TBL_EVENTS,
+      recordId: activeEventId,
+      fields: { [F_EV_TONS]: totTons }
+    })
+  }).catch(err => console.error('Ticket total sync failed:', err));
+}
   }
 
   function renderTickets() {
