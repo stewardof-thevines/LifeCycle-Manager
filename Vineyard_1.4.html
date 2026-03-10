@@ -70,11 +70,15 @@
     /* LOG TABLE */
     .log-section { margin-top:8px; }
     .log-table-wrap { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
-    .log-table-header { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px; padding:11px 20px; background:rgba(120,97,64,0.05); border-bottom:1px solid rgba(120,97,64,0.1); }
+    .log-table-header { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:11px 20px; background:rgba(120,97,64,0.05); border-bottom:1px solid rgba(120,97,64,0.1); }
     .log-th { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.4); }
-    .log-row { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px; padding:13px 20px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; }
+    .log-row { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:13px 20px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; }
     .log-row:last-child { border-bottom:none; }
-    .log-row:hover { background:rgba(120,97,64,0.03); }
+    .log-row:hover { background:rgba(120,97,64,0.03);.log-row:hover { background:rgba(120,97,64,0.03); }
+    .log-delete-btn { opacity:0; width:26px; height:26px; border-radius:6px; background:rgba(212,71,32,0.08); border:none; cursor:pointer; color:var(--grenadine); font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .log-row:hover .log-delete-btn { opacity:1; }
+    .log-delete-btn:hover { background:rgba(212,71,32,0.18); }
+    .log-delete-btn.deleting { opacity:0.4; pointer-events:none; } }
     .log-td { font-size:12.5px; color:var(--dark); padding-right:12px; }
     .log-td.muted { color:rgba(30,23,16,0.45); font-size:11.5px; }
     .log-td.bold { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; }
@@ -430,6 +434,8 @@
           <div class="log-th">Hrs</div>
           <div class="log-th">Dept</div>
           <div class="log-th">Cost</div>
+          <div class="log-th"></div>
+        </div>
         </div>
         <div id="log-body">
           <div class="log-empty">No labor logs yet — use the form to log your first entry.</div>
@@ -643,6 +649,15 @@
     if (!res.ok) throw new Error(`Airtable create error: ${res.status}`);
     return res.json();
   }
+  async function airtableDelete(tableId, recordId) {
+    const url = new URL('/api/airtable', window.location.origin);
+    url.searchParams.set('baseId', BASE_ID);
+    url.searchParams.set('tableId', tableId);
+    url.searchParams.set('recordId', recordId);
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Airtable delete error: ${res.status}`);
+    return res.json();
+  }
 
   // ─── Table & Field IDs ──────────────────────────────────────────────────
   const T_BLOCKS = 'tblPuFD0fbiLmITXK';
@@ -793,7 +808,7 @@
       const blockName = BLOCKS.find(b => blockIds.includes?.(b.id))?.name || '—';
       const dept = guessDept(taskName);
       return {
-        id:         r.id,
+        airtableId: r.id,
         date:       f[F_LOG_DATE]    || '',
         harvest:    !!(f[F_LOG_HARVEST]),
         category:   catName,
@@ -1089,12 +1104,12 @@
     if (blockSel.length > 1) {
       blockSel.forEach(b => {
         const share = total * (b.acres / totalAcres);
-        logs.unshift({ date, block: b.name, blockLabel, task: taskName, category: catName, workers, hours, total: share, dept, harvest: harvestOn, notes, multi: true });
+        logs.unshift({ airtableId: null, date, block: b.name, blockLabel, task: taskName, category: catName, workers, hours, total: share, dept, harvest: harvestOn, notes, multi: true });
         updateBlockCostDisplay(b.id, share);
       });
     } else {
       const bn = blockSel[0]?.name || '—';
-      logs.unshift({ date, block: bn, blockLabel, task: taskName, category: catName, workers, hours, total, dept, harvest: harvestOn, notes, multi: false });
+      logs.unshift({ airtableId: null, date, block: b.name, blockLabel, task: taskName, category: catName, workers, hours, total: share, dept, harvest: harvestOn, notes, multi: true });
       if (blockSel[0]) updateBlockCostDisplay(blockSel[0].id, total);
     }
     renderLogs();
@@ -1115,7 +1130,10 @@
         if (catId) fields[F_LOG_CATEGORY] = [catId];
         if (taskId) fields[F_LOG_TASK] = [taskId];
         if (b?.id)  fields[F_LOG_BLOCKS] = [b.id];
-        await airtableCreate(T_LOGS, fields);
+        const created = await airtableCreate(T_LOGS, fields);
+        // Backfill the airtableId on the matching log entry
+        const match = logs.find(l => !l.airtableId && l.date === date && l.task === taskName && (l.block === (b?.name || '—')));
+        if (match && created?.id) match.airtableId = created.id;;
       }
       showToast(`Saved — $${total.toFixed(2)} logged${blockLabel !== '—' ? ' to '+blockLabel : ''}`);
     } catch(e) {
@@ -1167,6 +1185,9 @@
         <div class="log-td">${l.hours}</div>
         <div class="log-td"><span class="dept-tag ${deptClass(l.dept)}">${l.dept.split('/')[0]}</span></div>
         <div class="log-td cost">$${l.displayCost.toFixed(2)}</div>
+        <div class="log-td" style="padding-right:0">
+          <button class="log-delete-btn" onclick="deleteLog('${l.date}|${l.task}|${l.blockLabel}|${l.category}', this)" title="Delete entry">✕</button>
+        </div>
       </div>`).join('');
   }
 
@@ -1189,7 +1210,31 @@
     currentFilter = f;
     renderLogs();
   }
+  async function deleteLog(key, btnEl) {
+    if (!confirm('Delete this labor log entry? This cannot be undone.')) return;
+    btnEl.classList.add('deleting');
 
+    // Find all matching entries in the logs array (multi-block entries share a key)
+    const toDelete = logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` === key);
+    const recordIds = toDelete.map(l => l.airtableId).filter(Boolean);
+
+    // Optimistically remove from UI
+    logs = logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` !== key);
+    renderLogs();
+
+    // Delete from Airtable
+    if (recordIds.length) {
+      try {
+        await Promise.all(recordIds.map(id => airtableDelete(T_LOGS, id)));
+        showToast('Entry deleted.');
+      } catch(e) {
+        showToast('Deleted locally — Airtable sync failed.', true);
+        console.error(e);
+      }
+    } else {
+      showToast('Entry removed (no Airtable record to delete).');
+    }
+  }
   // ─── Add Block Modal ──────────────────────────────────────────────────────
   function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
   function closeModal() {
