@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || '';
   const allowed = process.env.ALLOWED_ORIGIN || 'https://life-cycle-manager.vercel.app';
   res.setHeader('Access-Control-Allow-Origin', allowed);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -161,5 +161,21 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'DELETE') {
+    const { baseId, tableId, recordId } = req.query;
+    if (!baseId || !tableId || !recordId) {
+      return res.status(400).json({ error: 'baseId, tableId, and recordId are required' });
+    }
+    try {
+      const airtableRes = await fetch(
+        `https://api.airtable.com/v0/${baseId}/${tableId}/${recordId}`,
+        { method: 'DELETE', headers }
+      );
+      const data = await airtableRes.json();
+      if (!airtableRes.ok) return res.status(airtableRes.status).json(data);
+      return res.status(200).json(data);
+    } catch (e) {
+      return res.status(502).json({ error: 'Airtable delete failed', detail: e.message });
+    }
+  }
 }
