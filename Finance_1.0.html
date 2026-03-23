@@ -88,6 +88,7 @@
       position:sticky; top:58px;
       height:calc(100vh - 58px);
       overflow-y:auto;
+      padding: 28px;
     }
     .left-panel::-webkit-scrollbar { width:4px; }
     .left-panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
@@ -109,7 +110,7 @@
     }
     .panel-title {
       font-family:'Playfair Display',serif; font-size:22px; font-weight:900;
-      color:var(--cream); line-height:1.1;
+      color:var(--cream); line-height:1.1; margin-bottom:20px;
     }
     .panel-subtitle { font-size:12px; color:rgba(255,255,255,0.3); margin-top:5px; font-weight:300; }
 
@@ -271,10 +272,9 @@
   <div class="app-layout">
 
     <!-- ── LEFT PANEL ── -->
-    <div class="left-panel" style="padding:28px;">
+    <div class="left-panel">
       <div class="panel-eyebrow">Finance</div>
       <div class="panel-title">Balance Sheet<br>Entries</div>
-      <div style="margin-top:20px;"></div>
 
       <div class="field-group">
         <label class="field-label">Entry Name</label>
@@ -809,13 +809,9 @@
       const list = document.getElementById('bs-entry-list');
       if (!list) return;
 
-      // Filter to current period for display
-      const bsYF = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
-      const periodEntries = entries.filter(r => (r.fields[bsYF] || 0) === periodYear);
-
-      list.innerHTML = periodEntries.length === 0
+      list.innerHTML = entries.length === 0
         ? '<div class="entry-empty">No entries for this period</div>'
-        : periodEntries.map(r => `
+        : entries.map(r => `
             <div class="entry-row">
               <div class="entry-info">
                 <div class="entry-name">${r.fields[F_BS_NAME] || '—'}</div>
@@ -857,6 +853,7 @@
           const el = document.getElementById(id); if (el) el.value = '';
         });
         document.getElementById('bs-category').value = '';
+        document.getElementById('bs-date').value = '';
         document.getElementById('bs-vin-year').value = periodYear;
         document.getElementById('bs-cal-year').value = periodYear;
         await initApp(); // reload all tabs
@@ -894,7 +891,9 @@
         renderPL(window._data);
         renderBalanceSheet(window._data);
         renderCashFlow(window._data);
-        renderBSEntries(window._data.bsEntries);
+        const bsYF = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+        const filteredBS = (window._data.bsEntries || []).filter(r => (r.fields[bsYF] || 0) === periodYear);
+        renderBSEntries(filteredBS);
         updatePeriodLabel();
       } catch (e) {
         console.error('Finance load failed:', e);
