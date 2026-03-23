@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Finance — Domaine Mathiot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap">
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height:58px; background:var(--dark);
+      display:flex; align-items:center; padding:0 28px; gap:16px;
+      position:sticky; top:0; z-index:100;
+    }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; }
+    .topbar-dim   { color:rgba(255,255,255,0.35); }
+    .topbar-active{ color:var(--beeswax); }
+    .topbar-arrow { color:rgba(255,255,255,0.2); }
+    .topbar-spacer{ flex:1; }
+
+    /* Period toggle */
+    .period-group { display:flex; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); border-radius:6px; overflow:hidden; }
+    .period-btn {
+      height:30px; padding:0 13px;
+      font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600;
+      letter-spacing:0.1em; text-transform:uppercase;
+      cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,0.45);
+      transition:all 0.18s;
+    }
+    .period-btn.active { background:rgba(255,255,255,0.15); color:var(--cream); }
+    .period-btn:hover:not(.active) { color:rgba(255,255,255,0.7); }
+
+    /* Year selector */
+    .year-sel-wrap { position:relative; }
+    #year-sel {
+      height:30px; padding:0 28px 0 12px;
+      background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);
+      border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:12px;
+      font-weight:600; letter-spacing:0.08em; color:var(--cream); cursor:pointer;
+      outline:none; -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 9px center;
+    }
+    #year-sel option { background:#2a1f14; color:var(--cream); }
+    #year-sel:focus { border-color:var(--grenadine); }
+
+    /* Topbar buttons */
+    .tbtn {
+      height:32px; padding:0 14px; border-radius:6px;
+      font-family:'Barlow Condensed',sans-serif; font-size:11.5px; font-weight:600;
+      letter-spacing:0.08em; cursor:pointer; border:none;
+      display:flex; align-items:center; gap:6px; transition:all 0.18s;
+    }
+    .tbtn.ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.1); }
+    .tbtn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .tbtn.primary { background:var(--grenadine); color:#fff; }
+    .tbtn.primary:hover { background:#c03d1a; }
+
+    /* ── APP LAYOUT ── */
+    .app-layout {
+      display:grid;
+      grid-template-columns:380px 1fr;
+      min-height:calc(100vh - 58px);
+    }
+
+    /* ── LEFT PANEL ── */
+    .left-panel {
+      background:var(--dark);
+      border-right:1px solid rgba(255,255,255,0.07);
+      display:flex; flex-direction:column;
+      position:sticky; top:58px;
+      height:calc(100vh - 58px);
+      overflow-y:auto;
+    }
+    .left-panel::-webkit-scrollbar { width:4px; }
+    .left-panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+    .panel-header {
+      padding:28px 28px 20px;
+      border-bottom:1px solid rgba(255,255,255,0.07);
+      position:relative; overflow:hidden;
+    }
+    .panel-header::before {
+      content:''; position:absolute; top:-40px; right:-40px;
+      width:160px; height:160px; border-radius:50%;
+      background:radial-gradient(circle,rgba(212,71,32,0.15) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .panel-eyebrow {
+      font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600;
+      letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px;
+    }
+    .panel-title {
+      font-family:'Playfair Display',serif; font-size:22px; font-weight:900;
+      color:var(--cream); line-height:1.1;
+    }
+    .panel-subtitle { font-size:12px; color:rgba(255,255,255,0.3); margin-top:5px; font-weight:300; }
+
+    .panel-placeholder {
+      padding:24px 28px;
+      font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600;
+      letter-spacing:0.12em; text-transform:uppercase;
+      color:rgba(255,255,255,0.2);
+    }
+    .panel-placeholder p { line-height:1.7; }
+
+    /* ── MAIN AREA ── */
+    .main-area {
+      padding:28px 32px;
+      overflow-y:auto;
+    }
+    .main-area.loading { opacity:0.5; pointer-events:none; }
+
+    /* Page heading */
+    .main-eyebrow {
+      font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600;
+      letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px;
+    }
+    .main-title {
+      font-family:'Playfair Display',serif; font-size:30px; font-weight:900;
+      color:var(--dark); line-height:1; letter-spacing:-0.02em;
+    }
+    .main-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; margin-bottom:24px; }
+
+    /* ── TAB BAR ── */
+    .tab-bar {
+      display:flex; gap:4px; margin-bottom:22px;
+      background:var(--white); border:1px solid rgba(120,97,64,0.12);
+      border-radius:10px; padding:4px; width:fit-content;
+    }
+    .tab-btn {
+      font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600;
+      letter-spacing:0.1em; text-transform:uppercase;
+      padding:7px 18px; border-radius:7px;
+      cursor:pointer; border:none; background:transparent;
+      color:rgba(30,23,16,0.45); transition:all 0.18s;
+    }
+    .tab-btn:hover:not(.active) { color:rgba(30,23,16,0.7); background:rgba(120,97,64,0.06); }
+    .tab-btn.active { background:var(--dark); color:var(--cream); }
+
+    /* ── TAB PANELS ── */
+    .tab-panel { display:block; }
+    .tab-panel.hidden { display:none; }
+
+    /* Loading message placeholder */
+    .loading-msg {
+      padding:48px 0;
+      font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600;
+      letter-spacing:0.12em; text-transform:uppercase;
+      color:rgba(30,23,16,0.3); text-align:center;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position:fixed; bottom:28px; right:28px;
+      background:var(--dark); color:var(--cream);
+      padding:14px 20px; border-radius:10px;
+      font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600;
+      letter-spacing:0.06em;
+      box-shadow:0 8px 28px rgba(0,0,0,0.25);
+      animation:toast-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+      z-index:999;
+    }
+    .toast-error { background:var(--grenadine); }
+    @keyframes toast-in {
+      from { transform:translateY(80px); opacity:0; }
+      to   { transform:translateY(0);    opacity:1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── TOPBAR ── -->
+  <div class="topbar">
+    <a href="index.html" style="text-decoration:none;">
+      <div class="topbar-logo">Domaine <span>Mathiot</span></div>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-label topbar-dim">Finance</span>
+    <span class="topbar-arrow">›</span>
+    <span class="topbar-label topbar-active" id="period-label">2026 Vintage</span>
+
+    <div class="topbar-spacer"></div>
+
+    <!-- Period mode toggle -->
+    <div class="period-group">
+      <button class="period-btn active" data-mode="vintage" onclick="setPeriod('vintage', periodYear)">Vintage</button>
+      <button class="period-btn"        data-mode="calendar" onclick="setPeriod('calendar', periodYear)">Calendar</button>
+    </div>
+
+    <!-- Year selector -->
+    <select id="year-sel" title="Select year"></select>
+
+    <!-- Export / Print -->
+    <button class="tbtn ghost" onclick="exportCSV()">Export CSV</button>
+    <button class="tbtn ghost" onclick="window.print()">Print / PDF</button>
+  </div>
+
+  <!-- ── APP LAYOUT ── -->
+  <div class="app-layout">
+
+    <!-- ── LEFT PANEL ── -->
+    <div class="left-panel">
+      <div class="panel-header">
+        <div class="panel-eyebrow">Balance Sheet</div>
+        <div class="panel-title">Add Entry</div>
+        <div class="panel-subtitle">Manual balance sheet entries — implemented in Task 13</div>
+      </div>
+      <div class="panel-placeholder">
+        <p>Balance Sheet Entries form<br>— placeholder for Task 13 —</p>
+      </div>
+    </div>
+
+    <!-- ── MAIN AREA ── -->
+    <div class="main-area" id="main-area">
+      <div class="main-eyebrow">Domaine Mathiot</div>
+      <div class="main-title">Finance</div>
+      <div class="main-subtitle" id="main-subtitle">Loading financial data…</div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="showTab('overview')">Overview</button>
+        <button class="tab-btn" onclick="showTab('pl')">P&amp;L</button>
+        <button class="tab-btn" onclick="showTab('bs')">Balance Sheet</button>
+        <button class="tab-btn" onclick="showTab('cf')">Cash Flow</button>
+      </div>
+
+      <!-- Tab panels -->
+      <div id="tab-overview" class="tab-panel"></div>
+      <div id="tab-pl"       class="tab-panel hidden"></div>
+      <div id="tab-bs"       class="tab-panel hidden"></div>
+      <div id="tab-cf"       class="tab-panel hidden"></div>
+    </div>
+
+  </div><!-- /.app-layout -->
+
+  <script>
+    /* ══════════════════════════════════════════════════════════════
+       AIRTABLE CONSTANTS
+    ══════════════════════════════════════════════════════════════ */
+    const BASE_ID = 'appJNEHG8sqXmdYGe';
+    const PROXY   = '/api/airtable';
+
+    // Tables
+    const TBL_LOTS          = 'tblcBMCwq1ng8ykMb';
+    const TBL_EVENTS        = 'tblTDMmErrAssEEAB';
+    const TBL_BLOCKS        = 'tblPuFD0fbiLmITXK';
+    const TBL_LABOR         = 'tblVbpvTPxEQpw6Hz';
+    const TBL_SKUS          = 'tblLOqkPGMsgNvl2g';
+    const TBL_BLEND_COSTS   = 'tbl4wU6E4Unu2XZdH';
+    const TBL_BALANCE_SHEET = 'tblLTGFWPYqjgEcGB';
+    const TBL_OPEX          = 'tblLgn1j6SYVOr79n';
+
+    // Wine Lots fields
+    const F_LOT_NAME     = 'fldRib6w2mJcyYnji';
+    const F_LOT_STAGE    = 'fldv75LnMHiMhqwVU';
+    const F_LOT_YEAR     = 'flddMBBo3WnnatiGR';
+    const F_LOT_LIVE_VOL = 'fld8gBnBe60d9cSAn';
+    const F_LOT_COST     = 'fldEeGD6o6zxIV3gb';
+
+    // Harvest Events fields
+    const F_EV_DATE    = 'fldPgGScnLa6Kxsuf';
+    const F_EV_COST    = 'fldcb8yE3nsg2mc9M';
+
+    // Labor Logs fields
+    const F_LL_DATE         = 'fld22ciVaTERAAbAa';
+    const F_LL_TOTAL_COST   = 'fldabZyNtq13klfcz';
+    const F_LL_HARVEST_FLAG = 'fld3YoRvi1f6cvlym';
+
+    // Blend Costs fields
+    const F_BC_AMOUNT   = 'fldGiP3Q2lSkOmutc';
+    const F_BC_DATE     = 'fldu3C7tu6kZUZDaJ';
+    const F_BC_VIN_YEAR = 'fldzcpuli2mgQLbBE';
+    const F_BC_CAL_YEAR = 'fldQ9OP9y16xeSnFx';
+
+    // Balance Sheet Entries fields
+    const F_BS_NAME     = 'fldMarbXR2hF62iUw';
+    const F_BS_CATEGORY = 'fld2RJT7EXF7qPpHP';
+    const F_BS_AMOUNT   = 'fldukzh2zZ4OSMwhY';
+    const F_BS_DATE     = 'fldR9hfUcP1ijXPjQ';
+    const F_BS_VIN_YEAR = 'fldVaNduQRODG0p4h';
+    const F_BS_CAL_YEAR = 'fld0gYImkg0GTU8Jn';
+    const F_BS_NOTES    = 'fldjCLGJir3y77Ptl';
+
+    // Overhead & OpEx fields
+    const F_OX_AMOUNT = 'fld5jpcmBxXweLF1X';
+    const F_OX_DATE   = 'fldqTmLoBYs9hAt9V';
+
+    /* ══════════════════════════════════════════════════════════════
+       PERIOD STATE
+    ══════════════════════════════════════════════════════════════ */
+    let periodMode = 'vintage'; // 'vintage' | 'calendar'
+    let periodYear = new Date().getFullYear();
+
+    /* ══════════════════════════════════════════════════════════════
+       API HELPER
+    ══════════════════════════════════════════════════════════════ */
+    async function apiFetch(tableId, extraParams = '') {
+      const url = `${PROXY}?baseId=${BASE_ID}&tableId=${tableId}&maxRecords=500${extraParams}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      const d = await r.json();
+      return d.records || [];
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       LOAD ALL DATA
+    ══════════════════════════════════════════════════════════════ */
+    async function loadAllData() {
+      const [lots, events, laborLogs, skus, blendCosts, bsEntries, opex] = await Promise.all([
+        apiFetch(TBL_LOTS),
+        apiFetch(TBL_EVENTS),
+        apiFetch(TBL_LABOR),
+        apiFetch(TBL_SKUS),
+        apiFetch(TBL_BLEND_COSTS),
+        apiFetch(TBL_BALANCE_SHEET),
+        apiFetch(TBL_OPEX)
+      ]);
+      return { lots, events, laborLogs, skus, blendCosts, bsEntries, opex };
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PERIOD FILTERING HELPERS
+    ══════════════════════════════════════════════════════════════ */
+    function inPeriodByYear(yearVal) {
+      return yearVal === periodYear;
+    }
+
+    function inPeriodByDate(dateStr) {
+      return dateStr ? new Date(dateStr).getFullYear() === periodYear : false;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       STUB RENDER FUNCTIONS  (Tasks 9–12 will replace these)
+    ══════════════════════════════════════════════════════════════ */
+    function renderOverview(data) {
+      document.getElementById('tab-overview').innerHTML =
+        '<div class="loading-msg">Overview — coming in Task 9</div>';
+    }
+
+    function renderPL(data) {
+      document.getElementById('tab-pl').innerHTML =
+        '<div class="loading-msg">P&amp;L — coming in Task 10</div>';
+    }
+
+    function renderBalanceSheet(data) {
+      document.getElementById('tab-bs').innerHTML =
+        '<div class="loading-msg">Balance Sheet — coming in Task 11</div>';
+    }
+
+    function renderCashFlow(data) {
+      document.getElementById('tab-cf').innerHTML =
+        '<div class="loading-msg">Cash Flow — coming in Task 12</div>';
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       INIT APP
+    ══════════════════════════════════════════════════════════════ */
+    async function initApp() {
+      showLoading(true);
+      try {
+        window._data = await loadAllData();
+        renderOverview(window._data);
+        renderPL(window._data);
+        renderBalanceSheet(window._data);
+        renderCashFlow(window._data);
+        updatePeriodLabel();
+      } catch (e) {
+        console.error('Finance load failed:', e);
+        showToast('Failed to load financial data.', true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function showLoading(on) {
+      document.getElementById('main-area')?.classList.toggle('loading', on);
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.createElement('div');
+      t.className = `toast${isError ? ' toast-error' : ''}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    function updatePeriodLabel() {
+      const modeLabel = periodMode === 'vintage' ? 'Vintage' : 'Calendar';
+      document.getElementById('period-label').textContent = `${periodYear} ${modeLabel}`;
+      const subtitle = document.getElementById('main-subtitle');
+      if (subtitle) subtitle.textContent = `${periodYear} ${modeLabel} — read-only data view`;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PERIOD TOGGLE & YEAR SELECTOR
+    ══════════════════════════════════════════════════════════════ */
+    function setPeriod(mode, year) {
+      periodMode = mode;
+      periodYear = year;
+      // Update toggle button states
+      document.querySelectorAll('.period-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === mode));
+      const sel = document.getElementById('year-sel');
+      if (sel) sel.value = year;
+      initApp();
+    }
+
+    function initYearSelector() {
+      const sel = document.getElementById('year-sel');
+      if (!sel) return;
+      const cur = new Date().getFullYear();
+      for (let y = cur; y >= 2020; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === periodYear) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.onchange = () => setPeriod(periodMode, parseInt(sel.value));
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       TAB SWITCHING
+    ══════════════════════════════════════════════════════════════ */
+    function showTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${name}`)?.classList.remove('hidden');
+      document.querySelector(`.tab-btn[onclick="showTab('${name}')"]`)?.classList.add('active');
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       EXPORT CSV (stub — Task 14)
+    ══════════════════════════════════════════════════════════════ */
+    function exportCSV() {
+      showToast('CSV export — coming in Task 14');
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       BOOTSTRAP
+    ══════════════════════════════════════════════════════════════ */
+    document.addEventListener('DOMContentLoaded', () => {
+      initYearSelector();
+      initApp();
+    });
+  </script>
+</body>
+</html>
