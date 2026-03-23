@@ -69,8 +69,8 @@
       display:flex; align-items:center; gap:6px; transition:all 0.18s;
     }
     .tbtn.ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.1); }
-    .tbtn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
-    .tbtn.primary { background:var(--grenadine); color:#fff; }
+    .tbtn.ghost:hover { background:rgba(255,255,255,0.12); color:var(--white); }
+    .tbtn.primary { background:var(--grenadine); color:var(--white); }
     .tbtn.primary:hover { background:#c03d1a; }
 
     /* ── APP LAYOUT ── */
@@ -324,27 +324,29 @@
        LOAD ALL DATA
     ══════════════════════════════════════════════════════════════ */
     async function loadAllData() {
-      const [lots, events, laborLogs, skus, blendCosts, bsEntries, opex] = await Promise.all([
+      const [lots, events, blocks, laborLogs, skus, blendCosts, bsEntries, opex] = await Promise.all([
         apiFetch(TBL_LOTS),
         apiFetch(TBL_EVENTS),
+        apiFetch(TBL_BLOCKS),
         apiFetch(TBL_LABOR),
         apiFetch(TBL_SKUS),
         apiFetch(TBL_BLEND_COSTS),
         apiFetch(TBL_BALANCE_SHEET),
         apiFetch(TBL_OPEX)
       ]);
-      return { lots, events, laborLogs, skus, blendCosts, bsEntries, opex };
+      return { lots, events, blocks, laborLogs, skus, blendCosts, bsEntries, opex };
     }
 
     /* ══════════════════════════════════════════════════════════════
        PERIOD FILTERING HELPERS
     ══════════════════════════════════════════════════════════════ */
-    function inPeriodByYear(yearVal) {
-      return yearVal === periodYear;
-    }
-
-    function inPeriodByDate(dateStr) {
-      return dateStr ? new Date(dateStr).getFullYear() === periodYear : false;
+    function inPeriod(record, yearField, dateField) {
+      if (periodMode === 'vintage') {
+        return (record.fields[yearField] || 0) === periodYear;
+      } else {
+        const d = record.fields[dateField];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      }
     }
 
     /* ══════════════════════════════════════════════════════════════
@@ -370,6 +372,8 @@
         '<div class="loading-msg">Cash Flow — coming in Task 12</div>';
     }
 
+    function renderBSEntries(entries) { /* implemented in Task 13 */ }
+
     /* ══════════════════════════════════════════════════════════════
        INIT APP
     ══════════════════════════════════════════════════════════════ */
@@ -381,6 +385,7 @@
         renderPL(window._data);
         renderBalanceSheet(window._data);
         renderCashFlow(window._data);
+        renderBSEntries(window._data.bsEntries);
         updatePeriodLabel();
       } catch (e) {
         console.error('Finance load failed:', e);
