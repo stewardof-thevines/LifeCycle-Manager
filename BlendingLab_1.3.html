@@ -496,6 +496,10 @@
   const F_L_REMAIN  = 'fldZZHpkUCOh6xzA1';
   const F_L_CPG     = 'fldjadcAeYVr0XdPk';
 
+  // New Wine Lot fields (added 2026-03-23 for blend cost tracking):
+  const F_LOT_BLEND_BASIS = 'fldMthqLcPT1WcJPb';  // Blend Cost Basis (currency)
+  const F_LOT_GAL_PULLED  = 'fldvO0zt6Vks4u0Dc';  // Gallons Pulled (number)
+
   async function atGet(tableId) {
     const res = await fetch(`${PROXY}?${new URLSearchParams({baseId:BASE_ID,tableId})}`);
     if (!res.ok) throw new Error(res.status);
