@@ -1109,7 +1109,7 @@
       });
     } else {
       const bn = blockSel[0]?.name || '—';
-      logs.unshift({ airtableId: null, date, block: b.name, blockLabel, task: taskName, category: catName, workers, hours, total: share, dept, harvest: harvestOn, notes, multi: true });
+      logs.unshift({ airtableId: null, date, block: bn, blockLabel, task: taskName, category: catName, workers, hours, total, dept, harvest: harvestOn, notes, multi: false });
       if (blockSel[0]) updateBlockCostDisplay(blockSel[0].id, total);
     }
     renderLogs();
