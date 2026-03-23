@@ -190,6 +190,19 @@
     .nav-tile { display:inline-block; padding:8px 16px; background:var(--white); border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; color:var(--dark); text-decoration:none; }
     .nav-tile:hover { background:var(--grenadine); color:var(--white); }
 
+    /* ── FINANCIAL DOCUMENT (P&L) ── */
+    .fin-doc { max-width:680px; padding:24px; }
+    .fin-doc-title { font-family:'Playfair Display',serif; font-size:22px; color:var(--dark); margin-bottom:4px; }
+    .fin-doc-period { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--latte); text-transform:uppercase; letter-spacing:.06em; margin-bottom:20px; }
+    .fin-section-hdr { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; color:var(--latte); text-transform:uppercase; letter-spacing:.1em; padding:16px 0 6px; border-bottom:1px solid rgba(120,97,64,.2); margin-bottom:4px; }
+    .fin-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid rgba(120,97,64,.08); }
+    .fin-row-bold { font-weight:600; border-top:1px solid rgba(120,97,64,.3); border-bottom:2px solid rgba(120,97,64,.3); padding:8px 0; margin-top:4px; }
+    .fin-label { font-family:'Barlow Condensed',sans-serif; font-size:14px; color:var(--dark); }
+    .fin-val   { font-family:'Barlow Condensed',sans-serif; font-size:14px; color:var(--dark); font-weight:600; }
+    .fin-row.negative .fin-val { color:var(--grenadine); }
+    .export-btn { margin:16px 24px; padding:8px 20px; background:var(--grenadine); color:var(--white); border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
+    .export-btn:hover { opacity:.85; }
+
     /* ── TOAST ── */
     .toast {
       position:fixed; bottom:28px; right:28px;
@@ -465,6 +478,18 @@
     }
 
     /* ══════════════════════════════════════════════════════════════
+       FIN ROW HELPER
+    ══════════════════════════════════════════════════════════════ */
+    function finRow(label, val, bold = false, suffix = '', cls = '') {
+      const neg = val < 0;
+      const formatted = (neg ? '($' : '$') + fmt(Math.abs(val)) + (neg ? ')' : '');
+      return `<div class="fin-row${bold ? ' fin-row-bold' : ''}${cls ? ' ' + cls : ''}">
+    <span class="fin-label">${label}</span>
+    <span class="fin-val">${formatted}${suffix ? ' ' + suffix : ''}</span>
+  </div>`;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
        STUB RENDER FUNCTIONS  (Tasks 10–12 will replace these)
     ══════════════════════════════════════════════════════════════ */
     function renderOverview(data) {
@@ -517,8 +542,47 @@
     }
 
     function renderPL(data) {
-      document.getElementById('tab-pl').innerHTML =
-        '<div class="loading-msg">P&amp;L — coming in Task 10</div>';
+      const rev  = calcRevenue(data.skus);
+      const cogs = calcCOGS(data);
+      const totalRev  = Object.values(rev).reduce((s, v) => s + v, 0);
+      const totalCOGS = Object.values(cogs).reduce((s, v) => s + v, 0);
+      const grossProfit = totalRev - totalCOGS;
+      const grossPct = totalRev > 0 ? (grossProfit / totalRev * 100).toFixed(1) : '0.0';
+
+      // OpEx: filter by date year, exclude undated
+      const filteredOpex = data.opex.filter(r => {
+        const d = r.fields[F_OX_DATE];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      });
+      const opexTotal = filteredOpex.reduce((s, r) => s + (r.fields[F_OX_AMOUNT] || 0), 0);
+      const netIncome = grossProfit - opexTotal;
+
+      document.getElementById('tab-pl').innerHTML = `
+        <div class="fin-doc">
+          <div class="fin-doc-title">Income Statement</div>
+          <div class="fin-doc-period">${periodYear} ${periodMode === 'vintage' ? 'Vintage' : 'Calendar'} Year</div>
+
+          <div class="fin-section-hdr">Revenue</div>
+          ${Object.entries(rev).filter(([,v]) => v > 0).map(([ch, val]) => finRow(ch, val)).join('')}
+          ${finRow('Total Revenue', totalRev, true)}
+
+          <div class="fin-section-hdr">Cost of Goods Sold</div>
+          ${finRow('Vineyard Operations', cogs.vineyardCost)}
+          ${finRow('Harvest (Pick & Hauling)', cogs.harvestCost)}
+          ${finRow('Cellar (all active lots)', cogs.cellarCost)}
+          ${finRow('Blending Direct', cogs.blendDirectCost)}
+          ${finRow('Packaging', cogs.packagingCost)}
+          ${finRow('Total COGS', totalCOGS, true)}
+
+          ${finRow('Gross Profit', grossProfit, true, `(${grossPct}%)`)}
+
+          <div class="fin-section-hdr">Operating Expenses</div>
+          ${finRow('Total OpEx', opexTotal)}
+
+          ${finRow('Net Income', netIncome, true, '', netIncome >= 0 ? '' : 'negative')}
+        </div>
+        <button class="export-btn" onclick="exportCSV('pl')">Export CSV</button>
+      `;
     }
 
     function renderBalanceSheet(data) {
