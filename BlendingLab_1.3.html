@@ -899,13 +899,12 @@
     try{
       if(r._recId) await atPatch(TBL_RECIPES,r._recId,{[F_R_STATUS]:'Committed'});
       // Create new Wine Lot from blend
-      const TBL_LOTS_W = 'tblcBMCwq1ng8ykMb';
       const vol = parseFloat(document.getElementById('cp-volume').value)||r.targetVol||0;
       const newLotFields={};
       newLotFields['fldRib6w2mJcyYnji'] = lotId;         // Lot ID
       newLotFields['fldv75LnMHiMhqwVU'] = 'Estimate';    // Stage
       if(r._recId) newLotFields['fldrvl1LVhb6rZRT6'] = [r._recId]; // Blend Recipes link
-      const newLotRec = await atCreate(TBL_LOTS_W, newLotFields);
+      const newLotRec = await atCreate(TBL_LOTS_AT, newLotFields);
       const newLotRecId = newLotRec && newLotRec.id ? newLotRec.id : null;
 
       // Cost transfer: build components array using lot name → record ID lookup
