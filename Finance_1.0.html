@@ -383,6 +383,11 @@
       const byChannel = { 'Wine Club':0, 'Events':0, 'Weddings':0, 'DTC':0, 'Wholesale':0, 'Export':0, 'Held / Reserve':0 };
 
       for (const rec of skus) {
+        // Period filter: uses vintage/year field on the SKU record.
+        // In calendar mode: SKUs_1.4.html does not store a sale-date field,
+        // so both vintage and calendar modes filter by vintage year.
+        // If a sale-date field is added to SKUs in future, update this to
+        // branch on periodMode === 'calendar' and filter by that date instead.
         const skuYear = rec.fields['Vintage Year'] || rec.fields['Year'] || rec.fields['Vintage'] || 0;
         if (skuYear && skuYear !== periodYear) continue;
 
@@ -404,32 +409,32 @@
       const { lots, events, laborLogs, skus, blendCosts } = data;
 
       const filteredLaborLogs = laborLogs.filter(r => {
-        const d = r.fields['fld22ciVaTERAAbAa'];
+        const d = r.fields[F_LL_DATE];
         return d ? new Date(d).getFullYear() === periodYear : false;
       });
       const vineyardCost = filteredLaborLogs
-        .filter(r => !r.fields['fld3YoRvi1f6cvlym'])
-        .reduce((s, r) => s + (r.fields['fldabZyNtq13klfcz'] || 0), 0);
+        .filter(r => !r.fields[F_LL_HARVEST_FLAG])
+        .reduce((s, r) => s + (r.fields[F_LL_TOTAL_COST] || 0), 0);
 
       const filteredEvents = events.filter(r => {
-        const d = r.fields['fldPgGScnLa6Kxsuf'];
+        const d = r.fields[F_EV_DATE];
         return d ? new Date(d).getFullYear() === periodYear : false;
       });
-      const harvestCost = filteredEvents.reduce((s, r) => s + (r.fields['fldcb8yE3nsg2mc9M'] || 0), 0);
+      const harvestCost = filteredEvents.reduce((s, r) => s + (r.fields[F_EV_COST] || 0), 0);
 
       const activeLots = lots.filter(r => {
-        const stage = r.fields['fldv75LnMHiMhqwVU'] || '';
+        const stage = r.fields[F_LOT_STAGE] || '';
         const stageName = typeof stage === 'object' ? (stage.name || '') : stage;
-        const vol   = r.fields['fld8gBnBe60d9cSAn'] || 0;
-        const lotYear = r.fields['flddMBBo3WnnatiGR'] || 0;
+        const vol   = r.fields[F_LOT_LIVE_VOL] || 0;
+        const lotYear = r.fields[F_LOT_YEAR] || 0;
         const inPer = periodMode === 'vintage' ? lotYear === periodYear : true;
         return stageName !== 'Bottled' && stageName !== 'Disposed' && vol > 0 && inPer;
       });
-      const cellarCost = activeLots.reduce((s, r) => s + (r.fields['fldEeGD6o6zxIV3gb'] || 0), 0);
+      const cellarCost = activeLots.reduce((s, r) => s + (r.fields[F_LOT_COST] || 0), 0);
 
-      const blendYearField = periodMode === 'vintage' ? 'fldzcpuli2mgQLbBE' : 'fldQ9OP9y16xeSnFx';
+      const blendYearField = periodMode === 'vintage' ? F_BC_VIN_YEAR : F_BC_CAL_YEAR;
       const filteredBlendCosts = blendCosts.filter(r => (r.fields[blendYearField] || 0) === periodYear);
-      const blendDirectCost = filteredBlendCosts.reduce((s, r) => s + (r.fields['fldGiP3Q2lSkOmutc'] || 0), 0);
+      const blendDirectCost = filteredBlendCosts.reduce((s, r) => s + (r.fields[F_BC_AMOUNT] || 0), 0);
 
       const packagingCost = skus.reduce((s, r) => s + (r.fields['Total Packaging Cost'] || 0), 0);
 
@@ -471,17 +476,20 @@
       const grossMargin = totalRev > 0 ? (grossProfit / totalRev * 100).toFixed(1) : '0.0';
 
       const filteredOpex = data.opex.filter(r => {
-        const d = r.fields['fldqTmLoBYs9hAt9V'];
+        const d = r.fields[F_OX_DATE];
         return d ? new Date(d).getFullYear() === periodYear : false;
       });
-      const opexTotal = filteredOpex.reduce((s, r) => s + (r.fields['fld5jpcmBxXweLF1X'] || 0), 0);
+      const opexTotal = filteredOpex.reduce((s, r) => s + (r.fields[F_OX_AMOUNT] || 0), 0);
       const netIncome = grossProfit - opexTotal;
 
-      const bsYearField = periodMode === 'vintage' ? 'fldVaNduQRODG0p4h' : 'fld0gYImkg0GTU8Jn';
+      const bsYearField = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
       const periodBS = data.bsEntries.filter(r => (r.fields[bsYearField] || 0) === periodYear);
+      // Cash Position: sum all Cash entries for the period.
+      // Multiple Cash entries are intentional (e.g. checking + savings accounts).
+      // This aggregates all accounts into a single position figure.
       const cashPos = periodBS
-        .filter(r => r.fields['fld2RJT7EXF7qPpHP'] === 'Cash')
-        .reduce((s, r) => s + (r.fields['fldukzh2zZ4OSMwhY'] || 0), 0);
+        .filter(r => r.fields[F_BS_CATEGORY] === 'Cash')
+        .reduce((s, r) => s + (r.fields[F_BS_AMOUNT] || 0), 0);
 
       const sign = n => n < 0 ? 'negative' : '';
 
