@@ -62,6 +62,17 @@
     .block-cost-bar { margin-top:12px; padding-top:10px; border-top:1px solid rgba(120,97,64,0.08); display:flex; align-items:center; justify-content:space-between; }
     .block-cost-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
     .block-cost-value { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:var(--latte); }
+
+    /* Season Costs section inside block card */
+    .cost-section { margin-top:12px; background:rgba(120,97,64,0.06); border:1px solid rgba(120,97,64,0.13); border-radius:8px; overflow:hidden; }
+    .cost-section-title { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(30,23,16,0.4); padding:9px 12px 7px; border-bottom:1px solid rgba(120,97,64,0.1); }
+    .cost-row { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-bottom:1px solid rgba(120,97,64,0.07); }
+    .cost-row:last-child { border-bottom:none; }
+    .cost-label { font-family:'Barlow Condensed',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:0.06em; color:rgba(30,23,16,0.5); }
+    .cost-val { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; color:var(--dark); }
+    .cost-row-highlight { background:rgba(212,71,32,0.05); }
+    .cost-row-highlight .cost-label { color:var(--latte); font-weight:700; }
+    .cost-row-highlight .cost-val { font-size:13px; color:var(--grenadine); }
     .block-card-add { background:transparent; border-radius:14px; border:2px dashed rgba(120,97,64,0.2); cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:160px; padding:20px; }
     .block-card-add:hover { border-color:var(--grenadine); background:rgba(212,71,32,0.03); }
     .block-card-add-icon { font-size:24px; opacity:0.4; }
@@ -672,6 +683,7 @@
   const F_BLOCK_ESTTONS = 'fld5REiPH0brFntsK';
   const F_BLOCK_ACTTONS = 'fldcBL3ubZuCv9UFE';
   const F_BLOCK_FARMCST = 'fldSOJnI9FBQN6Lb2';
+  const F_BLOCK_HARVCST = 'fldDnnDSy6zeLwfe1';
   const F_BLOCK_ROWST   = 'fldZN27h4lMi2Nrqn';
   const F_BLOCK_ROWEND  = 'fld0GBcrWFrV77sWi';
 
@@ -696,7 +708,7 @@
   const F_TASK_ACTIVE = 'fldjhr6hV10Kk3Lr0';
 
   // ─── Runtime data (populated on load) ───────────────────────────────────
-  let BLOCKS    = [];  // { id, name, variety, acres, estTons, actTons, farmCost, rowStart, rowEnd, color }
+  let BLOCKS    = [];  // { id, name, variety, acres, estTons, actTons, farmCost, harvestCost, rowStart, rowEnd, color }
   let RATES     = [];  // { id, name, burdened }
   let TASKS_MAP = {};  // dept label → [{ id, name }]
   const DEPT_MAP = { Vineyard:'Vineyard', Cellar:'Cellar/Productions', Admin:'Admin', Sales:'Sales/Tasting Room', Events:'Venue/Events' };
@@ -740,7 +752,7 @@
     const data = await airtableFetch(T_BLOCKS, {
       fields: JSON.stringify([F_BLOCK_NAME, F_BLOCK_ACRES, F_BLOCK_TPACRE,
                               F_BLOCK_ESTTONS, F_BLOCK_ACTTONS, F_BLOCK_FARMCST,
-                              F_BLOCK_ROWST, F_BLOCK_ROWEND])
+                              F_BLOCK_HARVCST, F_BLOCK_ROWST, F_BLOCK_ROWEND])
     });
     BLOCKS = (data.records || []).map(r => {
       const f = r.fields || r.cellValuesByFieldId || {};
@@ -752,8 +764,9 @@
         acres:     f[F_BLOCK_ACRES]   || 0,
         estTons:   f[F_BLOCK_ESTTONS] || 0,
         actTons:   f[F_BLOCK_ACTTONS] || 0,
-        farmCost:  f[F_BLOCK_FARMCST] || 0,
-        rowStart:  f[F_BLOCK_ROWST]   || '',
+        farmCost:    f[F_BLOCK_FARMCST] || 0,
+        harvestCost: f[F_BLOCK_HARVCST] || 0,
+        rowStart:    f[F_BLOCK_ROWST]   || '',
         rowEnd:    f[F_BLOCK_ROWEND]  || '',
         color:     varietyColor(name),
       };
@@ -889,9 +902,20 @@
             <div class="block-stat"><div class="block-stat-label">Actual</div><div class="block-stat-value">${b.actTons>0?b.actTons:'—'}<span class="block-stat-unit">${b.actTons>0?'t':''}</span></div></div>
             <div class="block-stat"><div class="block-stat-label">Remaining</div><div class="block-stat-value">${b.actTons>0?(b.estTons-b.actTons).toFixed(1):b.estTons||'—'}<span class="block-stat-unit">t</span></div></div>
           </div>
-          <div class="block-cost-bar">
-            <div class="block-cost-label">Farm Cost</div>
-            <div class="block-cost-value" id="cost-${b.id}">$${(b.farmCost||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          <div class="cost-section">
+            <div class="cost-section-title">Season Costs</div>
+            <div class="cost-row">
+              <span class="cost-label">Total Farming Cost</span>
+              <span class="cost-val" id="cost-${b.id}">$${(b.farmCost||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+            </div>
+            <div class="cost-row">
+              <span class="cost-label">Harvest Labor</span>
+              <span class="cost-val">$${(b.harvestCost||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+            </div>
+            <div class="cost-row cost-row-highlight">
+              <span class="cost-label">Cost / Acre</span>
+              <span class="cost-val">${b.acres > 0 ? '$' + Math.round(b.farmCost / b.acres).toLocaleString() : '—'}</span>
+            </div>
           </div>
         </div>`;
       grid.insertBefore(card, addCard);
@@ -1149,7 +1173,7 @@
     const block = BLOCKS.find(b => b.id === blockId);
     if (!block) return;
     block.farmCost = (block.farmCost || 0) + amount;
-    el.textContent = '$' + block.farmCost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    el.textContent = '$' + block.farmCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
   }
 
   // ─── Render logs ──────────────────────────────────────────────────────────
