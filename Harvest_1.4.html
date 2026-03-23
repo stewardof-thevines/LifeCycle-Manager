@@ -275,7 +275,7 @@
 
     /* Expand detail */
     .ec-detail { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
-    .event-card.expanded .ec-detail { max-height:300px; }
+    .event-card.expanded .ec-detail { max-height:420px; }
     .ec-detail-inner { padding:0 20px 16px; border-top:1px solid rgba(120,97,64,0.07); }
     .ec-detail-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; padding-top:14px; margin-bottom:14px; }
     .edg-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
@@ -816,6 +816,7 @@
   const F_EV_BLOCK    = 'fldkbAGjU0G9X3YF6';  // linked → Vineyard Blocks
   const F_EV_COST     = 'fldcb8yE3nsg2mc9M';  // Pick & Hauling Cost (writable currency field)
   const F_EV_CPT      = 'fld2ohbBe49Wh1eaa';  // Cost Per Ton (formula)
+  const F_EV_VIN_COST = 'fld6BO2MbfAo21emr';  // Vineyard Cost at Harvest (lookup, read-only)
   const F_EV_LOT      = 'fldpL19WBD43Qg3iA';  // linked → Wine Lots
   const F_EV_ESTGPT   = 'fldffVZ7y9dEyRlOv';
   const F_EV_ACTGPT   = 'fldtacFWgfrUTIu9U';
@@ -924,7 +925,8 @@
             actJuice: f[F_EV_ACTJUICE] || 0,
             lotId:    lotName,
             lotStyle: '',
-            cost:     f[F_EV_CPT]      || 0,
+            cost:     f[F_EV_COST]     || 0,
+            vinCost:  Array.isArray(f[F_EV_VIN_COST]) ? f[F_EV_VIN_COST][0] || 0 : f[F_EV_VIN_COST] || 0,
             notes:    '',
             // Reconstruct a synthetic "total tons" ticket so overview math works
             tickets:  tons > 0 ? [{ id:1, time:'—', binType:'Scale Total', gross: tons*2000, tare:0, net: tons*2000, brix:null, ph:null, temp:null }] : []
@@ -1317,7 +1319,20 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
                 <div><div class="edg-label">Act. Gal/Ton</div><div class="edg-val">${ev.actGpt||'—'}</div></div>
                 <div><div class="edg-label">Yield Variance</div><div class="edg-val" style="color:${yieldVar>0?'#3a7a50':yieldVar<0?'var(--grenadine)':'inherit'}">${yieldVar?(yieldVar>0?'+':'')+yieldVar+'%':'—'}</div></div>
                 <div><div class="edg-label">Actual Juice</div><div class="edg-val">${ev.actJuice?ev.actJuice.toLocaleString()+' gal':'—'}</div></div>
-                <div><div class="edg-label">Farming Cost</div><div class="edg-val money">${ev.cost>0?'$'+ev.cost.toLocaleString():'—'}</div></div>
+              </div>
+              <div class="ec-detail-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;padding-top:0;background:rgba(120,97,64,0.04);border-radius:8px;padding:10px 12px;">
+                <div>
+                  <div class="edg-label">Pick &amp; Haul Cost</div>
+                  <div class="edg-val money">${ev.cost>0?'$'+ev.cost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}):'—'}</div>
+                </div>
+                <div>
+                  <div class="edg-label">Cost / Ton</div>
+                  <div class="edg-val money">${ev.cost>0&&tons>0?'$'+Math.round(ev.cost/tons).toLocaleString():'—'}</div>
+                </div>
+                <div>
+                  <div class="edg-label" title="Auto-populated from linked vineyard block">Vineyard Farming Cost <span style="font-size:8px;opacity:0.6;text-transform:none;letter-spacing:0">(from block)</span></div>
+                  <div class="edg-val" style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;color:rgba(30,23,16,0.5)">${ev.vinCost>0?'$'+ev.vinCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}):'—'}</div>
+                </div>
               </div>
               ${ev.notes?`<div style="font-size:12px;color:rgba(30,23,16,0.5);margin-bottom:12px;font-style:italic">"${ev.notes}"</div>`:''}
               <div class="ec-tickets-summary">${ev.tickets.length} scale tickets · ${tons.toFixed(3)} tons total</div>
