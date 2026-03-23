@@ -632,6 +632,24 @@
   const CHANNEL_COLORS = ['#D44720','#E9A752','#ACCAB2','#786140','#8FA832'];
   const BLEND_RECIPES = {};  // kept empty — blend recipes wired in BlendingLab screen
 
+  // ─── Channel migration ────────────────────────────────────────────────────
+  const CHANNEL_MIGRATION = {
+    'Restaurant':         'Events',
+    'DTC / Tasting Room': 'DTC'
+  };
+
+  const KNOWN_CHANNELS = ['Wine Club', 'Events', 'Weddings', 'DTC', 'Wholesale'];
+
+  function migrateChannels(sku) {
+    let changed = false;
+    sku.channels = (sku.channels || []).map(ch => {
+      const newName = CHANNEL_MIGRATION[ch.name];
+      if (newName) { changed = true; return { ...ch, name: newName }; }
+      return ch;
+    });
+    return changed;
+  }
+
   // ─── SKU state ────────────────────────────────────────────────────────────
   let skuType = 'single';
   let skus = [];
@@ -719,6 +737,12 @@
             channels: []
           };
         });
+
+      // Run channel migration on all loaded SKUs
+      skus.forEach(sku => {
+        const changed = migrateChannels(sku);
+        if (changed) sku._needsMigration = true;
+      });
 
       render();
     } catch(err) {
@@ -833,8 +857,9 @@
           <div class="add-channel-row" style="margin-top:10px">
             <select class="ch-select" id="ch-sel-${s.id}">
               <option value="">Add channel…</option>
-              <option>Wine Club</option><option>Wholesale</option>
-              <option>Restaurant</option><option>DTC / Tasting Room</option>
+              <option>Wine Club</option><option>Events</option>
+              <option>Weddings</option><option>DTC</option>
+              <option>Wholesale</option>
               <option>Export</option><option>Held / Reserve</option>
             </select>
             <button class="add-ch-btn" onclick="addChannel('${s.id}')">+ Add</button>
@@ -882,9 +907,10 @@
   function channelRowHtml(skuId, cogs, ch, idx) {
     const m = cogs > 0 && ch.price > 0 ? ((ch.price - cogs)/ch.price*100).toFixed(0) : null;
     const mc2 = m === null ? '' : m >= 50 ? 'good' : m >= 30 ? 'ok' : 'warn';
+    const isUnknown = !KNOWN_CHANNELS.includes(ch.name);
     return `
       <div class="channel-row" id="chr-${skuId}-${idx}">
-        <div class="ch-name">${ch.name}</div>
+        <div class="ch-name"${isUnknown ? ` title="Unrecognized channel: '${ch.name}'" style="color:#E9A752;text-decoration:underline dotted"` : ''}>${ch.name}${isUnknown ? ' ⚠' : ''}</div>
         <input type="number" class="ch-input" value="${ch.bottles||''}" placeholder="—"
           onchange="updateChannel('${skuId}',${idx},'bottles',this.value)"
           onclick="event.stopPropagation()" />
