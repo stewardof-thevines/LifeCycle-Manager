@@ -70,7 +70,7 @@
     .rcm-val{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--dark);line-height:1;}
     .rcm-unit{font-size:9px;color:rgba(30,23,16,0.4);}
     .rc-expand{max-height:0;overflow:hidden;transition:max-height 0.38s ease;}
-    .rc.open .rc-expand{max-height:700px;}
+    .rc.open .rc-expand{max-height:1200px;}
     .rc-detail{padding:14px 18px;}
     .comp-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;}
     .comp-tbl th{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(30,23,16,0.35);padding:5px 8px;text-align:left;border-bottom:1px solid rgba(120,97,64,0.1);}
@@ -305,7 +305,21 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.18);
   }
-      @media (max-width: 768px) 
+      /* Direct Costs section */
+    .direct-costs-section{margin-top:14px;padding-top:14px;border-top:1px solid rgba(120,97,64,0.1);}
+    .dc-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(30,23,16,0.4);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+    .dc-total{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--s-committed);letter-spacing:0.04em;}
+    .dc-list{margin-bottom:10px;}
+    .dc-empty{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:rgba(30,23,16,0.3);padding:6px 0;}
+    .dc-row{display:grid;grid-template-columns:1fr 70px 80px;gap:6px;align-items:center;padding:6px 8px;background:rgba(107,45,62,0.04);border-radius:6px;border:1px solid rgba(107,45,62,0.07);margin-bottom:5px;}
+    .dc-desc{font-size:12.5px;color:var(--dark);}
+    .dc-amt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--s-committed);text-align:right;}
+    .dc-date{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:rgba(30,23,16,0.4);text-align:right;}
+    .dc-form{background:rgba(120,97,64,0.04);border:1px solid rgba(120,97,64,0.1);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;}
+    .add-ch-btn{height:30px;padding:0 14px;background:var(--s-committed);color:#fff;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.06em;cursor:pointer;align-self:flex-start;transition:all 0.18s;}
+    .add-ch-btn:hover{opacity:0.85;}
+
+    @media (max-width: 768px)
   {
     body { overflow-x: hidden; }
     .layout { grid-template-columns: 1fr; }
@@ -472,7 +486,17 @@
   const TBL_RECIPES  = 'tblTaAYQmjVxNAmJt';
   const TBL_COMPS    = 'tblXcKZTuycXg7KVP';
   const TBL_LOTS_AT  = 'tblcBMCwq1ng8ykMb';
+  const TBL_BLEND_COSTS = 'tbl4wU6E4Unu2XZdH';
   const PROXY        = '/api/airtable';
+
+  // Blend Costs field IDs
+  const F_BC_DESC     = 'fldQ64rmjAobP5PJr';
+  const F_BC_AMOUNT   = 'fldGiP3Q2lSkOmutc';
+  const F_BC_DATE     = 'fldu3C7tu6kZUZDaJ';
+  const F_BC_VIN_YEAR = 'fldzcpuli2mgQLbBE';
+  const F_BC_CAL_YEAR = 'fldQ9OP9y16xeSnFx';
+  const F_BC_LOT      = 'fldBWm8UmXaI1ytU8';  // link to Wine Lots
+  const F_BC_NOTES    = 'fldCCA3c4fSNfPcKN';
 
   // Blend Recipe field IDs
   const F_R_NAME    = 'fldGx5DXbdkIPBWDA';
@@ -530,6 +554,7 @@
   let LOTS = [];   // [{id, _recId, vol, cost, costPerGal, color}]
   let recipes = [];
   let rows=[],rowCtr=0,activeFilter='all',expandedId=null,commitRecipeId=null;
+  let blendCosts = [];
 
   async function initApp() {
     try {
@@ -766,6 +791,20 @@
             </div>
           </div>
           ${trialRows}
+          ${r.status==='Committed'&&r.committedLotRecId?`
+          <div class="direct-costs-section">
+            <div class="dc-title">Direct Costs <span class="dc-total" id="dc-total-${r.id}"></span></div>
+            <div class="dc-list" id="dc-list-${r.id}"><div class="dc-empty">No direct costs yet</div></div>
+            <div class="dc-form">
+              <input type="text"   class="fi" id="dc-desc-${r.id}"  placeholder="e.g. Tartaric acid" />
+              <input type="number" class="fi" id="dc-amt-${r.id}"   placeholder="$" step="0.01" />
+              <input type="date"   class="fi" id="dc-date-${r.id}"  />
+              <textarea            class="fi" id="dc-notes-${r.id}" placeholder="Notes (optional)" rows="2"></textarea>
+              <button class="add-ch-btn" onclick="addDirectCost('${r.id}', '${r.committedLotRecId}', ${r.vintage || new Date().getFullYear()})">
+                + Add Cost
+              </button>
+            </div>
+          </div>`:''}
         </div></div>
       </div>`;
     }).join('');
@@ -786,7 +825,19 @@
     };
   }
 
-  function toggleExpand(id){expandedId=expandedId===id?null:id;renderList();}
+  function toggleExpand(id){
+    expandedId=expandedId===id?null:id;
+    renderList();
+    if(expandedId){
+      const r=recipes.find(x=>x.id===expandedId);
+      if(r&&r.status==='Committed'&&r.committedLotRecId){
+        loadBlendCosts(r.committedLotRecId).then(costs=>{
+          blendCosts=costs;
+          renderDirectCosts(r.id,costs);
+        });
+      }
+    }
+  }
   function setFilter(el,f){document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');activeFilter=f;expandedId=null;renderList();}
 
   async function advanceStatus(id){
@@ -906,6 +957,8 @@
       if(r._recId) newLotFields['fldrvl1LVhb6rZRT6'] = [r._recId]; // Blend Recipes link
       const newLotRec = await atCreate(TBL_LOTS_AT, newLotFields);
       const newLotRecId = newLotRec && newLotRec.id ? newLotRec.id : null;
+      // Store Airtable record ID on recipe so Direct Costs panel can reference it
+      if (newLotRecId) r.committedLotRecId = newLotRecId;
 
       // Cost transfer: build components array using lot name → record ID lookup
       const comps = (r.components || []).map(comp => {
@@ -921,6 +974,74 @@
         await transferBlendCosts(comps, newLotRecId);
       }
     } catch(err){ console.error('commitBlend Airtable write failed:',err); }
+  }
+
+  // ── Direct Costs ──────────────────────────────────────────────────────────
+  async function loadBlendCosts(lotRecId) {
+    if (!lotRecId) return [];
+    const formula = encodeURIComponent(`FIND('${lotRecId}', ARRAYJOIN({Wine Lot}))`);
+    const url = `/api/airtable?baseId=${BASE_ID}&tableId=${TBL_BLEND_COSTS}&filterByFormula=${formula}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return (data.records || []).map(r => ({
+      _id:    r.id,
+      desc:   r.fields[F_BC_DESC]   || '',
+      amount: r.fields[F_BC_AMOUNT] || 0,
+      date:   r.fields[F_BC_DATE]   || '',
+      notes:  r.fields[F_BC_NOTES]  || ''
+    }));
+  }
+
+  function renderDirectCosts(recipeId, costs) {
+    const list  = document.getElementById(`dc-list-${recipeId}`);
+    const total = document.getElementById(`dc-total-${recipeId}`);
+    if (!list) return;
+
+    const sum = costs.reduce((s, c) => s + c.amount, 0);
+    if (total) total.textContent = sum > 0 ? `$${sum.toFixed(0)}` : '';
+
+    list.innerHTML = costs.length === 0
+      ? '<div class="dc-empty">No direct costs yet</div>'
+      : costs.map(c => `
+          <div class="dc-row">
+            <span class="dc-desc">${c.desc}</span>
+            <span class="dc-amt">$${c.amount.toFixed(2)}</span>
+            <span class="dc-date">${c.date || '—'}</span>
+          </div>`).join('');
+  }
+
+  async function addDirectCost(recipeId, lotRecId, vintageYear) {
+    const desc   = document.getElementById(`dc-desc-${recipeId}`).value.trim();
+    const amount = parseFloat(document.getElementById(`dc-amt-${recipeId}`).value) || 0;
+    const date   = document.getElementById(`dc-date-${recipeId}`).value;
+    const notes  = document.getElementById(`dc-notes-${recipeId}`).value.trim();
+
+    if (!desc || !amount) { showToast('Description and amount required.', true); return; }
+
+    const calYear = date ? new Date(date).getFullYear() : new Date().getFullYear();
+
+    const fields = {
+      [F_BC_DESC]:     desc,
+      [F_BC_AMOUNT]:   amount,
+      [F_BC_VIN_YEAR]: vintageYear,
+      [F_BC_CAL_YEAR]: calYear,
+      [F_BC_LOT]:      [lotRecId]
+    };
+    if (date)  fields[F_BC_DATE]  = date;
+    if (notes) fields[F_BC_NOTES] = notes;
+
+    try {
+      await atCreate(TBL_BLEND_COSTS, fields);
+      showToast(`Cost "${desc}" added — $${amount.toFixed(2)}`);
+      blendCosts = await loadBlendCosts(lotRecId);
+      renderDirectCosts(recipeId, blendCosts);
+      // Clear form inputs
+      [`dc-desc-${recipeId}`, `dc-amt-${recipeId}`, `dc-notes-${recipeId}`]
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    } catch(err) {
+      showToast('Failed to save cost.', true);
+      console.error(err);
+    }
   }
 
   function showToast(msg,err=false){
