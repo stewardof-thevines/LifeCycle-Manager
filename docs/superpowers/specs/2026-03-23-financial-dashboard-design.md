@@ -38,11 +38,11 @@ Before any implementation, the following Airtable field issues must be resolved.
 `fldEeGD6o6zxIV3gb` is currently mapped as `F_LOT_VOL` (gallons in) in `Cellar_1.6.html`, as `F_L_COST` (cost) in `BlendingLab_1.3.html`, **and** as `F_LOT_COST` (Total Loaded Cost) in `SKUs_1.4.html`. All three cannot be correct — this single field ID is used for three different purposes across three modules.
 
 **Resolved:**
-- `fldEeGD6o6zxIV3gb` = **Total Loaded Cost** (confirmed in Airtable)
-- `fldqnxu3PHCVXVrXg` = **Actual Juice (Gal) from Harvest Event** — the correct volume field
-- `F_LOT_COST = 'fldEeGD6o6zxIV3gb'` added to Cellar; `F_LOT_VOL` corrected to `fldqnxu3PHCVXVrXg`
+- `fldEeGD6o6zxIV3gb` = **Total Loaded Cost** — confirmed as a **formula field** (cannot be patched). Cellar reads it correctly; blending cost transfer uses a new `Blend Cost Basis` writable field instead (see Blending section)
+- `fldqnxu3PHCVXVrXg` = "Actual Juice (Gal) (from Harvest Event)" — a **lookup** field; `fld8gBnBe60d9cSAn` = "Live Wine Volume" is the formula-derived current volume
+- `F_LOT_COST = 'fldEeGD6o6zxIV3gb'` added to Cellar for reading; `F_LOT_VOL` corrected to `fldqnxu3PHCVXVrXg`
 - Cellar lot loading now reads `f[F_LOT_COST]` instead of hardcoded `0`
-- Cellar lot creation now writes `F_LOT_COST` to Airtable
+- Cellar lot creation now writes `F_LOT_COST` — **note:** this writes to a formula field and will be silently ignored by Airtable. The `Total Loaded Cost` formula is Airtable-managed via rollups. Cellar cost display will read the formula value; the new `Blend Cost Basis` field will feed into it for blends.
 
 ### 2. cost_per_gal Field — Formula vs. Stored Number
 
@@ -55,8 +55,9 @@ Before any implementation, the following Airtable field issues must be resolved.
 `ef-cost` (total pick cost) is captured in the Harvest event form and stored in-memory but is **never written to Airtable**. The `submitLog()` function's `airtableCreate` call does not include the cost field. `F_EV_CPT` (Cost Per Ton, `fld2ohbBe49Wh1eaa`) is a formula field that likely depends on a base cost field — confirm which Airtable field it references.
 
 **Resolved:**
-- `fld6BO2MbfAo21emr` = **Vineyard Cost At Harvest** (confirmed in Airtable Pick Events table)
-- `F_EV_COST = 'fld6BO2MbfAo21emr'` added to `Harvest_1.4.html`
+- `fld6BO2MbfAo21emr` = "Vineyard Cost at Harvest" is a **lookup** (pulls Total Farming Cost from the Vineyard Block) — not writable
+- A new writable currency field **"Pick & Hauling Cost"** (`fldcb8yE3nsg2mc9M`) was created in the Harvest Events table for direct pick/hauling costs (contract picking, bin transport, scale fees)
+- `F_EV_COST = 'fldcb8yE3nsg2mc9M'` added to `Harvest_1.4.html`
 - `submitLog()` now writes `F_EV_COST` when `ev.cost` is present
 
 ### 5. Blend Cost Field — Not Written on Commit
@@ -98,15 +99,20 @@ Blending is always partial. A typical blend pulls 100% of one lot and 25–50% o
 
 ### Inherited Cost Calculation
 
-When a blend is committed, `commitBlend()` must perform the following operations:
+**Important constraint:** `Total Loaded Cost` (`fldEeGD6o6zxIV3gb`) on Wine Lots is an Airtable **formula field** — it cannot be patched directly. It is calculated as the sum of rollup fields (Lot Initial Cost, Total Supply Costs) plus any manual acquisition cost. Similarly, `Live Wine Volume` (`fld8gBnBe60d9cSAn`) is a formula.
 
-1. For each component lot, retrieve `total_cost` (F_LOT_COST) and `current_volume` (F_LOT_VOL)
-2. `cost_per_gal = total_cost ÷ current_volume`
-3. `cost_transferred = gallons_pulled × cost_per_gal` (per component)
-4. New blend lot `total_cost` = sum of all `cost_transferred` values
-5. **PATCH each source lot** in Airtable: `remaining_cost = original_cost − cost_transferred`, `remaining_volume = original_volume − gallons_pulled`
-6. `cost_per_gal` on the source lot remains constant because cost and volume reduce proportionally
-7. **PATCH / CREATE the new blend lot** in Airtable with `total_cost` and `volume` written at commit time
+The blend cost transfer therefore works through **a dedicated writable field** on Wine Lots: a `Blend Cost Basis` currency field (to be created as part of this build) that stores the inherited cost transferred from component lots. The `Total Loaded Cost` formula in Airtable should be updated to include `{Blend Cost Basis}` in its sum.
+
+When a blend is committed, `commitBlend()` performs:
+
+1. For each component lot, read `current_cost_per_gal` from `F_L_CPG` (Current Cost/Gal formula, `fldjadcAeYVr0XdPk`)
+2. `cost_transferred = gallons_pulled × cost_per_gal` (per component)
+3. New blend lot `Blend Cost Basis` = sum of all `cost_transferred` values — **PATCH new blend lot**
+4. For each source lot, **PATCH** a new writable `Gallons Pulled` accumulator field (to be created), incrementing it by the gallons used. `Live Wine Volume` formula (`{Actual Juice} - {Gallons Pulled}`) will then auto-reduce, and `Current Cost/Gal` will remain accurate since both numerator and denominator reduce proportionally.
+
+**New fields required on Wine Lots table (created during implementation):**
+- `Blend Cost Basis` (currency) — stores inherited cost from blend components
+- `Gallons Pulled` (number) — accumulates total gallons transferred out to blends; used as an input to the Live Wine Volume formula update
 
 If `current_volume` is 0 on a source lot, skip cost transfer for that lot and log a warning.
 
@@ -398,9 +404,17 @@ Uses `window.print()` with `@media print` stylesheet. Print view:
 - `sw.js` — add Finance_1.0.html to pre-cache shell; bump cache version to `lifecycle-v7` (current is `lifecycle-v6`)
 - `index.html` — add Finance navigation card
 
-### New Airtable tables
-- `TBL_FINANCIALS` — manual balance sheet and cash flow entries
-- `TBL_BLEND_COSTS` — direct cost line items on blend lots
+### New Airtable tables (created)
+- `Balance Sheet Entries` (`tblLTGFWPYqjgEcGB`) — manual balance sheet entries (cash, fixed assets, loans, etc.)
+- `Blend Costs` (`tbl4wU6E4Unu2XZdH`) — direct cost line items on blend lots
+
+### Existing Airtable table (reused)
+- `Overhead & OpEx` (`tblLgn1j6SYVOr79n`) — used for operating expenses on the P&L; no new table needed
+
+### New Airtable fields (to be created during implementation)
+- `Pick & Hauling Cost` (`fldcb8yE3nsg2mc9M`) — currency field on Harvest Events ✓ **already created**
+- `Blend Cost Basis` — currency field on Wine Lots (inherited cost from blend components)
+- `Gallons Pulled` — number field on Wine Lots (accumulates gallons transferred out to blends)
 
 ---
 
