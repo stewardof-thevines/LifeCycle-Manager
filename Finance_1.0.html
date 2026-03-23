@@ -204,6 +204,23 @@
     .export-btn:hover { opacity:.85; }
     .fin-sub-hdr { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--latte); padding:10px 0 4px; font-style:italic; }
 
+    /* Left panel form */
+    .field-group { margin-bottom:12px; }
+    .field-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; color:rgba(245,239,228,.6); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+    .field-input { width:100%; box-sizing:border-box; background:rgba(245,239,228,.08); border:1px solid rgba(245,239,228,.15); border-radius:4px; color:var(--cream); font-family:'Barlow',sans-serif; font-size:13px; padding:7px 10px; }
+    .field-input:focus { outline:none; border-color:var(--beeswax); }
+    .field-hint { font-family:'Barlow',sans-serif; font-size:11px; color:rgba(245,239,228,.4); margin-top:3px; }
+    .submit-btn { width:100%; padding:10px; background:var(--grenadine); color:var(--white); border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; cursor:pointer; margin-bottom:16px; }
+    .submit-btn:hover { opacity:.85; }
+    /* Entry list */
+    .entry-list { overflow-y:auto; max-height:300px; }
+    .entry-empty { font-family:'Barlow',sans-serif; font-size:13px; color:rgba(245,239,228,.4); padding:8px 0; }
+    .entry-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(245,239,228,.08); }
+    .entry-name { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--cream); font-weight:600; }
+    .entry-meta { font-family:'Barlow',sans-serif; font-size:12px; color:rgba(245,239,228,.5); }
+    .entry-del { background:none; border:none; color:rgba(245,239,228,.4); font-size:18px; cursor:pointer; padding:0 4px; }
+    .entry-del:hover { color:var(--grenadine); }
+
     /* ── TOAST ── */
     .toast {
       position:fixed; bottom:28px; right:28px;
@@ -254,15 +271,55 @@
   <div class="app-layout">
 
     <!-- ── LEFT PANEL ── -->
-    <div class="left-panel">
-      <div class="panel-header">
-        <div class="panel-eyebrow">Balance Sheet</div>
-        <div class="panel-title">Add Entry</div>
-        <div class="panel-subtitle">Manual balance sheet entries — implemented in Task 13</div>
+    <div class="left-panel" style="padding:28px;">
+      <div class="panel-eyebrow">Finance</div>
+      <div class="panel-title">Balance Sheet<br>Entries</div>
+      <div style="margin-top:20px;"></div>
+
+      <div class="field-group">
+        <label class="field-label">Entry Name</label>
+        <input type="text" class="field-input" id="bs-name" placeholder="e.g. Main Checking" />
       </div>
-      <div class="panel-placeholder">
-        <p>Balance Sheet Entries form<br>— placeholder for Task 13 —</p>
+      <div class="field-group">
+        <label class="field-label">Category</label>
+        <select class="field-input" id="bs-category">
+          <option value="">Select…</option>
+          <option>Cash</option>
+          <option>Fixed Asset</option>
+          <option>Loan</option>
+          <option>Loan Repayment</option>
+          <option>Accounts Receivable</option>
+          <option>Accounts Payable</option>
+          <option>Working Capital Adjustment</option>
+          <option>Beginning Cash Balance</option>
+        </select>
       </div>
+      <div class="field-group">
+        <label class="field-label">Amount ($)</label>
+        <input type="number" class="field-input" id="bs-amount" placeholder="0.00" step="0.01" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date</label>
+        <input type="date" class="field-input" id="bs-date" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Vintage Year</label>
+        <input type="number" class="field-input" id="bs-vin-year" placeholder="2024" />
+        <div class="field-hint">Auto-filled from period — edit to override</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Calendar Year</label>
+        <input type="number" class="field-input" id="bs-cal-year" placeholder="2024" />
+        <div class="field-hint">Auto-filled from date — edit to override</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Notes</label>
+        <textarea class="field-input" id="bs-notes" placeholder="Optional…" rows="2"></textarea>
+      </div>
+
+      <button class="submit-btn" onclick="addBSEntry()">+ Add Entry</button>
+
+      <div class="entry-list" id="bs-entry-list"></div>
     </div>
 
     <!-- ── MAIN AREA ── -->
@@ -355,6 +412,25 @@
       if (!r.ok) throw new Error(`API ${r.status}`);
       const d = await r.json();
       return d.records || [];
+    }
+
+    async function apiCreate(tableId, fields) {
+      const res = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+      });
+      if (!res.ok) throw new Error(`POST ${res.status}`);
+      return res.json();
+    }
+
+    async function apiDelete(tableId, recordId) {
+      const res = await fetch(PROXY, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId, recordId })
+      });
+      if (!res.ok) throw new Error(`DELETE ${res.status}`);
     }
 
     /* ══════════════════════════════════════════════════════════════
@@ -719,7 +795,83 @@
       `;
     }
 
-    function renderBSEntries(entries) { /* implemented in Task 13 */ }
+    function renderBSEntries(entries) {
+      const list = document.getElementById('bs-entry-list');
+      if (!list) return;
+
+      // Filter to current period for display
+      const bsYF = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+      const periodEntries = entries.filter(r => (r.fields[bsYF] || 0) === periodYear);
+
+      list.innerHTML = periodEntries.length === 0
+        ? '<div class="entry-empty">No entries for this period</div>'
+        : periodEntries.map(r => `
+            <div class="entry-row">
+              <div class="entry-info">
+                <div class="entry-name">${r.fields[F_BS_NAME] || '—'}</div>
+                <div class="entry-meta">${r.fields[F_BS_CATEGORY] || ''} · $${fmt(r.fields[F_BS_AMOUNT] || 0)}</div>
+              </div>
+              <button class="entry-del" onclick="deleteBSEntry('${r.id}')">×</button>
+            </div>`).join('');
+    }
+
+    async function addBSEntry() {
+      const name     = document.getElementById('bs-name').value.trim();
+      const category = document.getElementById('bs-category').value;
+      const amount   = parseFloat(document.getElementById('bs-amount').value) || 0;
+      const date     = document.getElementById('bs-date').value;
+      const notes    = document.getElementById('bs-notes').value.trim();
+      const vinYear  = parseInt(document.getElementById('bs-vin-year').value) || periodYear;
+      const calYear  = parseInt(document.getElementById('bs-cal-year').value) ||
+                       (date ? new Date(date).getFullYear() : periodYear);
+
+      if (!name || !category || !amount) {
+        showToast('Name, category, and amount required.', true); return;
+      }
+
+      const fields = {
+        [F_BS_NAME]:     name,
+        [F_BS_CATEGORY]: category,
+        [F_BS_AMOUNT]:   amount,
+        [F_BS_VIN_YEAR]: vinYear,
+        [F_BS_CAL_YEAR]: calYear
+      };
+      if (date)  fields[F_BS_DATE]  = date;
+      if (notes) fields[F_BS_NOTES] = notes;
+
+      try {
+        await apiCreate(TBL_BALANCE_SHEET, fields);
+        showToast(`"${name}" saved`);
+        // Clear form
+        ['bs-name','bs-amount','bs-notes'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('bs-category').value = '';
+        document.getElementById('bs-vin-year').value = periodYear;
+        document.getElementById('bs-cal-year').value = periodYear;
+        await initApp(); // reload all tabs
+      } catch(e) {
+        showToast('Save failed.', true);
+        console.error(e);
+      }
+    }
+
+    async function deleteBSEntry(recordId) {
+      if (!confirm('Delete this entry?')) return;
+      try {
+        await apiDelete(TBL_BALANCE_SHEET, recordId);
+        await initApp();
+      } catch(e) {
+        showToast('Delete failed.', true);
+      }
+    }
+
+    function initBSForm() {
+      const vinEl = document.getElementById('bs-vin-year');
+      const calEl = document.getElementById('bs-cal-year');
+      if (vinEl) vinEl.value = periodYear;
+      if (calEl) calEl.value = periodYear;
+    }
 
     /* ══════════════════════════════════════════════════════════════
        INIT APP
@@ -772,6 +924,7 @@
         b.classList.toggle('active', b.dataset.mode === mode));
       const sel = document.getElementById('year-sel');
       if (sel) sel.value = year;
+      initBSForm();
       initApp();
     }
 
@@ -811,6 +964,7 @@
     ══════════════════════════════════════════════════════════════ */
     document.addEventListener('DOMContentLoaded', () => {
       initYearSelector();
+      initBSForm();
       initApp();
     });
   </script>
