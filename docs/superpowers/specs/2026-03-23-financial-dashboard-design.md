@@ -35,12 +35,12 @@ Before any implementation, the following Airtable field issues must be resolved.
 
 ### 1. Lot Cost Field — Missing / Conflicting
 
-`fldEeGD6o6zxIV3gb` is currently mapped as `F_LOT_VOL` (gallons in) in `Cellar_1.6.html` **and** as `F_L_COST` (cost) in `BlendingLab_1.3.html`. These cannot both be correct.
+`fldEeGD6o6zxIV3gb` is currently mapped as `F_LOT_VOL` (gallons in) in `Cellar_1.6.html`, as `F_L_COST` (cost) in `BlendingLab_1.3.html`, **and** as `F_LOT_COST` (Total Loaded Cost) in `SKUs_1.4.html`. All three cannot be correct — this single field ID is used for three different purposes across three modules.
 
 **Resolution required before implementation:**
-- Confirm the true purpose of `fldEeGD6o6zxIV3gb` in Airtable (it is either volume or cost, not both)
+- Confirm the true purpose of `fldEeGD6o6zxIV3gb` in Airtable (open Airtable → Wine Lots table → check the field name)
 - Identify or create a dedicated **Total Loaded Cost** field in the Wine Lots table
-- Document the correct field ID as `F_LOT_COST` and update all modules that reference it
+- Document the correct field ID as `F_LOT_COST` and update all three modules that reference it (Cellar, BlendingLab, SKUs)
 - Cellar currently reads no cost field from Airtable (`cost: 0` is hardcoded at line 689) — this must be fixed so Cellar reads and writes the correct field
 
 ### 2. cost_per_gal Field — Formula vs. Stored Number
@@ -49,7 +49,16 @@ Before any implementation, the following Airtable field issues must be resolved.
 
 **Confirm before implementation:** Verify that `fldjadcAeYVr0XdPk` is an Airtable formula field defined as `{Total Loaded Cost} / {Gallons In}`. If it is a stored number, the commit logic must also patch it explicitly.
 
-### 3. Blend Cost Field — Not Written on Commit
+### 4. Harvest Pick Event Cost — Not Written to Airtable
+
+`ef-cost` (total pick cost) is captured in the Harvest event form and stored in-memory but is **never written to Airtable**. The `submitLog()` function's `airtableCreate` call does not include the cost field. `F_EV_CPT` (Cost Per Ton, `fld2ohbBe49Wh1eaa`) is a formula field that likely depends on a base cost field — confirm which Airtable field it references.
+
+**Resolution required before implementation:**
+- Confirm or create a **Total Harvest Cost** field in the Pick Events table; document its field ID as `F_EV_COST`
+- Update `submitLog()` in `Harvest_1.4.html` to write `F_EV_COST` on event creation
+- Confirm `F_EV_CPT` formula references `{Total Harvest Cost}` — if so, it will auto-calculate once the field is populated
+
+### 5. Blend Cost Field — Not Written on Commit
 
 `commitBlend()` in `BlendingLab_1.3.html` currently creates a new Wine Lot with only `Lot ID`, `Stage`, and a recipe link. It does not write the blend's inherited cost or reduce source lot costs.
 
@@ -104,7 +113,19 @@ If `current_volume` is 0 on a source lot, skip cost transfer for that lot and lo
 
 After a blend is created, direct costs (additives, nutrients, color enhancers, fining agents) may be added to the blend lot itself via a new entry form in BlendingLab. These are new cost entries owned by the blend lot — they did not exist in any source lot and are not double-counted with prior treatments applied to source lots before blending.
 
-Direct costs are stored as line items in a new Airtable table `TBL_BLEND_COSTS` (or as a linked set of records on the lot) and summed into the lot's `total_cost` field on save.
+Direct costs are stored as line items in a new Airtable table `TBL_BLEND_COSTS` and summed into the lot's `total_cost` field on save.
+
+**`TBL_BLEND_COSTS` schema:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| Description | Text | e.g., "Tartaric acid addition", "Bentonite fining" |
+| Amount | Number | Dollar cost |
+| Date | Date | Date of addition |
+| Vintage Year | Number | Inherited from the linked blend lot's vintage year |
+| Calendar Year | Number | Derived from Date field |
+| Lot | Linked record | Link to Wine Lots record (the blend lot) |
+| Notes | Long text | Optional |
 
 **Example:**
 - Lot A (300 gal, $8,000 total): received a nutrient treatment pre-blend at $150
@@ -206,7 +227,7 @@ Stores manual balance sheet and cash flow entries. Fields:
 | Field | Type | Notes |
 |-------|------|-------|
 | Entry Name | Text | e.g., "Main Checking", "2022 Tractor" |
-| Category | Single select | Cash, Fixed Asset, Loan, Accounts Receivable, Accounts Payable, Operating Expense, Beginning Cash Balance, Loan Repayment |
+| Category | Single select | Cash, Fixed Asset, Loan, Loan Repayment, Accounts Receivable, Accounts Payable, Operating Expense, Working Capital Adjustment, Beginning Cash Balance |
 | Amount | Number | Dollar value — positive for assets/income, negative for liabilities/expenses where applicable |
 | Date | Date | Entry date |
 | Vintage Year | Number | e.g., 2026 — for vintage period filtering |
@@ -254,7 +275,7 @@ Navigation tiles linking to each operational module.
 
 #### Tab 2: P&L (Income Statement)
 
-Inherited blending costs are **not** a separate line — they are already captured within the Cellar COGS line, because they transfer from Cellar lot cost bases. Only direct costs added in BlendingLab appear as a separate line.
+Inherited blending costs are **not** a separate line. The Cellar COGS line sums `total_cost` across **all** active Wine Lots records — including blend lots. When `commitBlend()` transfers cost from source lots to the new blend lot, the blend lot's `total_cost` becomes part of the Cellar COGS aggregate. Source lot costs are reduced by the exact amount transferred, so the total across all lots is unchanged. Only direct costs added in BlendingLab after the blend is created appear as a separate line (`Blending Direct`).
 
 ```
 Revenue
@@ -311,7 +332,7 @@ Equity
 ```
 Operating Activities
   Net Income                          $X  ← from P&L
-  Changes in Working Capital          $X  ← manual entries (Category = Operating Expense)
+  Working Capital Adjustments         $X  ← TBL_FINANCIALS, Category = Working Capital Adjustment
   ──────────────────────────────────────
   Net Cash from Operations            $X
 
@@ -349,33 +370,59 @@ Uses `window.print()` with `@media print` stylesheet. Print view:
 - Outputs active tab document only in clean single-column layout
 - Includes Domaine Mathiot header, period label (e.g., "2026 Vintage Year"), and generation date
 - No external PDF library required
+- When the Overview tab is active, Print/PDF outputs all three accounting documents (P&L, Balance Sheet, Cash Flow) sequentially with page breaks between them
 
 ---
 
 ## Implementation Scope
 
 ### Prerequisites (must happen first in Airtable)
-1. Resolve the `fldEeGD6o6zxIV3gb` field conflict — determine if it is volume or cost
-2. Confirm or create a **Total Loaded Cost** field in Wine Lots table; document its field ID
+1. Resolve the `fldEeGD6o6zxIV3gb` field conflict across Cellar, BlendingLab, and SKUs — confirm its true purpose in Airtable (volume or cost)
+2. Confirm or create a **Total Loaded Cost** field in Wine Lots table; document its field ID as `F_LOT_COST` for use in all three modules
 3. Confirm `fldjadcAeYVr0XdPk` is an Airtable formula field (`{Total Loaded Cost} / {Gallons In}`)
-4. Create `TBL_FINANCIALS` table in Airtable with fields defined above
-5. Create `TBL_BLEND_COSTS` table (or equivalent structure) for BlendingLab direct cost line items
+4. Confirm or create a **Total Harvest Cost** field in Pick Events table; document its field ID as `F_EV_COST`
+5. Confirm `fld2ohbBe49Wh1eaa` (`F_EV_CPT`, Cost Per Ton) formula references `{Total Harvest Cost} / {Net Tons}`
+6. Create `TBL_FINANCIALS` table in Airtable with fields defined above
+7. Create `TBL_BLEND_COSTS` table with fields defined above
 
 ### New file
 - `Finance_1.0.html` — standalone Finance module
 
 ### Modified files
 - `Vineyard_1.4.html` — add Costs section to left panel
-- `Harvest_1.4.html` — surface pick cost per event; add cost-per-ton derived stat
+- `Harvest_1.4.html` — update `submitLog()` to write `F_EV_COST` to Airtable; surface pick cost per event; add cost-per-ton derived stat
 - `Cellar_1.6.html` — fix F_LOT_COST field mapping; extend lot cost to support line-item breakdown; display cost-per-gal live
 - `BlendingLab_1.3.html` — update `commitBlend()` to write inherited costs and PATCH source lots; add direct cost entry form; resolve F_L_COST field conflict
 - `SKUs_1.4.html` — update channel list; add migration for old channel names
-- `sw.js` — add Finance_1.0.html to pre-cache shell; bump cache version to `lifecycle-v5`
+- `sw.js` — add Finance_1.0.html to pre-cache shell; bump cache version to `lifecycle-v7` (current is `lifecycle-v6`)
 - `index.html` — add Finance navigation card
 
 ### New Airtable tables
 - `TBL_FINANCIALS` — manual balance sheet and cash flow entries
 - `TBL_BLEND_COSTS` — direct cost line items on blend lots
+
+---
+
+## Period Filtering
+
+The Finance module period selector (Vintage Year / Calendar Year) applies to all data sources as follows:
+
+| Source | Vintage Year Filter | Calendar Year Filter |
+|--------|-------------------|---------------------|
+| Vineyard labor logs | Filter by `F_BL_YEAR` on linked block, or by log date year if available | Filter by log date year |
+| Pick events (`TBL_EVENTS`) | Filter by `F_EV_DATE` year (harvest year maps to vintage year for wine) | Filter by `F_EV_DATE` year |
+| Wine lots (`TBL_LOTS`) | Filter by `F_LOT_YEAR` (harvest/vintage year field) | Filter by lot creation date year |
+| Blend direct costs (`TBL_BLEND_COSTS`) | Filter by `Vintage Year` field | Filter by `Calendar Year` field (derived from Date) |
+| SKU channel revenue | Filter by SKU's linked lot `F_LOT_YEAR` | Filter by SKU creation/sale date year |
+| `TBL_FINANCIALS` entries | Filter by `Vintage Year` field | Filter by `Calendar Year` field |
+
+All date-based filters use the year value only (not month/day). Vintage year for pick events is the calendar year of the `F_EV_DATE` field — in winery practice, a 2026 harvest occurs in the fall of 2026 and produces 2026 vintage wine.
+
+---
+
+## Known Simplifications
+
+**Loans balance:** The Balance Sheet Loans line = sum of all `Loan` category entries − sum of all `Loan Repayment` entries for the period. This is an approximation — it does not model true loan amortization schedules or interest. Bookkeepers using this report should note that the Loans figure represents net cash flow from financing, not a precise outstanding principal balance. For compliance-grade reporting, a proper amortization schedule should be maintained outside this system.
 
 ---
 
