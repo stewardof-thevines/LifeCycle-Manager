@@ -167,6 +167,29 @@
       color:rgba(30,23,16,0.3); text-align:center;
     }
 
+    /* Overview tab */
+    .overview-period { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--latte); text-transform:uppercase; letter-spacing:.06em; padding:16px 24px 0; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; padding:16px 24px; }
+    .stat-card { background:var(--white); border-radius:8px; padding:16px; }
+    .stat-val { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:600; color:var(--dark); }
+    .stat-val.negative { color:var(--grenadine); }
+    .stat-lbl { font-family:'Barlow',sans-serif; font-size:12px; color:var(--latte); margin-top:2px; }
+    .overview-section { padding:0 24px 24px; }
+    .section-title { font-family:'Playfair Display',serif; font-size:16px; color:var(--dark); margin-bottom:12px; }
+    /* Channel bar */
+    .ch-bar { display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:12px; background:var(--cream); }
+    .ch-bar-seg { height:100%; }
+    /* Finance table */
+    .fin-table { width:100%; border-collapse:collapse; font-family:'Barlow Condensed',sans-serif; font-size:14px; }
+    .fin-table th { text-align:left; color:var(--latte); font-weight:600; padding:6px 8px; border-bottom:1px solid rgba(120,97,64,.2); }
+    .fin-table td { padding:6px 8px; color:var(--dark); }
+    .fin-table tr:hover td { background:rgba(120,97,64,.05); }
+    .fin-empty { font-family:'Barlow',sans-serif; font-size:14px; color:var(--latte); padding:16px 0; }
+    /* Nav tiles */
+    .nav-tiles { display:flex; flex-wrap:wrap; gap:8px; }
+    .nav-tile { display:inline-block; padding:8px 16px; background:var(--white); border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; color:var(--dark); text-decoration:none; }
+    .nav-tile:hover { background:var(--grenadine); color:var(--white); }
+
     /* ── TOAST ── */
     .toast {
       position:fixed; bottom:28px; right:28px;
@@ -350,11 +373,139 @@
     }
 
     /* ══════════════════════════════════════════════════════════════
-       STUB RENDER FUNCTIONS  (Tasks 9–12 will replace these)
+       OVERVIEW HELPERS
+    ══════════════════════════════════════════════════════════════ */
+    function fmt(n) {
+      return Math.abs(n).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
+    }
+
+    function calcRevenue(skus) {
+      const byChannel = { 'Wine Club':0, 'Events':0, 'Weddings':0, 'DTC':0, 'Wholesale':0, 'Export':0, 'Held / Reserve':0 };
+
+      for (const rec of skus) {
+        const skuYear = rec.fields['Vintage Year'] || rec.fields['Year'] || rec.fields['Vintage'] || 0;
+        if (skuYear && skuYear !== periodYear) continue;
+
+        const raw = rec.fields['Channels'] || rec.fields['channels'] || rec.fields['Sales Channels'] || '[]';
+        let channels;
+        try { channels = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []); }
+        catch { channels = []; }
+
+        for (const ch of channels) {
+          const name = ch.name || ch.channel || '';
+          const rev  = (ch.bottles || ch.qty || 0) * (ch.price || 0);
+          if (byChannel[name] !== undefined) byChannel[name] += rev;
+        }
+      }
+      return byChannel;
+    }
+
+    function calcCOGS(data) {
+      const { lots, events, laborLogs, skus, blendCosts } = data;
+
+      const filteredLaborLogs = laborLogs.filter(r => {
+        const d = r.fields['fld22ciVaTERAAbAa'];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      });
+      const vineyardCost = filteredLaborLogs
+        .filter(r => !r.fields['fld3YoRvi1f6cvlym'])
+        .reduce((s, r) => s + (r.fields['fldabZyNtq13klfcz'] || 0), 0);
+
+      const filteredEvents = events.filter(r => {
+        const d = r.fields['fldPgGScnLa6Kxsuf'];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      });
+      const harvestCost = filteredEvents.reduce((s, r) => s + (r.fields['fldcb8yE3nsg2mc9M'] || 0), 0);
+
+      const activeLots = lots.filter(r => {
+        const stage = r.fields['fldv75LnMHiMhqwVU'] || '';
+        const stageName = typeof stage === 'object' ? (stage.name || '') : stage;
+        const vol   = r.fields['fld8gBnBe60d9cSAn'] || 0;
+        const lotYear = r.fields['flddMBBo3WnnatiGR'] || 0;
+        const inPer = periodMode === 'vintage' ? lotYear === periodYear : true;
+        return stageName !== 'Bottled' && stageName !== 'Disposed' && vol > 0 && inPer;
+      });
+      const cellarCost = activeLots.reduce((s, r) => s + (r.fields['fldEeGD6o6zxIV3gb'] || 0), 0);
+
+      const blendYearField = periodMode === 'vintage' ? 'fldzcpuli2mgQLbBE' : 'fldQ9OP9y16xeSnFx';
+      const filteredBlendCosts = blendCosts.filter(r => (r.fields[blendYearField] || 0) === periodYear);
+      const blendDirectCost = filteredBlendCosts.reduce((s, r) => s + (r.fields['fldGiP3Q2lSkOmutc'] || 0), 0);
+
+      const packagingCost = skus.reduce((s, r) => s + (r.fields['Total Packaging Cost'] || 0), 0);
+
+      return { vineyardCost, harvestCost, cellarCost, blendDirectCost, packagingCost };
+    }
+
+    function renderChannelTable(rev, totalRev) {
+      const CHANNEL_COLORS = ['var(--grenadine)','var(--beeswax)','var(--darlington)','var(--latte)','#5b3d6e','#4a7c59','#8b8b6b'];
+      const entries = Object.entries(rev).filter(([, v]) => v > 0);
+      if (entries.length === 0) return '<div class="fin-empty">No revenue data for this period</div>';
+
+      const bars = entries.map(([name, val], i) => {
+        const pct = totalRev > 0 ? (val/totalRev*100).toFixed(1) : 0;
+        return `<div class="ch-bar-seg" style="width:${pct}%;background:${CHANNEL_COLORS[i % CHANNEL_COLORS.length]}" title="${name}: ${pct}%"></div>`;
+      }).join('');
+
+      const rows = entries.map(([name, val]) => {
+        const pct = totalRev > 0 ? (val/totalRev*100).toFixed(1) : '0.0';
+        return `<tr><td>${name}</td><td>$${fmt(val)}</td><td>${pct}%</td></tr>`;
+      }).join('');
+
+      return `
+        <div class="ch-bar">${bars}</div>
+        <table class="fin-table">
+          <thead><tr><th>Channel</th><th>Revenue</th><th>Share</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       STUB RENDER FUNCTIONS  (Tasks 10–12 will replace these)
     ══════════════════════════════════════════════════════════════ */
     function renderOverview(data) {
-      document.getElementById('tab-overview').innerHTML =
-        '<div class="loading-msg">Overview — coming in Task 9</div>';
+      const rev    = calcRevenue(data.skus);
+      const cogs   = calcCOGS(data);
+      const totalRev  = Object.values(rev).reduce((s, v) => s + v, 0);
+      const totalCOGS = Object.values(cogs).reduce((s, v) => s + v, 0);
+      const grossProfit = totalRev - totalCOGS;
+      const grossMargin = totalRev > 0 ? (grossProfit / totalRev * 100).toFixed(1) : '0.0';
+
+      const filteredOpex = data.opex.filter(r => {
+        const d = r.fields['fldqTmLoBYs9hAt9V'];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      });
+      const opexTotal = filteredOpex.reduce((s, r) => s + (r.fields['fld5jpcmBxXweLF1X'] || 0), 0);
+      const netIncome = grossProfit - opexTotal;
+
+      const bsYearField = periodMode === 'vintage' ? 'fldVaNduQRODG0p4h' : 'fld0gYImkg0GTU8Jn';
+      const periodBS = data.bsEntries.filter(r => (r.fields[bsYearField] || 0) === periodYear);
+      const cashPos = periodBS
+        .filter(r => r.fields['fld2RJT7EXF7qPpHP'] === 'Cash')
+        .reduce((s, r) => s + (r.fields['fldukzh2zZ4OSMwhY'] || 0), 0);
+
+      const sign = n => n < 0 ? 'negative' : '';
+
+      document.getElementById('tab-overview').innerHTML = `
+        <div class="overview-period">${periodYear} ${periodMode === 'vintage' ? 'Vintage' : 'Calendar'} Year</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-val">$${fmt(totalRev)}</div><div class="stat-lbl">Revenue</div></div>
+          <div class="stat-card"><div class="stat-val">$${fmt(totalCOGS)}</div><div class="stat-lbl">Cost of Goods</div></div>
+          <div class="stat-card"><div class="stat-val">${grossMargin}%</div><div class="stat-lbl">Gross Margin</div></div>
+          <div class="stat-card"><div class="stat-val ${sign(netIncome)}">${netIncome < 0 ? '($'+fmt(netIncome)+')' : '$'+fmt(netIncome)}</div><div class="stat-lbl">Net Income</div></div>
+          <div class="stat-card"><div class="stat-val">$${fmt(cashPos)}</div><div class="stat-lbl">Cash Position</div></div>
+        </div>
+        <div class="overview-section">
+          <div class="section-title">Sales by Channel</div>
+          ${renderChannelTable(rev, totalRev)}
+        </div>
+        <div class="overview-section">
+          <div class="section-title">Module Links</div>
+          <div class="nav-tiles">
+            ${[['Vineyard','Vineyard_1.4.html'],['Harvest','Harvest_1.4.html'],['Cellar','Cellar_1.6.html'],['BlendingLab','BlendingLab_1.3.html'],['SKUs','SKUs_1.4.html']]
+              .map(([label,href]) => `<a class="nav-tile" href="/${href}">${label}</a>`).join('')}
+          </div>
+        </div>
+      `;
     }
 
     function renderPL(data) {
