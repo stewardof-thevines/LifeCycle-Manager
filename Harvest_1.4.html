@@ -39,14 +39,16 @@
     .tbtn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
 
     /* VIEW TABS */
-    .view-tabs { height:44px; background:var(--dark); border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; padding:0 28px; gap:4px; }
-    .view-tab { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; padding:6px 14px; border-radius:6px; cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,0.35); transition:all 0.18s; }
+    .view-tabs { height:52px; background:var(--dark); border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; padding:0 28px; gap:4px; }
+    .view-tab { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; padding:6px 14px; border-radius:6px; cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,0.35); transition:all 0.18s; display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1; }
     .view-tab.active { background:rgba(255,255,255,0.1); color:var(--cream); }
     .view-tab:hover:not(.active) { color:rgba(255,255,255,0.6); }
+    .view-tab-sub { font-size:9px; font-weight:400; letter-spacing:0.06em; text-transform:none; opacity:0.55; }
+    .view-tab.active .view-tab-sub { opacity:0.7; }
 
     /* VIEWS */
     .view { display:none; }
-    .view.active { display:flex; min-height:calc(100vh - 102px); }
+    .view.active { display:flex; min-height:calc(100vh - 110px); }
 
     /* ═══════════════════════════════
        SCALE HOUSE VIEW
@@ -67,9 +69,12 @@
     .abs-stat { text-align:right; }
     .abs-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:var(--dark); line-height:1; }
     .abs-stat-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-top:2px; }
-    .no-event-banner { background:rgba(120,97,64,0.06); border-radius:12px; border:2px dashed rgba(120,97,64,0.18); padding:16px 20px; display:flex; align-items:center; gap:12px; }
-    .no-event-text { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
-    .no-event-btn { margin-left:auto; height:30px; padding:0 14px; background:var(--grenadine); color:#fff; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; cursor:pointer; }
+    .no-event-banner { background:var(--white); border-radius:14px; border:2px solid rgba(212,71,32,0.18); padding:28px 28px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; }
+    .no-event-icon { font-size:36px; line-height:1; opacity:0.6; }
+    .no-event-heading { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; color:var(--dark); margin-top:4px; }
+    .no-event-body { font-size:13px; color:rgba(30,23,16,0.5); max-width:340px; line-height:1.55; }
+    .no-event-btn { margin-top:8px; height:44px; padding:0 28px; background:var(--grenadine); color:#fff; border:none; border-radius:9px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+    .no-event-btn:hover { background:#c03d1a; transform:translateY(-1px); }
 
     /* SCALE TICKET ENTRY */
     .scale-ticket-entry { background:var(--dark); border-radius:16px; padding:22px 24px; }
@@ -107,6 +112,7 @@
     .record-btn:hover { background:#c03d1a; transform:translateY(-1px); box-shadow:0 6px 20px rgba(212,71,32,0.35); }
     .record-btn:active { transform:translateY(0); }
     .record-btn:disabled { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.25); cursor:not-allowed; transform:none; box-shadow:none; }
+    .scale-ticket-entry.blocked { opacity:0.45; pointer-events:none; }
 
     /* TICKET LOG TABLE */
     .ticket-log { background:var(--white); border-radius:12px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
@@ -136,7 +142,7 @@
     .total-cell-value.highlight { color:var(--grenadine); }
 
     /* ─── RIGHT PANEL (EVENT FORM) ─── */
-    .event-form-panel { background:var(--dark); border-left:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; position:sticky; top:102px; height:calc(100vh - 102px); overflow-y:auto; }
+    .event-form-panel { background:var(--dark); border-left:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; position:sticky; top:110px; height:calc(100vh - 110px); overflow-y:auto; }
     .event-form-panel::-webkit-scrollbar { width:4px; }
     .event-form-panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
 
@@ -371,6 +377,8 @@
   }
   .nav-item:hover .nav-item-label { color: rgba(255,255,255,0.85); }
   .nav-item.active .nav-item-label { color: var(--beeswax); }
+  .nav-subitem { padding-left: 44px; }
+  .nav-item-parent { opacity: 0.7; pointer-events: none; cursor: default; }
 
   .nav-footer {
     margin-top: auto; padding: 16px 20px;
@@ -424,9 +432,17 @@
     <span class="nav-item-icon">🌿</span>
     <span class="nav-item-label">Vineyard</span>
   </a>
-  <a class="nav-item active" href="Harvest_1.4.html">
+  <div class="nav-item active nav-item-parent">
     <span class="nav-item-icon">⚖</span>
     <span class="nav-item-label">Harvest</span>
+  </div>
+  <a class="nav-item nav-subitem" href="Harvest_1.4.html" onclick="closeNav()">
+    <span class="nav-item-icon" style="font-size:11px">⚖</span>
+    <span class="nav-item-label">Scale House</span>
+  </a>
+  <a class="nav-item nav-subitem" href="Harvest_1.4.html?view=overview" onclick="closeNav()">
+    <span class="nav-item-icon" style="font-size:11px">📊</span>
+    <span class="nav-item-label">Season Overview</span>
   </a>
   <div class="nav-section-label">Packaging</div>
   <a class="nav-item" href="SKUs_1.4.html">
@@ -447,8 +463,8 @@
 
 
 <div class="view-tabs">
-  <button class="view-tab active" onclick="setView('scale')">⚖ Scale House</button>
-  <button class="view-tab" onclick="setView('overview')">📊 Season Overview</button>
+  <button class="view-tab active" onclick="setView('scale')">⚖ Scale House<span class="view-tab-sub">log tickets by weight</span></button>
+  <button class="view-tab" onclick="setView('overview')">📊 Season Overview<span class="view-tab-sub">picks, blocks, totals</span></button>
 </div>
 
 <!-- ═══════════════ SCALE HOUSE VIEW ═══════════════ -->
@@ -461,9 +477,10 @@
       <!-- Active event banner -->
       <div id="active-banner-wrap">
         <div class="no-event-banner" id="no-event-banner">
-          <span style="font-size:20px">⚖️</span>
-          <span class="no-event-text">No active harvest event — create one to start logging scale tickets</span>
-          <button class="no-event-btn" onclick="setView('overview');setTimeout(()=>document.getElementById('efp-form').scrollIntoView({behavior:'smooth'}),100)">+ New Event</button>
+          <div class="no-event-icon">⚖️</div>
+          <div class="no-event-heading">No harvest event is open</div>
+          <div class="no-event-body">Scale tickets must be logged against an active harvest event. Open an event using the form on the right, then return here to start weighing bins.</div>
+          <button class="no-event-btn" onclick="document.getElementById('efp-form').scrollIntoView({behavior:'smooth',block:'start'})">⚖ Open a Harvest Event</button>
         </div>
         <div class="active-banner" id="active-banner" style="display:none">
           <div class="active-banner-left">
@@ -847,6 +864,7 @@
   document.getElementById('ef-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('ef-est-gpt').value = 155;
   renderBinChips();
+  if (!activeEventId) document.querySelector('.scale-ticket-entry').classList.add('blocked');
 
   async function initApp() {
     try {
@@ -1163,6 +1181,7 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
     // Show active banner
     document.getElementById('no-event-banner').style.display = 'none';
     document.getElementById('active-banner').style.display = 'flex';
+    document.querySelector('.scale-ticket-entry').classList.remove('blocked');
     document.getElementById('banner-name').textContent = ev.name;
     document.getElementById('banner-meta').textContent = ev.block + ' · ' + fmtDate(ev.date);
     updateBanner();
@@ -1363,6 +1382,12 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeNav();
   });
+
+  // Deep-link: ?view=overview (or ?view=scale)
+  (function() {
+    const p = new URLSearchParams(window.location.search).get('view');
+    if (p === 'overview') setView('overview');
+  })();
 
 </script>
 <script>
