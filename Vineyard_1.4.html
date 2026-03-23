@@ -914,7 +914,7 @@
             </div>
             <div class="cost-row cost-row-highlight">
               <span class="cost-label">Cost / Acre</span>
-              <span class="cost-val">${b.acres > 0 ? '$' + Math.round(b.farmCost / b.acres).toLocaleString() : '—'}</span>
+              <span class="cost-val" id="cpa-${b.id}">${b.acres > 0 ? '$' + Math.round(b.farmCost / b.acres).toLocaleString() : '—'}</span>
             </div>
           </div>
         </div>`;
@@ -1174,6 +1174,12 @@
     if (!block) return;
     block.farmCost = (block.farmCost || 0) + amount;
     el.textContent = '$' + block.farmCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+    const cpaEl = document.getElementById(`cpa-${blockId}`);
+    if (cpaEl) {
+      cpaEl.textContent = block.acres > 0
+        ? '$' + Math.round(block.farmCost / block.acres).toLocaleString()
+        : '—';
+    }
   }
 
   // ─── Render logs ──────────────────────────────────────────────────────────
@@ -1280,7 +1286,7 @@
 
     // Optimistically add to local registry and render
     const tempId = 'temp-' + Date.now();
-    const newBlock = { id: tempId, name, variety, acres, estTons: parseFloat((acres*tons).toFixed(1)), actTons: 0, farmCost: 0, rowStart, rowEnd, color };
+    const newBlock = { id: tempId, name, variety, acres, estTons: parseFloat((acres*tons).toFixed(1)), actTons: 0, farmCost: 0, harvestCost: 0, rowStart, rowEnd, color };
     BLOCKS.push(newBlock);
     renderBlockCards();
     buildBlockDropdown();
