@@ -638,7 +638,7 @@
     'DTC / Tasting Room': 'DTC'
   };
 
-  const KNOWN_CHANNELS = ['Wine Club', 'Events', 'Weddings', 'DTC', 'Wholesale'];
+  const KNOWN_CHANNELS = ['Wine Club', 'Events', 'Weddings', 'DTC', 'Wholesale', 'Export', 'Held / Reserve'];
 
   function migrateChannels(sku) {
     let changed = false;
@@ -910,7 +910,7 @@
     const isUnknown = !KNOWN_CHANNELS.includes(ch.name);
     return `
       <div class="channel-row" id="chr-${skuId}-${idx}">
-        <div class="ch-name"${isUnknown ? ` title="Unrecognized channel: '${ch.name}'" style="color:#E9A752;text-decoration:underline dotted"` : ''}>${ch.name}${isUnknown ? ' ⚠' : ''}</div>
+        <div class="ch-name"${isUnknown ? ` title="Unrecognized channel: '${ch.name}'" style="color:var(--beeswax);text-decoration:underline dotted"` : ''}>${ch.name}${isUnknown ? ' ⚠' : ''}</div>
         <input type="number" class="ch-input" value="${ch.bottles||''}" placeholder="—"
           onchange="updateChannel('${skuId}',${idx},'bottles',this.value)"
           onclick="event.stopPropagation()" />
