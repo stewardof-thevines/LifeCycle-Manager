@@ -110,7 +110,7 @@
 
     /* Expand detail */
     .lot-detail { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.35s ease, padding 0.2s; }
-    .lot-card.expanded .lot-detail { max-height:300px; padding:14px 18px; border-top:1px solid rgba(120,97,64,0.07); }
+    .lot-card.expanded .lot-detail { max-height:540px; padding:14px 18px; border-top:1px solid rgba(120,97,64,0.07); }
     .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .detail-item-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:2px; }
     .detail-item-value { font-size:12.5px; color:var(--dark); font-weight:500; }
@@ -120,6 +120,17 @@
     .detail-btn.primary:hover { background:#c03d1a; }
     .detail-btn.ghost { background:transparent; color:var(--latte); border:1px solid rgba(120,97,64,0.2); }
     .detail-btn.ghost:hover { border-color:var(--latte); background:rgba(120,97,64,0.06); }
+
+    /* Cost breakdown section inside lot detail */
+    .cost-section { margin-top:14px; background:rgba(120,97,64,0.06); border:1px solid rgba(120,97,64,0.13); border-radius:8px; overflow:hidden; }
+    .cost-section-title { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(30,23,16,0.4); padding:9px 12px 7px; border-bottom:1px solid rgba(120,97,64,0.1); }
+    .cost-row { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-bottom:1px solid rgba(120,97,64,0.07); }
+    .cost-row:last-child { border-bottom:none; }
+    .cost-label { font-family:'Barlow Condensed',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:0.06em; color:rgba(30,23,16,0.5); }
+    .cost-val { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; color:var(--dark); }
+    .cost-row-highlight { background:rgba(212,71,32,0.05); }
+    .cost-row-highlight .cost-label { color:var(--latte); font-weight:700; }
+    .cost-row-highlight .cost-val { font-size:13px; color:var(--grenadine); }
 
     /* ── VESSEL MAP VIEW ── */
     .vessel-map { display:none; }
@@ -842,6 +853,21 @@
                 ${['Fermentation','Aging','Racking','Finished'].map(s =>
                   `<button class="stage-pill-btn ${l.stage===s?'sel':''}" onclick="updateStage(event,'${l.id}','${s}')">${s}</button>`
                 ).join('')}
+              </div>
+            </div>
+            <div class="cost-section">
+              <div class="cost-section-title">Cost Breakdown</div>
+              <div class="cost-row">
+                <span class="cost-label">Total Loaded Cost</span>
+                <span class="cost-val">$${l.cost.toLocaleString(undefined, {minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+              </div>
+              <div class="cost-row">
+                <span class="cost-label">Live Volume</span>
+                <span class="cost-val">${l.vol.toLocaleString()} gal</span>
+              </div>
+              <div class="cost-row cost-row-highlight">
+                <span class="cost-label">Cost / Gal</span>
+                <span class="cost-val">${l.vol > 0 ? '$' + (l.cost / l.vol).toFixed(2) : '—'}</span>
               </div>
             </div>
             <div class="detail-actions">
