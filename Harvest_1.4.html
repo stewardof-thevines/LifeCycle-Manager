@@ -789,6 +789,7 @@
   const BASE_ID     = 'appJNEHG8sqXmdYGe';
   const TBL_EVENTS  = 'tblTDMmErrAssEEAB';
   const TBL_BLOCKS  = 'tblPuFD0fbiLmITXK';
+  const TBL_LOTS    = 'tblcBMCwq1ng8ykMb';
   const PROXY       = '/api/airtable';
 
   // Harvest Events field IDs
@@ -808,6 +809,9 @@
   const F_BL_NAME    = 'fld3BU2ADl8oypAWe';
   const F_BL_ACRES   = 'fldmXtigs8eGYXN5Z';
   const F_BL_ESTTONS = 'fld5REiPH0brFntsK';
+
+  // Wine Lots field IDs (for linked record resolution)
+  const F_LOT_NAME   = 'fldRib6w2mJcyYnji';
 
   async function airtableGet(tableId) {
     const params = new URLSearchParams({ baseId: BASE_ID, tableId });
@@ -829,6 +833,7 @@
 
   // ─── State ────────────────────────────────────────────────────────────────
   let BLOCKS = [];
+  let LOTS   = [];
   let events = [];
   let activeEventId = null;
   let currentTickets = [];
@@ -845,9 +850,10 @@
 
   async function initApp() {
     try {
-      const [blockRecs, eventRecs] = await Promise.all([
+      const [blockRecs, eventRecs, lotRecs] = await Promise.all([
         airtableGet(TBL_BLOCKS),
-        airtableGet(TBL_EVENTS)
+        airtableGet(TBL_EVENTS),
+        airtableGet(TBL_LOTS)
       ]);
 
       // Map blocks
@@ -865,6 +871,12 @@
         };
       });
 
+      // Map lots for linked record resolution
+      LOTS = lotRecs.map(r => {
+        const f = r.fields || r.cellValuesByFieldId || {};
+        return { _id: r.id, name: f[F_LOT_NAME] || r.id };
+      });
+
       // Map events — Harvest Events don't have scale tickets in Airtable,
       // so tickets array is empty for existing records (tickets are entered live)
       events = eventRecs
@@ -877,7 +889,7 @@
           const blockLink = f[F_EV_BLOCK];
           const blockName = Array.isArray(blockLink) ? (BLOCKS.find(b => b._id === blockLink[0])?.name || blockLink[0] || '') : '';
           const lotLink   = f[F_EV_LOT];
-          const lotName = Array.isArray(lotLink) ? (lotLink[0] || '') : '';
+          const lotName = Array.isArray(lotLink) ? (LOTS.find(l => l._id === lotLink[0])?.name || lotLink[0] || '') : '';
           const tons      = f[F_EV_TONS] || 0;
           return {
             _id:      r.id,

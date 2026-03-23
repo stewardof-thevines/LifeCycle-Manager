@@ -1,8 +1,9 @@
 // Lifecycle Manager — Service Worker v2
 // Cache version — bump this number any time you deploy new files
-const CACHE = 'lifecycle-v3';
+const CACHE = 'lifecycle-v4';
 
 const SHELL = [
+  '/index.html',
   '/Vineyard_1.4.html',
   '/Cellar_1.6.html',
   '/Harvest_1.4.html',
@@ -47,7 +48,7 @@ self.addEventListener('fetch', e => {
       });
     }).catch(() => {
       if (e.request.mode === 'navigate') {
-        return caches.match('/Vineyard_1.4.html');
+        return caches.match('/index.html');
       }
     })
   );
