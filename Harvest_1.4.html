@@ -281,7 +281,7 @@
     .edg-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
     .edg-val { font-size:13px; font-weight:500; color:var(--dark); }
     .edg-val.money { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:var(--latte); }
-    .edg-val--readonly { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; color: rgba(30, 23, 16, 0.5); }
+    .edg-val--readonly { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; color:rgba(30,23,16,0.5); }
     .ec-tickets-summary { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; color:rgba(30,23,16,0.4); margin-bottom:12px; }
     .ec-actions { display:flex; gap:8px; }
     .ecbtn { height:32px; padding:0 14px; border-radius:7px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all 0.18s; border:none; }
@@ -1328,7 +1328,7 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
                 </div>
                 <div>
                   <div class="edg-label">Cost / Ton</div>
-                  <div class="edg-val money">${tons>0?'$'+Math.round(ev.cost/tons).toLocaleString():'—'}</div>
+                  <div class="edg-val money">${tons>0&&ev.cost>0?'$'+Math.round(ev.cost/tons).toLocaleString():'—'}</div>
                 </div>
                 <div>
                   <div class="edg-label" title="Auto-populated from linked vineyard block">Vineyard Farming Cost <span style="font-size:8px;opacity:0.6;text-transform:none;letter-spacing:0">(from block)</span></div>
