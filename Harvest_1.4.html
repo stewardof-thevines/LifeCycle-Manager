@@ -814,6 +814,7 @@
   const F_EV_DATE     = 'fldPgGScnLa6Kxsuf';
   const F_EV_TONS     = 'fldJpcLea721sfUV3';
   const F_EV_BLOCK    = 'fldkbAGjU0G9X3YF6';  // linked → Vineyard Blocks
+  const F_EV_COST     = 'fld6BO2MbfAo21emr';  // Vineyard Cost At Harvest
   const F_EV_CPT      = 'fld2ohbBe49Wh1eaa';  // Cost Per Ton (formula)
   const F_EV_LOT      = 'fldpL19WBD43Qg3iA';  // linked → Wine Lots
   const F_EV_ESTGPT   = 'fldffVZ7y9dEyRlOv';
@@ -1165,10 +1166,11 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
       const fields = {};
       fields[F_EV_NAME]   = name;
       fields[F_EV_DATE]   = date;
-      if (ev.estGpt)  fields[F_EV_ESTGPT]  = ev.estGpt;
-      if (ev.actGpt)  fields[F_EV_ACTGPT]  = ev.actGpt;
+      if (ev.estGpt)   fields[F_EV_ESTGPT]   = ev.estGpt;
+      if (ev.actGpt)   fields[F_EV_ACTGPT]   = ev.actGpt;
       if (ev.actJuice) fields[F_EV_ACTJUICE] = ev.actJuice;
-      if (blockRec)   fields[F_EV_BLOCK]   = [blockRec._id];
+      if (ev.cost)     fields[F_EV_COST]     = ev.cost;
+      if (blockRec)    fields[F_EV_BLOCK]    = [blockRec._id];
       const created = await airtableCreate(TBL_EVENTS, fields);
       ev._id = created.id || ev._id;
       ev.id  = ev._id;

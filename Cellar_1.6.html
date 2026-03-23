@@ -613,8 +613,9 @@
   const F_LOT_NAME     = 'fldRib6w2mJcyYnji';
   const F_LOT_TYPE     = 'fldDtMoBcZWh6m6Z8';   // singleSelect
   const F_LOT_STAGE    = 'fldv75LnMHiMhqwVU';   // singleSelect
-  const F_LOT_VOL      = 'fldEeGD6o6zxIV3gb';   // gallons in
-  const F_LOT_OUT      = 'fldZZHpkUCOh6xzA1';   // gallons out
+  const F_LOT_VOL      = 'fldqnxu3PHCVXVrXg';   // actual juice (gal) from harvest event
+  const F_LOT_COST     = 'fldEeGD6o6zxIV3gb';   // total loaded cost
+  const F_LOT_OUT      = 'fldZZHpkUCOh6xzA1';   // gallons out / remaining (formula)
   const F_LOT_YEAR     = 'flddMBBo3WnnatiGR';   // harvest year (number)
 
   // Vessels field IDs
@@ -686,7 +687,7 @@
           vintage: f[F_LOT_YEAR] || null,
           vol:    f[F_LOT_VOL]  || 0,
           alloc:  f[F_LOT_OUT]  || 0,
-          cost:   0,
+          cost:   f[F_LOT_COST] || 0,
           releaseYear: null,
           vessels: [],
           notes: ''
@@ -988,11 +989,12 @@ async function updateStage(e, lotId, stage) {
     const stage   = document.getElementById('lot-stage').value;
     const style   = document.getElementById('lot-style').value;
     const vol     = parseFloat(document.getElementById('lot-vol').value) || 0;
+    const cost    = parseFloat(document.getElementById('lot-cost').value) || 0;
 
     if (!name || !vol) { showToast('Lot ID and volume are required.', true); return; }
 
     // Optimistic UI
-    const tempObj = { _id: 'temp-' + Date.now(), id: name, stage, style, vintage: new Date().getFullYear(), vol, alloc: 0, cost: 0, releaseYear: null, vessels: [], notes: '' };
+    const tempObj = { _id: 'temp-' + Date.now(), id: name, stage, style, vintage: new Date().getFullYear(), vol, alloc: 0, cost, releaseYear: null, vessels: [], notes: '' };
     lots.unshift(tempObj);
     renderLots();
     updateStats();
@@ -1007,6 +1009,7 @@ async function updateStage(e, lotId, stage) {
       fields[F_LOT_STAGE] = stage;
       fields[F_LOT_TYPE]  = style;
       fields[F_LOT_VOL]   = vol;
+      if (cost) fields[F_LOT_COST] = cost;
       const created = await airtableCreate(TBL_LOTS, fields);
       tempObj._id = created.id || tempObj._id;
     } catch(err) {

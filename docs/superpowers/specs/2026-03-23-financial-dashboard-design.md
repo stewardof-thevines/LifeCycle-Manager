@@ -37,11 +37,12 @@ Before any implementation, the following Airtable field issues must be resolved.
 
 `fldEeGD6o6zxIV3gb` is currently mapped as `F_LOT_VOL` (gallons in) in `Cellar_1.6.html`, as `F_L_COST` (cost) in `BlendingLab_1.3.html`, **and** as `F_LOT_COST` (Total Loaded Cost) in `SKUs_1.4.html`. All three cannot be correct — this single field ID is used for three different purposes across three modules.
 
-**Resolution required before implementation:**
-- Confirm the true purpose of `fldEeGD6o6zxIV3gb` in Airtable (open Airtable → Wine Lots table → check the field name)
-- Identify or create a dedicated **Total Loaded Cost** field in the Wine Lots table
-- Document the correct field ID as `F_LOT_COST` and update all three modules that reference it (Cellar, BlendingLab, SKUs)
-- Cellar currently reads no cost field from Airtable (`cost: 0` is hardcoded at line 689) — this must be fixed so Cellar reads and writes the correct field
+**Resolved:**
+- `fldEeGD6o6zxIV3gb` = **Total Loaded Cost** (confirmed in Airtable)
+- `fldqnxu3PHCVXVrXg` = **Actual Juice (Gal) from Harvest Event** — the correct volume field
+- `F_LOT_COST = 'fldEeGD6o6zxIV3gb'` added to Cellar; `F_LOT_VOL` corrected to `fldqnxu3PHCVXVrXg`
+- Cellar lot loading now reads `f[F_LOT_COST]` instead of hardcoded `0`
+- Cellar lot creation now writes `F_LOT_COST` to Airtable
 
 ### 2. cost_per_gal Field — Formula vs. Stored Number
 
@@ -53,10 +54,10 @@ Before any implementation, the following Airtable field issues must be resolved.
 
 `ef-cost` (total pick cost) is captured in the Harvest event form and stored in-memory but is **never written to Airtable**. The `submitLog()` function's `airtableCreate` call does not include the cost field. `F_EV_CPT` (Cost Per Ton, `fld2ohbBe49Wh1eaa`) is a formula field that likely depends on a base cost field — confirm which Airtable field it references.
 
-**Resolution required before implementation:**
-- Confirm or create a **Total Harvest Cost** field in the Pick Events table; document its field ID as `F_EV_COST`
-- Update `submitLog()` in `Harvest_1.4.html` to write `F_EV_COST` on event creation
-- Confirm `F_EV_CPT` formula references `{Total Harvest Cost}` — if so, it will auto-calculate once the field is populated
+**Resolved:**
+- `fld6BO2MbfAo21emr` = **Vineyard Cost At Harvest** (confirmed in Airtable Pick Events table)
+- `F_EV_COST = 'fld6BO2MbfAo21emr'` added to `Harvest_1.4.html`
+- `submitLog()` now writes `F_EV_COST` when `ev.cost` is present
 
 ### 5. Blend Cost Field — Not Written on Commit
 
