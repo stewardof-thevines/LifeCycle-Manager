@@ -238,6 +238,15 @@
       from { transform:translateY(80px); opacity:0; }
       to   { transform:translateY(0);    opacity:1; }
     }
+
+    @media print {
+      .topbar, .left-panel, .tab-bar, .export-btn, .nav-tiles { display: none !important; }
+      .tab-panel { display: block !important; }
+      .tab-panel:not(.print-active) { display: none !important; }
+      .fin-doc { max-width: 100%; font-size: 12px; }
+      /* Page breaks between documents when printing from Overview */
+      .fin-doc + .fin-doc { page-break-before: always; }
+    }
   </style>
 </head>
 <body>
@@ -264,8 +273,8 @@
     <select id="year-sel" title="Select year"></select>
 
     <!-- Export / Print -->
-    <button class="tbtn ghost" onclick="exportCSV()">Export CSV</button>
-    <button class="tbtn ghost" onclick="window.print()">Print / PDF</button>
+    <button class="tbtn ghost" onclick="exportAllCSV()">Export CSV</button>
+    <button class="tbtn ghost" onclick="printDoc()">Print / PDF</button>
   </div>
 
   <!-- ── APP LAYOUT ── -->
@@ -337,7 +346,7 @@
       </div>
 
       <!-- Tab panels -->
-      <div id="tab-overview" class="tab-panel"></div>
+      <div id="tab-overview" class="tab-panel active"></div>
       <div id="tab-pl"       class="tab-panel hidden"></div>
       <div id="tab-bs"       class="tab-panel hidden"></div>
       <div id="tab-cf"       class="tab-panel hidden"></div>
@@ -955,17 +964,137 @@
        TAB SWITCHING
     ══════════════════════════════════════════════════════════════ */
     function showTab(name) {
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-panel').forEach(p => { p.classList.add('hidden'); p.classList.remove('active'); });
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(`tab-${name}`)?.classList.remove('hidden');
+      const panel = document.getElementById(`tab-${name}`);
+      panel?.classList.remove('hidden');
+      panel?.classList.add('active');
       document.querySelector(`.tab-btn[onclick="showTab('${name}')"]`)?.classList.add('active');
     }
 
     /* ══════════════════════════════════════════════════════════════
-       EXPORT CSV (stub — Task 14)
+       EXPORT CSV
     ══════════════════════════════════════════════════════════════ */
-    function exportCSV() {
-      showToast('CSV export — coming in Task 14');
+    function exportCSV(docType) {
+      const d = window._data;
+      let rows = [];
+      const period = `${periodYear}-${periodMode}`;
+
+      if (docType === 'pl') {
+        const rev  = calcRevenue(d.skus);
+        const cogs = calcCOGS(d);
+        const totalRev  = Object.values(rev).reduce((s, v) => s + v, 0);
+        const totalCOGS = Object.values(cogs).reduce((s, v) => s + v, 0);
+        const fOpexPL = d.opex.filter(r => { const dt = r.fields[F_OX_DATE]; return dt ? new Date(dt).getFullYear() === periodYear : false; });
+        const opexTotal = fOpexPL.reduce((s, r) => s + (r.fields[F_OX_AMOUNT] || 0), 0);
+        rows = [
+          ['Income Statement', period],
+          [''],
+          ['Revenue'],
+          ...Object.entries(rev).map(([ch, v]) => [ch, v]),
+          ['Total Revenue', totalRev],
+          [''],
+          ['Cost of Goods Sold'],
+          ['Vineyard Operations', cogs.vineyardCost],
+          ['Harvest (Pick & Hauling)', cogs.harvestCost],
+          ['Cellar (all active lots)', cogs.cellarCost],
+          ['Blending Direct', cogs.blendDirectCost],
+          ['Packaging', cogs.packagingCost],
+          ['Total COGS', totalCOGS],
+          [''],
+          ['Gross Profit', totalRev - totalCOGS],
+          ['Operating Expenses', opexTotal],
+          ['Net Income', totalRev - totalCOGS - opexTotal]
+        ];
+      } else if (docType === 'bs') {
+        // Period-filter BS entries before summing (mirrors renderBalanceSheet logic)
+        const { lots, bsEntries } = d;
+        const bsYFExp = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+        const periodBSExp = bsEntries.filter(r => (r.fields[bsYFExp] || 0) === periodYear);
+        const cash = bsSum(periodBSExp,'Cash'), ar = bsSum(periodBSExp,'Accounts Receivable');
+        const inv  = calcInventory(lots), fa = bsSum(periodBSExp,'Fixed Asset');
+        const ap   = bsSum(periodBSExp,'Accounts Payable'), loans = loanNet(periodBSExp);
+        rows = [
+          ['Balance Sheet', period],
+          [''],
+          ['Assets'],
+          ['Cash & Bank', cash],['Accounts Receivable', ar],['Inventory (at cost)', inv],['Fixed Assets', fa],
+          ['Total Assets', cash+ar+inv+fa],
+          [''],
+          ['Liabilities'],
+          ['Accounts Payable', ap], ['Loans (net)', loans],
+          ['Total Liabilities', ap+loans],
+          [''],
+          ['Equity'],
+          ['Total Equity', cash+ar+inv+fa-ap-loans]
+        ];
+      } else if (docType === 'cf') {
+        const bsYF = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+        const cfBSEntries = d.bsEntries.filter(r => (r.fields[bsYF] || 0) === periodYear);
+        const rev2  = calcRevenue(d.skus);
+        const cogs2 = calcCOGS(d);
+        const fOpex = d.opex.filter(r => { const dt = r.fields[F_OX_DATE]; return dt ? new Date(dt).getFullYear() === periodYear : false; });
+        const ni    = Object.values(rev2).reduce((s,v)=>s+v,0) - Object.values(cogs2).reduce((s,v)=>s+v,0) - fOpex.reduce((s,r)=>s+(r.fields[F_OX_AMOUNT]||0),0);
+        const wcAdj = bsSum(cfBSEntries,'Working Capital Adjustment');
+        const fp    = bsSum(cfBSEntries,'Fixed Asset');
+        const lp    = bsSum(cfBSEntries,'Loan');
+        const lr    = bsSum(cfBSEntries,'Loan Repayment');
+        const nc    = (ni + wcAdj) + (-fp) + (lp - lr);
+        const beg   = (() => { const e = [...cfBSEntries].filter(r=>r.fields[F_BS_CATEGORY]==='Beginning Cash Balance').sort((a,b)=>new Date(b.fields[F_BS_DATE])-new Date(a.fields[F_BS_DATE]))[0]; return e ? e.fields[F_BS_AMOUNT]||0 : 0; })();
+        rows = [
+          ['Cash Flow Statement', period],
+          [''],
+          ['Operating Activities'],
+          ['Net Income', ni],
+          ['Working Capital Adjustments', wcAdj],
+          ['Net Cash from Operations', ni + wcAdj],
+          [''],
+          ['Investing Activities'],
+          ['Fixed Asset Purchases', -fp],
+          ['Net Cash from Investing', -fp],
+          [''],
+          ['Financing Activities'],
+          ['Loan Proceeds', lp],
+          ['Loan Repayments', -lr],
+          ['Net Cash from Financing', lp - lr],
+          [''],
+          ['Net Change in Cash', nc],
+          ['Beginning Cash Balance', beg],
+          ['Ending Cash Balance', beg + nc]
+        ];
+      }
+
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `domaine-mathiot-${docType}-${period}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAllCSV() {
+      exportCSV('pl');
+      setTimeout(() => exportCSV('bs'), 300);
+      setTimeout(() => exportCSV('cf'), 600);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PRINT / PDF
+    ══════════════════════════════════════════════════════════════ */
+    function printDoc() {
+      // If on Overview tab, mark all 3 doc tabs as print-active
+      const activeTab = document.querySelector('.tab-panel.active')?.id;
+      if (activeTab === 'tab-overview') {
+        ['tab-pl','tab-bs','tab-cf'].forEach(id =>
+          document.getElementById(id)?.classList.add('print-active'));
+      } else {
+        document.querySelector('.tab-panel.active')?.classList.add('print-active');
+      }
+      window.print();
+      // Clean up
+      document.querySelectorAll('.print-active').forEach(el => el.classList.remove('print-active'));
     }
 
     /* ══════════════════════════════════════════════════════════════
