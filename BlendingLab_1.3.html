@@ -545,8 +545,9 @@
         const name = f[F_L_ID] || '';
         const vol  = f[F_L_REMAIN] || 0;
         const cost = f[F_L_COST]   || 0;
-        const cpg  = f[F_L_CPG]    || (vol > 0 ? cost/vol : 0);
-        return { id: name, _recId: r.id, vol, cost, costPerGal: cpg, color: lotColor(name) };
+        const cpg       = f[F_L_CPG]           || (vol > 0 ? cost/vol : 0);
+        const galPulled = f[F_LOT_GAL_PULLED]  || 0;
+        return { id: name, _recId: r.id, vol, cost, costPerGal: cpg, galPulled, color: lotColor(name) };
       }).filter(l => l.id);
 
       // Index components by recipe record ID
@@ -854,6 +855,35 @@
     renderList();
   }
 
+  async function transferBlendCosts(components, newLotRecId) {
+    // components = array of { lotRecId, galPulled, cpg }
+    let blendBasis = 0;
+
+    for (const comp of components) {
+      const costTransferred = comp.galPulled * comp.cpg;
+      blendBasis += costTransferred;
+
+      // PATCH source lot: increment Gallons Pulled
+      if (comp.lotRecId && comp.galPulled > 0) {
+        const sourceLot = LOTS.find(l => l._recId === comp.lotRecId);
+        const currentPulled = sourceLot ? (sourceLot.galPulled || 0) : 0;
+        await atPatch(TBL_LOTS_AT, comp.lotRecId, {
+          [F_LOT_GAL_PULLED]: currentPulled + comp.galPulled
+        });
+        if (sourceLot) sourceLot.galPulled = currentPulled + comp.galPulled;
+      }
+    }
+
+    // PATCH new blend lot: set Blend Cost Basis
+    if (newLotRecId && blendBasis > 0) {
+      await atPatch(TBL_LOTS_AT, newLotRecId, {
+        [F_LOT_BLEND_BASIS]: blendBasis
+      });
+    }
+
+    return blendBasis;
+  }
+
   async function commitBlend(){
     const r=recipes.find(x=>x.id===commitRecipeId);if(!r)return;
     const lotId=document.getElementById('cp-lot-id').value.trim();
@@ -875,7 +905,22 @@
       newLotFields['fldRib6w2mJcyYnji'] = lotId;         // Lot ID
       newLotFields['fldv75LnMHiMhqwVU'] = 'Estimate';    // Stage
       if(r._recId) newLotFields['fldrvl1LVhb6rZRT6'] = [r._recId]; // Blend Recipes link
-      await atCreate(TBL_LOTS_W, newLotFields);
+      const newLotRec = await atCreate(TBL_LOTS_W, newLotFields);
+      const newLotRecId = newLotRec && newLotRec.id ? newLotRec.id : null;
+
+      // Cost transfer: build components array using lot name → record ID lookup
+      const comps = (r.components || []).map(comp => {
+        const lot = LOTS.find(l => l.id === comp.lotId);
+        return {
+          lotRecId:  lot ? lot._recId : null,
+          galPulled: comp.gal || 0,
+          cpg:       lot ? (lot.costPerGal || 0) : 0
+        };
+      }).filter(c => c.galPulled > 0 && c.lotRecId);
+
+      if (comps.length > 0 && newLotRecId) {
+        await transferBlendCosts(comps, newLotRecId);
+      }
     } catch(err){ console.error('commitBlend Airtable write failed:',err); }
   }
 
