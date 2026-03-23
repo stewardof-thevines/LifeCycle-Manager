@@ -414,6 +414,16 @@
       return d.records || [];
     }
 
+    async function apiPatch(tableId, recordId, fields) {
+      const res = await fetch(PROXY, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId, recordId, fields })
+      });
+      if (!res.ok) throw new Error(`PATCH ${res.status}`);
+      return res.json();
+    }
+
     async function apiCreate(tableId, fields) {
       const res = await fetch(PROXY, {
         method: 'POST',
