@@ -202,6 +202,7 @@
     .fin-row.negative .fin-val { color:var(--grenadine); }
     .export-btn { margin:16px 24px; padding:8px 20px; background:var(--grenadine); color:var(--white); border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
     .export-btn:hover { opacity:.85; }
+    .fin-sub-hdr { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--latte); padding:10px 0 4px; font-style:italic; }
 
     /* ── TOAST ── */
     .toast {
@@ -490,6 +491,32 @@
     }
 
     /* ══════════════════════════════════════════════════════════════
+       BALANCE SHEET / CASH FLOW HELPERS  (Tasks 11–12)
+    ══════════════════════════════════════════════════════════════ */
+    function calcInventory(lots) {
+      return lots
+        .filter(r => {
+          const stage = r.fields[F_LOT_STAGE];
+          const stageName = typeof stage === 'object' ? (stage.name || '') : (stage || '');
+          const vol     = r.fields[F_LOT_LIVE_VOL] || 0;
+          const lotYear = r.fields[F_LOT_YEAR]     || 0;
+          const inPer   = periodMode === 'vintage' ? lotYear === periodYear : true;
+          return stageName !== 'Bottled' && stageName !== 'Disposed' && vol > 0 && inPer;
+        })
+        .reduce((s, r) => s + (r.fields[F_LOT_COST] || 0), 0);
+    }
+
+    function bsSum(entries, category) {
+      return entries
+        .filter(r => r.fields[F_BS_CATEGORY] === category)
+        .reduce((s, r) => s + (r.fields[F_BS_AMOUNT] || 0), 0);
+    }
+
+    function loanNet(entries) {
+      return bsSum(entries, 'Loan') - bsSum(entries, 'Loan Repayment');
+    }
+
+    /* ══════════════════════════════════════════════════════════════
        STUB RENDER FUNCTIONS  (Tasks 10–12 will replace these)
     ══════════════════════════════════════════════════════════════ */
     function renderOverview(data) {
@@ -586,13 +613,110 @@
     }
 
     function renderBalanceSheet(data) {
-      document.getElementById('tab-bs').innerHTML =
-        '<div class="loading-msg">Balance Sheet — coming in Task 11</div>';
+      const { lots, bsEntries } = data;
+
+      const bsYearField = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+      const periodBS = bsEntries.filter(r => (r.fields[bsYearField] || 0) === periodYear);
+
+      const cash        = bsSum(periodBS, 'Cash');
+      const ar          = bsSum(periodBS, 'Accounts Receivable');
+      const inventory   = calcInventory(lots);
+      const fixedAssets = bsSum(periodBS, 'Fixed Asset');
+      const totalAssets = cash + ar + inventory + fixedAssets;
+
+      const ap        = bsSum(periodBS, 'Accounts Payable');
+      const loans     = loanNet(periodBS);
+      const totalLiab = ap + loans;
+
+      const equity = totalAssets - totalLiab;
+
+      document.getElementById('tab-bs').innerHTML = `
+        <div class="fin-doc">
+          <div class="fin-doc-title">Balance Sheet</div>
+          <div class="fin-doc-period">${periodYear} ${periodMode === 'vintage' ? 'Vintage' : 'Calendar'} Year</div>
+
+          <div class="fin-section-hdr">Assets</div>
+          <div class="fin-sub-hdr">Current Assets</div>
+          ${finRow('Cash & Bank', cash)}
+          ${finRow('Accounts Receivable', ar)}
+          ${finRow('Inventory (at cost)', inventory)}
+          <div class="fin-sub-hdr">Fixed Assets</div>
+          ${finRow('Fixed Assets', fixedAssets)}
+          ${finRow('Total Assets', totalAssets, true)}
+
+          <div class="fin-section-hdr">Liabilities</div>
+          ${finRow('Accounts Payable', ap)}
+          ${finRow('Loans (net)', loans)}
+          ${finRow('Total Liabilities', totalLiab, true)}
+
+          <div class="fin-section-hdr">Equity</div>
+          ${finRow('Total Equity', equity, true, '', equity >= 0 ? '' : 'negative')}
+        </div>
+        <button class="export-btn" onclick="exportCSV('bs')">Export CSV</button>
+      `;
     }
 
     function renderCashFlow(data) {
-      document.getElementById('tab-cf').innerHTML =
-        '<div class="loading-msg">Cash Flow — coming in Task 12</div>';
+      const { bsEntries, opex } = data;
+
+      const bsYearField = periodMode === 'vintage' ? F_BS_VIN_YEAR : F_BS_CAL_YEAR;
+      const periodBS = bsEntries.filter(r => (r.fields[bsYearField] || 0) === periodYear);
+
+      const rev      = calcRevenue(data.skus);
+      const cogs     = calcCOGS(data);
+      const totalRev  = Object.values(rev).reduce((s, v) => s + v, 0);
+      const totalCOGS = Object.values(cogs).reduce((s, v) => s + v, 0);
+      const filteredOpex = opex.filter(r => {
+        const d = r.fields[F_OX_DATE];
+        return d ? new Date(d).getFullYear() === periodYear : false;
+      });
+      const opexTotal  = filteredOpex.reduce((s, r) => s + (r.fields[F_OX_AMOUNT] || 0), 0);
+      const netIncome  = totalRev - totalCOGS - opexTotal;
+
+      const wcAdj  = bsSum(periodBS, 'Working Capital Adjustment');
+      const netOps = netIncome + wcAdj;
+
+      const fixedPurch = bsSum(periodBS, 'Fixed Asset');
+      const netInvest  = -fixedPurch;
+
+      const loanProc = bsSum(periodBS, 'Loan');
+      const loanRepm = bsSum(periodBS, 'Loan Repayment');
+      const netFin   = loanProc - loanRepm;
+
+      const netChange = netOps + netInvest + netFin;
+      const begCash   = (() => {
+        const entry = [...periodBS]
+          .filter(r => r.fields[F_BS_CATEGORY] === 'Beginning Cash Balance')
+          .sort((a, b) => new Date(b.fields[F_BS_DATE] || 0) - new Date(a.fields[F_BS_DATE] || 0))[0];
+        return entry ? (entry.fields[F_BS_AMOUNT] || 0) : 0;
+      })();
+      const endCash = begCash + netChange;
+
+      document.getElementById('tab-cf').innerHTML = `
+        <div class="fin-doc">
+          <div class="fin-doc-title">Cash Flow Statement</div>
+          <div class="fin-doc-period">${periodYear} ${periodMode === 'vintage' ? 'Vintage' : 'Calendar'} Year</div>
+
+          <div class="fin-section-hdr">Operating Activities</div>
+          ${finRow('Net Income', netIncome)}
+          ${finRow('Working Capital Adjustments', wcAdj)}
+          ${finRow('Net Cash from Operations', netOps, true)}
+
+          <div class="fin-section-hdr">Investing Activities</div>
+          ${finRow('Fixed Asset Purchases', -fixedPurch)}
+          ${finRow('Net Cash from Investing', netInvest, true)}
+
+          <div class="fin-section-hdr">Financing Activities</div>
+          ${finRow('Loan Proceeds', loanProc)}
+          ${finRow('Loan Repayments', -loanRepm)}
+          ${finRow('Net Cash from Financing', netFin, true)}
+
+          ${finRow('Net Change in Cash', netChange, true)}
+          ${finRow('Beginning Cash Balance', begCash)}
+          ${finRow('Ending Cash Balance', endCash, true, '', endCash >= 0 ? '' : 'negative')}
+        </div>
+        <button class="export-btn" onclick="exportCSV('cf')">Export CSV</button>
+      `;
     }
 
     function renderBSEntries(entries) { /* implemented in Task 13 */ }
