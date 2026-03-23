@@ -612,7 +612,8 @@
             notes:      f[F_R_NOTES] || '',
             components: compsByRecipe[r.id] || [],
             trials:     [],
-            committedLotId: null
+            committedLotId: null,
+            committedLotRecId: (f[F_R_LOTS] && f[F_R_LOTS][0]) ? f[F_R_LOTS][0] : null
           };
         });
 
@@ -979,7 +980,7 @@
   // ── Direct Costs ──────────────────────────────────────────────────────────
   async function loadBlendCosts(lotRecId) {
     if (!lotRecId) return [];
-    const formula = encodeURIComponent(`FIND('${lotRecId}', ARRAYJOIN({Wine Lot}))`);
+    const formula = encodeURIComponent(`{Wine Lot} = '${lotRecId}'`);
     const url = `/api/airtable?baseId=${BASE_ID}&tableId=${TBL_BLEND_COSTS}&filterByFormula=${formula}`;
     const res = await fetch(url);
     const data = await res.json();
@@ -998,7 +999,7 @@
     if (!list) return;
 
     const sum = costs.reduce((s, c) => s + c.amount, 0);
-    if (total) total.textContent = sum > 0 ? `$${sum.toFixed(0)}` : '';
+    if (total) total.textContent = sum > 0 ? `$${sum.toFixed(2)}` : '';
 
     list.innerHTML = costs.length === 0
       ? '<div class="dc-empty">No direct costs yet</div>'
@@ -1036,7 +1037,7 @@
       blendCosts = await loadBlendCosts(lotRecId);
       renderDirectCosts(recipeId, blendCosts);
       // Clear form inputs
-      [`dc-desc-${recipeId}`, `dc-amt-${recipeId}`, `dc-notes-${recipeId}`]
+      [`dc-desc-${recipeId}`, `dc-amt-${recipeId}`, `dc-notes-${recipeId}`, `dc-date-${recipeId}`]
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     } catch(err) {
       showToast('Failed to save cost.', true);
