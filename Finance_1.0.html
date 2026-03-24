@@ -247,12 +247,103 @@
       /* Page breaks between documents when printing from Overview */
       .fin-doc + .fin-doc { page-break-before: always; }
     }
+
+    /* ── Shared Nav Drawer ── */
+    .nav-toggle {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; transition: all 0.18s; flex-shrink: 0;
+    }
+    .nav-toggle:hover { background: rgba(255,255,255,0.13); color: #fff; }
+    .nav-toggle.open { background: var(--grenadine); border-color: var(--grenadine); color: #fff; }
+
+    .nav-overlay {
+      display: none; position: fixed; inset: 0; z-index: 490;
+      background: rgba(0,0,0,0.45);
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-drawer {
+      position: fixed; top: 0; left: -280px; width: 280px; height: 100vh;
+      background: var(--dark); z-index: 500;
+      display: flex; flex-direction: column;
+      transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+    }
+    .nav-drawer.open { left: 0; }
+
+    .nav-header {
+      height: 58px; display: flex; align-items: center;
+      padding: 0 20px; gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+    }
+    .nav-header-logo {
+      font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 900;
+      color: var(--cream); flex: 1;
+    }
+    .nav-header-logo span { color: var(--grenadine); }
+    .nav-close {
+      width: 28px; height: 28px; border-radius: 5px;
+      background: rgba(255,255,255,0.07); border: none;
+      color: rgba(255,255,255,0.5); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all 0.15s;
+    }
+    .nav-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+    .nav-section-label {
+      font-family: 'Barlow Condensed', sans-serif; font-size: 9.5px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      padding: 20px 20px 6px;
+    }
+    .nav-section-label:first-of-type { padding-top: 16px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px; cursor: pointer;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-item:hover {
+      background: rgba(255,255,255,0.06);
+      border-left-color: rgba(255,255,255,0.15);
+    }
+    .nav-item.active {
+      background: rgba(233,167,82,0.1);
+      border-left-color: var(--beeswax);
+    }
+    .nav-item-icon {
+      font-size: 16px; width: 22px; text-align: center; flex-shrink: 0;
+      opacity: 0.75;
+    }
+    .nav-item.active .nav-item-icon { opacity: 1; }
+    .nav-item-label {
+      font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      transition: color 0.15s;
+    }
+    .nav-item:hover .nav-item-label { color: rgba(255,255,255,0.85); }
+    .nav-item.active .nav-item-label { color: var(--beeswax); }
+
+    .nav-footer {
+      margin-top: auto; padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.18);
+    }
   </style>
 </head>
 <body>
 
   <!-- ── TOPBAR ── -->
   <div class="topbar">
+    <button class="nav-toggle" onclick="openNav()" title="Navigation">&#9776;</button>
     <a href="index.html" style="text-decoration:none;">
       <div class="topbar-logo">Domaine <span>Mathiot</span></div>
     </a>
@@ -1105,6 +1196,52 @@
       initBSForm();
       initApp();
     });
+
+    function openNav() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+    function closeNav() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
   </script>
+
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item" href="/Vineyard_1.4.html">
+    <span class="nav-item-icon">🌿</span>
+    <span class="nav-item-label">Vineyard</span>
+  </a>
+  <a class="nav-item" href="/Harvest_1.4.html">
+    <span class="nav-item-icon">⚖</span>
+    <span class="nav-item-label">Harvest</span>
+  </a>
+  <div class="nav-section-label">Packaging</div>
+  <a class="nav-item" href="/SKUs_1.4.html">
+    <span class="nav-item-icon">📦</span>
+    <span class="nav-item-label">SKUs</span>
+  </a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item" href="/Cellar_1.6.html">
+    <span class="nav-item-icon">🍷</span>
+    <span class="nav-item-label">Cellar</span>
+  </a>
+  <a class="nav-item" href="/BlendingLab_1.3.html">
+    <span class="nav-item-icon">🧪</span>
+    <span class="nav-item-label">Blending Lab</span>
+  </a>
+  <div class="nav-section-label">Finance</div>
+  <a class="nav-item active" href="/Finance_1.0.html">
+    <span class="nav-item-icon">📊</span>
+    <span class="nav-item-label">Finance</span>
+  </a>
+  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+</div>
 </body>
 </html>
