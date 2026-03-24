@@ -20,7 +20,7 @@ There is no build toolchain. Files are served directly from the repo.
 
 - **Local preview**: Open any HTML file directly in a browser, or use `npx serve .` for local static serving
 - **Deploy**: `git push origin main` — Vercel auto-deploys
-- **Cache bust**: Bump the cache name in `sw.js` (currently `lifecycle-v3`) after any CSS or JS change
+- **Cache bust**: Bump the cache name in `sw.js` (currently `lifecycle-v8`) after any CSS or JS change
 
 ## Architecture
 
@@ -43,7 +43,8 @@ Each operational area is a single self-contained HTML file with embedded `<style
 | `Harvest_1.4.html` | Pick events, scale tickets, tonnage |
 | `Cellar_1.6.html` | Wine lots, vessels, production stages |
 | `BlendingLab_1.3.html` | Blend recipes, trials, bottle yield |
-| `SKUs_1.4.html` | Products, pricing, sales channels |
+| `SKUs_1.4.html` | Products, pricing, sales channels (7 channels: Wine Club, Events, Weddings, DTC, Wholesale, Export, Held/Reserve) |
+| `Finance_1.0.html` | P&L, Balance Sheet, Cash Flow — period filtering by vintage or calendar year, CSV export, print/PDF |
 
 ### API Proxy (`api/airtable.js`)
 
@@ -96,11 +97,36 @@ CORS is locked to the configured `ALLOWED_ORIGIN` env var.
 
 ### Service Worker
 
-Current cache name: `lifecycle-v3`. Bump to `lifecycle-v4` (and increment on each subsequent CSS or JS change) — do not reuse a version name once deployed.
+Current cache name: `lifecycle-v8`. Increment by 1 on each deploy that changes static files — do not reuse a version name once deployed.
 
 ### Auth
 
 Do not re-enable Clerk authentication until a custom domain is purchased.
+
+## Airtable Tables
+
+| Constant | Table ID | Description |
+|----------|----------|-------------|
+| `TBL_LOTS` | `tblcBMCwq1ng8ykMb` | Wine Lots |
+| `TBL_EVENTS` | `tblTDMmErrAssEEAB` | Harvest Events |
+| `TBL_BLOCKS` | `tblPuFD0fbiLmITXK` | Vineyard Blocks |
+| `TBL_LABOR` | `tblVbpvTPxEQpw6Hz` | Labor Logs |
+| `TBL_SKUS` | `tblLOqkPGMsgNvl2g` | SKUs |
+| `TBL_BLEND_RECIPES` | `tblTaAYQmjVxNAmJt` | Blend Recipes |
+| `TBL_BLEND_COMPS` | `tblXcKZTuycXg7KVP` | Blend Components |
+| `TBL_BLEND_COSTS` | `tbl4wU6E4Unu2XZdH` | Blend Direct Costs (post-blend additions) |
+| `TBL_BALANCE_SHEET` | `tblLTGFWPYqjgEcGB` | Balance Sheet Entries |
+| `TBL_OPEX` | `tblLgn1j6SYVOr79n` | Overhead & OpEx |
+
+### Key Wine Lots fields
+- `fldMthqLcPT1WcJPb` — Blend Cost Basis (writable currency; feeds into Total Loaded Cost formula)
+- `fldvO0zt6Vks4u0Dc` — Gallons Pulled (writable number; tracks partial volume pulls for blending)
+- `fldEeGD6o6zxIV3gb` — Total Loaded Cost (Airtable formula — do not PATCH)
+- `fld8gBnBe60d9cSAn` — Live Wine Volume (Airtable formula — do not PATCH)
+
+## Navigation Conventions
+
+Every module has a hamburger nav drawer (`.nav-drawer`) accessible via a `&#9776;` button in the topbar. The drawer lists all 6 modules. The topbar logo (`Lifecycle.`) links to `/index.html` on every module. Finance marks itself `active` in its own drawer; each other module marks itself `active`.
 
 ## Key Conventions
 
