@@ -1040,7 +1040,7 @@
         const lp    = bsSum(cfBSEntries,'Loan');
         const lr    = bsSum(cfBSEntries,'Loan Repayment');
         const nc    = (ni + wcAdj) + (-fp) + (lp - lr);
-        const beg   = (() => { const e = [...cfBSEntries].filter(r=>r.fields[F_BS_CATEGORY]==='Beginning Cash Balance').sort((a,b)=>new Date(b.fields[F_BS_DATE])-new Date(a.fields[F_BS_DATE]))[0]; return e ? e.fields[F_BS_AMOUNT]||0 : 0; })();
+        const beg   = (() => { const e = [...cfBSEntries].filter(r=>r.fields[F_BS_CATEGORY]==='Beginning Cash Balance').sort((a,b)=>new Date(b.fields[F_BS_DATE]||0)-new Date(a.fields[F_BS_DATE]||0))[0]; return e ? e.fields[F_BS_AMOUNT]||0 : 0; })();
         rows = [
           ['Cash Flow Statement', period],
           [''],
