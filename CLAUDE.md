@@ -148,22 +148,88 @@ Every screen has a vintage pill + lock icon in the topbar. Reads from `TBL_VINTA
 
 ## Airtable Tables
 
-### Existing Tables
-- `TBL_BLOCKS` — vineyard blocks
-- `TBL_LABOR_LOGS` — labor log entries
-- `TBL_LOTS` (tblcBMCwq1ng8ykMb) — wine lots
-- `TBL_HARVEST_EVENTS` — harvest events
-- `TBL_SKUS` (tblLOqkPGMsgNvl2g) — product SKUs
-- `TBL_VESSELS` — barrels and tanks
-- `TBL_BLEND_RECIPES` — blend recipes
-- `TBL_SUPPLIERS` — supplier records
+All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldId=true` (proxy adds this automatically). Define field ID constants at the top of each screen's `<script>` block.
 
-### New Tables (Phase 2 — provision before building)
-- `TBL_VINTAGES` — year, state (active/locked/finalized), harvest_window_start, harvest_window_end, tons_target, tons_actual, finalized_at, linked lots
-- `TBL_VINTAGE_CHANGELOG` — vintage_id, table_name, record_id, field_name, original_value, new_value, changed_at, reason
-- `TBL_INVENTORY` — item name, category, current stock, unit, unit cost (last), reorder threshold, linked supplier, linked SKUs
-- `TBL_LABOR_RATES` — name, department, hourly rate, burden multiplier, effective date
-- `TBL_TASKS` — name, department, default duration, active/inactive
+### Core Tables
+| Constant | Table ID | Notes |
+|---|---|---|
+| `TBL_BLOCKS` | `tblPuFD0fbiLmITXK` | Vineyard blocks |
+| `TBL_LABOR_LOGS` | `tblVbpvTPxEQpw6Hz` | Labor log entries |
+| `TBL_LOTS` | `tblcBMCwq1ng8ykMb` | Wine lots |
+| `TBL_HARVEST_EVENTS` | `tblTDMmErrAssEEAB` | Harvest events |
+| `TBL_SKUS` | `tblLOqkPGMsgNvl2g` | Product SKUs |
+| `TBL_VESSELS` | `tblWyQjpgBOWutl7s` | Barrels and tanks |
+| `TBL_BLEND_RECIPES` | `tblTaAYQmjVxNAmJt` | Blend recipes |
+| `TBL_SUPPLIERS` | `tbl966ZHygCRxEv8S` | Supplier records |
+| `TBL_OVERHEAD_OPEX` | `tblLgn1j6SYVOr79n` | Overhead & OpEx |
+| `TBL_BALANCE_SHEET` | `tblLTGFWPYqjgEcGB` | Balance sheet entries |
+| `TBL_BLEND_COSTS` | `tbl4wU6E4Unu2XZdH` | Blend direct costs |
+| `TBL_DRY_GOODS` | `tbld7eYPAspQny1Ii` | Dry goods inventory (existing, rich schema) |
+| `TBL_SHIPMENTS` | `tblibVNV2aJrPJgEv` | Shipments received |
+
+### Phase 2 Tables
+| Constant | Table ID | Notes |
+|---|---|---|
+| `TBL_VINTAGES` | `tblJ8NBvXinvXpGPq` | Pre-existing, richer schema — see field IDs below |
+| `TBL_VINTAGE_CHANGELOG` | `tblBxqjVtPtnvcIjN` | Newly created |
+| `TBL_INVENTORY` | `tblZt25WPP5VEg8OF` | Newly created (simple) |
+| `TBL_LABOR_RATES` | `tblwX75CPEYHhIXmD` | Pre-existing, different field names — see below |
+| `TBL_TASKS` | `tblmsz91HIoI4LjHs` | Pre-existing, richer schema — see below |
+
+### Key Field IDs — TBL_VINTAGES (`tblJ8NBvXinvXpGPq`)
+**Note: "Vintage Year" is a text field (not number). "Status" is the state field (not "State").**
+| Field | ID | Type |
+|---|---|---|
+| Vintage Year | `fldgc54uvUaT7GwQX` | singleLineText |
+| Status | `fldho6518UjJmfRqX` | singleSelect (Active / Locked / Finalized) |
+| Harvest Start Date | `fldYMgmK6fH2ZfNm6` | date |
+| Harvest End Date | `fldvNTmOxXCGNDWMf` | date |
+| Total Tons Target | `fldGiKHuV1nO6XkYa` | number |
+| Season Notes | `fldBUnsOgnrNkNezG` | multilineText |
+| Harvest Events (Link) | `fldWObOsA7GAylIRd` | multipleRecordLinks |
+| Wine Lots (Link) | `flds5uGyFP119emOO` | multipleRecordLinks |
+| Vintage Changelog | `fld1GxEOGO9A85Qmk` | multipleRecordLinks |
+
+### Key Field IDs — TBL_VINTAGE_CHANGELOG (`tblBxqjVtPtnvcIjN`)
+| Field | ID | Type |
+|---|---|---|
+| Entry ID | `fldprsPjnC30tG88J` | singleLineText |
+| Module | `fldO2Inyw8K7wgx82` | singleSelect |
+| Table Name | `fldkdGyuQcoTElJqL` | singleLineText |
+| Record ID | `fldGYOqM6jGzVZCVg` | singleLineText |
+| Field Name | `fldIy9TZEm8RtPAcX` | singleLineText |
+| Original Value | `fldFdYAP8HLCWElBE` | singleLineText |
+| New Value | `fld8o1ARlaInLMhJk` | singleLineText |
+| Changed At | `fld9Uop0IzEwtjvmV` | date |
+| Reason | `fld5pZ2ckM8kpJthT` | multilineText |
+| Vintage | `fldwdN1mVkYSDptQ0` | multipleRecordLinks |
+
+### Key Field IDs — TBL_INVENTORY (`tblZt25WPP5VEg8OF`)
+| Field | ID | Type |
+|---|---|---|
+| Item Name | `fld2OlR9TizF8UId7` | singleLineText |
+| Category | `fld5v9F2JG4Bz71cK` | singleSelect |
+| Current Stock | `fldQv6nbkME6k43bd` | number |
+| Unit | `fldiJXLOryOTbmbXQ` | singleSelect |
+| Unit Cost Last | `fldgGhAuvyp4DqL2n` | currency |
+| Reorder Threshold | `fldK3RE8VHYB8Zp9g` | number |
+
+### Key Field IDs — TBL_LABOR_RATES (`tblwX75CPEYHhIXmD`)
+**Note: No "Department" field. Primary field is "Category Name" (not "Rate Name"). Burden is a percent field called "Tax & Insurance Multiplier". No "Active" checkbox field.**
+| Field | ID | Type |
+|---|---|---|
+| Category Name | `fldQA7KgGa6CzLkut` | singleLineText |
+| Hourly Rate | `fldoSTNC6UTrEmGmL` | currency |
+| Tax & Insurance Multiplier | `fldhC8utqAsDDsip1` | percent (e.g. 0.25 = 25%) |
+| Fully Burdened Rate | `fldXELasLWF8wO1UP` | formula (read-only) |
+
+### Key Field IDs — TBL_TASKS (`tblmsz91HIoI4LjHs`)
+**Note: No "Default Duration hrs" field. "Active?" is the checkbox (not "Active").**
+| Field | ID | Type |
+|---|---|---|
+| Task Name | `fldi3tHNfdITzZ0DX` | singleLineText |
+| Department | `fldo9F41LBtLTm5kL` | singleSelect (Vineyard / Cellar / Tasting Room / Events / Admin) |
+| Active? | `fldjhr6hV10Kk3Lr0` | checkbox |
 
 ---
 
