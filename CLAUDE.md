@@ -1,136 +1,279 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# Lifecycle Manager — Claude Code Instructions
 
 ## Project Overview
 
-**LifeCycle Manager** is a winery operations management PWA for Domaine Mathiot. It manages the full wine production lifecycle—vineyard labor, harvest tracking, cellar operations, blending, and SKUs—backed by Airtable as the database.
+**Lifecycle Manager** is a custom Progressive Web App (PWA) for winery operations management at **Domaine Mathiot**, a small winery in Champoeg, Oregon. It replaces Airtable's native UI with a purpose-built interface. Airtable is the backend database. A Vercel serverless proxy (`/api/airtable.js`) sits between the frontend and Airtable to keep the API key secure.
 
-## Tech Stack
+- **Live app:** `life-cycle-manager.vercel.app`
+- **GitHub repo:** `github.com/stewardof-thevines/LifeCycle-Manager`
+- **Airtable base ID:** `appJNEHG8sqXmdYGe` (Winery Lifecycle Manager)
+- **Stack:** HTML + CSS + Vanilla JS + Airtable API + Vercel
+- **Architecture:** No build system. Every screen is a self-contained HTML file with embedded `<style>` and `<script>`. Changes are made directly to HTML files.
 
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3 (no framework, no build step)
-- **Backend**: Single Vercel serverless function (`api/airtable.js`) acting as a reverse proxy to Airtable
-- **Database**: Airtable (`BASE_ID = 'appJNEHG8sqXmdYGe'`)
-- **Hosting**: Vercel (auto-deploys on push to `main`)
-- **Auth**: Clerk (integrated but currently disabled in `api/airtable.js`)
+---
 
-## Development & Deployment
+## Service Worker Rule — CRITICAL
 
-There is no build toolchain. Files are served directly from the repo.
+**Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-- **Local preview**: Open any HTML file directly in a browser, or use `npx serve .` for local static serving
-- **Deploy**: `git push origin main` — Vercel auto-deploys
-- **Cache bust**: Bump the cache name in `sw.js` (currently `lifecycle-v8`) after any CSS or JS change
+Current version after Phase 1 deploy: `lifecycle-v9`
+Next version (Phase 2): `lifecycle-v10`
 
-## Architecture
+Without this bump, phones with the PWA installed will keep running the old cached version.
 
-### Request Flow
+---
+
+## File Naming Convention
+
+All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html` convention has been retired.
+
+---
+
+## File Inventory
+
+### Deployed / In Repo
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Landing page / macro dashboard |
+| `vineyard.html` | Block management, labor logs, cost-per-acre |
+| `harvest.html` | Scale house, harvest events, season overview |
+| `cellar.html` | Wine lots, vessel tracking, stage management |
+| `blending-lab.html` | Blend recipes, bench trials, commit to cellar |
+| `skus.html` | Product SKUs, COGS, margin analysis |
+| `finance.html` | Finance / P&L |
+| `financial-dashboard.html` | Financial dashboard overview |
+| `suppliers.html` | Supplier management |
+| `overhead-opex.html` | Overhead and operating expenses |
+| `winery-app.html` | UI reference shell (not a nav destination) |
+| `api/airtable.js` | Vercel proxy — GET/POST/PATCH/DELETE |
+| `sw.js` | Service worker — bump version on any CSS/JS change |
+| `manifest.json` | PWA manifest |
+
+### To Be Built (Phase 2)
+
+| File | Purpose |
+|------|---------|
+| `inventory.html` | Dry goods & packaging stock, receive shipments, low-stock flags |
+| `labor-rates.html` | Labor rate cards by department, burdened rate calculator |
+| `task-library.html` | Master task list by department, feeds dropdowns across app |
+| `vintage-manager.html` | Create/manage vintages, finalize, view state badges |
+
+`vintage-context.html` is **not** a standalone page — replaced by the topbar vintage control embedded in every screen.
+
+---
+
+## Nav Drawer Structure
+
+Every screen gets this drawer. Mark the active screen with `.active` on its nav item.
 
 ```
-HTML module → fetch('/api/airtable') → api/airtable.js (Vercel fn) → Airtable REST API
+Lifecycle.                          ✕
+
+─ FIELD ──────────────────────────
+🌿  Vineyard          /vineyard.html
+⚖️   Harvest           /harvest.html
+🗓  Vintage Manager   /vintage-manager.html
+
+─ CELLAR ─────────────────────────
+🍷  Cellar            /cellar.html
+🧪  Blending Lab      /blending-lab.html
+
+─ SALES ──────────────────────────
+📦  SKUs              /skus.html
+
+─ OPERATIONS ─────────────────────
+🏭  Inventory         /inventory.html
+🤝  Suppliers         /suppliers.html
+
+─ FINANCE ────────────────────────
+📊  Financial Dashboard  /financial-dashboard.html
+📈  Finance              /finance.html
+💸  Overhead & OpEx      /overhead-opex.html
+
+─ SETUP ──────────────────────────
+⏱  Labor Rates       /labor-rates.html
+📋  Task Library      /task-library.html
+
+──────────────────────────────────
+Lifecycle Manager · v1.0
 ```
 
-All Airtable operations (GET/POST/PATCH/DELETE) go through the single proxy at `/api/airtable.js`. The frontend passes query params or JSON body; the proxy forwards with the stored API key.
+The Setup section sits below a hairline rule, slightly muted — same nav-item pattern but visually subordinate.
 
-### Module Structure
+---
 
-Each operational area is a single self-contained HTML file with embedded `<style>` and `<script>`:
+## Vintage State System
 
-| File | Domain |
-|------|--------|
-| `index.html` | Dashboard/navigation hub |
-| `Vineyard_1.4.html` | Block management, labor logs, farm costs |
-| `Harvest_1.4.html` | Pick events, scale tickets, tonnage |
-| `Cellar_1.6.html` | Wine lots, vessels, production stages |
-| `BlendingLab_1.3.html` | Blend recipes, trials, bottle yield |
-| `SKUs_1.4.html` | Products, pricing, sales channels (7 channels: Wine Club, Events, Weddings, DTC, Wholesale, Export, Held/Reserve) |
-| `Finance_1.0.html` | P&L, Balance Sheet, Cash Flow — period filtering by vintage or calendar year, CSV export, print/PDF |
+### Topbar Control
+Every screen has a vintage pill + lock icon in the topbar. Reads from `TBL_VINTAGES` on load. Stores active selection in `localStorage` as cache with Airtable as source of truth.
 
-### API Proxy (`api/airtable.js`)
+```
+[☰]  Lifecycle.  |  [MODULE]     [2026 ▾] [🔓]   [action buttons]
+```
 
-Accepts requests with these params/body fields:
-- `baseId`, `tableId` — target Airtable table
-- `filterByFormula`, `sort`, `maxRecords` — for GET filtering
-- `fields`, `records` — for POST/PATCH payloads
+### Three States
+- **Active 🟢** — current working vintage, fully editable
+- **Locked 🔒** — historic vintage, read-only by default
+- **Finalized 🔐** — permanently closed; edits go through change-log only
 
-CORS is locked to the configured `ALLOWED_ORIGIN` env var.
+### Rules
+- Only one vintage can be unlocked at a time
+- App always boots with current year as Active
+- Selecting a historic vintage shows it as Locked (no prompt to view)
+- Unlocking historic vintage requires confirmation: *"Unlocking 2023 will lock 2026. Continue?"* — current vintage pauses into Locked, nothing is erased
+- You cannot unlock a second vintage until the first is re-locked
+- Finalize action lives only in `vintage-manager.html` — two-step confirmation, irreversible
+- First-boot: if no Active vintage exists for current year, auto-create one
 
-### Environment Variables (Vercel)
+### Visual Guards for Locked/Finalized Vintages
+- Amber banner below topbar: "Viewing 2024 Vintage — Locked"
+- All form inputs disabled at DOM level
+- Save/submit buttons hidden
 
-| Variable | Purpose |
-|----------|---------|
-| `AIRTABLE_API_KEY` | Airtable personal access token |
-| `ALLOWED_ORIGIN` | CORS whitelist (production domain) |
-| `CLERK_SECRET_KEY` | Clerk auth (currently unused—auth is disabled) |
+### Offline Behavior
+- Historic vintages are view-only
+- Current vintage remains fully editable
+- Offline indicator in topbar: `● Offline`
 
-### PWA / Service Worker
+### Finalized Vintage Edits (Change-Log)
+- "Request Edit" replaces Save on finalized vintages
+- Writes to `TBL_VINTAGE_CHANGELOG` — original numbers untouched
+- Financial Dashboard shows a flag when change-log entries exist
+- Toggle options: **Finalized** / **All Changes** / **Select Changes**
+- Select Changes opens a slide-in panel grouped by module
+- Fields with multiple changes show collapsed with arrow to expand; only one revision per field can be selected (radio behavior within group)
 
-`sw.js` caches the app shell with a cache-first strategy for static assets and network-first for API calls. Bump `CACHE_VERSION` whenever deploying changes to static files to force cache invalidation.
+---
+
+## Airtable Tables
+
+### Existing Tables
+- `TBL_BLOCKS` — vineyard blocks
+- `TBL_LABOR_LOGS` — labor log entries
+- `TBL_LOTS` (tblcBMCwq1ng8ykMb) — wine lots
+- `TBL_HARVEST_EVENTS` — harvest events
+- `TBL_SKUS` (tblLOqkPGMsgNvl2g) — product SKUs
+- `TBL_VESSELS` — barrels and tanks
+- `TBL_BLEND_RECIPES` — blend recipes
+- `TBL_SUPPLIERS` — supplier records
+
+### New Tables (Phase 2 — provision before building)
+- `TBL_VINTAGES` — year, state (active/locked/finalized), harvest_window_start, harvest_window_end, tons_target, tons_actual, finalized_at, linked lots
+- `TBL_VINTAGE_CHANGELOG` — vintage_id, table_name, record_id, field_name, original_value, new_value, changed_at, reason
+- `TBL_INVENTORY` — item name, category, current stock, unit, unit cost (last), reorder threshold, linked supplier, linked SKUs
+- `TBL_LABOR_RATES` — name, department, hourly rate, burden multiplier, effective date
+- `TBL_TASKS` — name, department, default duration, active/inactive
+
+---
+
+## Airtable Field ID Rules
+
+- Always use field IDs (`fldXXXXX`), never field names
+- Define them as constants at the top of each screen's `<script>` block
+- `singleSelect` fields return objects — always unwrap `.name`: `field?.name || ''`
+- Linked record fields return arrays of record IDs — check `Array.isArray()` before accessing
+- Use `FIND('${id}', ARRAYJOIN({LinkedField}))` for filtering by linked record ID in `filterByFormula` — the `=` operator does not work for linked fields
+- Re-pull schema if data isn't loading — field IDs change when fields are deleted and recreated
+
+---
 
 ## Design System
 
 ### Color Tokens
-
-| Token | Value | Role |
-|-------|-------|------|
-| `--grenadine` | `#D44720` | Primary action |
-| `--beeswax` | `#E9A752` | Secondary accent |
-| `--darlington` | `#ACCAB2` | Sage green |
-| `--latte` | `#786140` | Neutral brown |
-| `--cream` | `#F5EFE4` | Page background |
-| `--dark` | `#1e1710` | Topbar and panels |
-| `--white` | `#ffffff` | Card backgrounds |
+```css
+--grenadine: #D44720;   /* Primary action, active states, eyebrow labels */
+--beeswax:   #E9A752;   /* Secondary accent, cost preview, amber highlights */
+--darlington:#ACCAB2;   /* Sage green — vineyard, positive states */
+--latte:     #786140;   /* Neutral brown — muted labels */
+--cream:     #F5EFE4;   /* Page background */
+--dark:      #1e1710;   /* Topbar, dark panels */
+--white:     #ffffff;   /* Card backgrounds */
+```
 
 ### Typography
-
-- **Playfair Display** — headings
-- **Barlow Condensed** — labels and stats
-- **Barlow** — body text
+- **Playfair Display** — page titles, screen headings
+- **Barlow Condensed** — labels, stats, chips, nav items (uppercase)
+- **Barlow** — body copy, form inputs
 
 ### Layout
+- Topbar: 58px, dark, sticky. Logo + breadcrumb + action buttons.
+- Standard grid: `380px dark left panel | fluid cream main area`
+- Optional: `360px dark right panel`
+- Forms live in dark panels — never in modals
+- Cards: white on cream with subtle border/shadow
 
-- `58px` dark sticky topbar
-- `380px` dark left panel
-- Fluid cream main area
-- Optional `360px` dark right panel
-- Forms always in dark panels — never in modals
+### Logo Text
+Standardized as: `Lifecycle<span>.</span>` — the dot is in `--grenadine`. Do not use "Domaine Mathiot" in the topbar logo.
 
-### Service Worker
+### Never Use
+- Modals for forms
+- Clerk auth script (disabled until custom domain is purchased — do NOT re-enable)
+- Version suffixes in filenames (use `vineyard.html` not `Vineyard_1.5.html`)
+- Old PascalCase filenames in any nav links
 
-Current cache name: `lifecycle-v8`. Increment by 1 on each deploy that changes static files — do not reuse a version name once deployed.
+---
 
-### Auth
+## Proxy API
 
-Do not re-enable Clerk authentication until a custom domain is purchased.
+Every screen calls the proxy at: `const PROXY = '/api/airtable';`
 
-## Airtable Tables
+```
+GET  ?baseId=&tableId=&fields=&sort=&maxRecords=&filterByFormula=
+POST { baseId, tableId, fields }
+PATCH { baseId, tableId, recordId, fields }
+DELETE { baseId, tableId, recordId }
+```
 
-| Constant | Table ID | Description |
-|----------|----------|-------------|
-| `TBL_LOTS` | `tblcBMCwq1ng8ykMb` | Wine Lots |
-| `TBL_EVENTS` | `tblTDMmErrAssEEAB` | Harvest Events |
-| `TBL_BLOCKS` | `tblPuFD0fbiLmITXK` | Vineyard Blocks |
-| `TBL_LABOR` | `tblVbpvTPxEQpw6Hz` | Labor Logs |
-| `TBL_SKUS` | `tblLOqkPGMsgNvl2g` | SKUs |
-| `TBL_BLEND_RECIPES` | `tblTaAYQmjVxNAmJt` | Blend Recipes |
-| `TBL_BLEND_COMPS` | `tblXcKZTuycXg7KVP` | Blend Components |
-| `TBL_BLEND_COSTS` | `tbl4wU6E4Unu2XZdH` | Blend Direct Costs (post-blend additions) |
-| `TBL_BALANCE_SHEET` | `tblLTGFWPYqjgEcGB` | Balance Sheet Entries |
-| `TBL_OPEX` | `tblLgn1j6SYVOr79n` | Overhead & OpEx |
+The proxy appends `returnFieldsByFieldId=true` to all GET requests — responses use field IDs, not names.
 
-### Key Wine Lots fields
-- `fldMthqLcPT1WcJPb` — Blend Cost Basis (writable currency; feeds into Total Loaded Cost formula)
-- `fldvO0zt6Vks4u0Dc` — Gallons Pulled (writable number; tracks partial volume pulls for blending)
-- `fldEeGD6o6zxIV3gb` — Total Loaded Cost (Airtable formula — do not PATCH)
-- `fld8gBnBe60d9cSAn` — Live Wine Volume (Airtable formula — do not PATCH)
+---
 
-## Navigation Conventions
+## Known Issues
 
-Every module has a hamburger nav drawer (`.nav-drawer`) accessible via a `&#9776;` button in the topbar. The drawer lists all 6 modules. The topbar logo (`Lifecycle.`) links to `/index.html` on every module. Finance marks itself `active` in its own drawer; each other module marks itself `active`.
+- `manifest.json` `start_url` still points to `Vineyard_1.4.html` — update to `/index.html`
+- `index.html` dashboard stat blocks may show `—` if Airtable table IDs mismatch — needs live data wiring
+- Clerk auth scaffold exists in `login.disabled.html` — do not activate until custom domain is purchased
 
-## Key Conventions
+---
 
-- **No framework**: All logic is vanilla JS within `<script>` tags
-- **Embedded styles**: CSS lives in `<style>` blocks within each HTML file; use the design system tokens defined above — do not introduce ad-hoc color values
-- **Airtable IDs are hardcoded** in each module's `<script>` block—update there when table structure changes
-- **Version numbers in filenames** (e.g., `_1.4`) are manual—update filename and all internal references when bumping
+## Implementation Status
+
+### Phase 1 — Complete (deployed as lifecycle-v9)
+- All files renamed to lowercase-hyphenated convention
+- 3 replacement screens copied in (vineyard, harvest, blending-lab from design folder)
+- 3 ready screens added (financial-dashboard, suppliers, overhead-opex)
+- Nav drawer standardized across all screens
+- `winery-app.html` added to repo as reference shell
+
+### Phase 2 — In Progress
+Plan documents:
+- `docs/superpowers/specs/2026-03-31-screen-integration-design.md`
+- `docs/superpowers/plans/2026-03-31-phase1-rename-nav-ready-screens.md`
+- `docs/superpowers/plans/2026-03-31-phase2-new-screens-vintage-system.md`
+
+Remaining tasks:
+1. Provision 4 new Airtable tables (TBL_VINTAGES, TBL_VINTAGE_CHANGELOG, TBL_INVENTORY, TBL_LABOR_RATES, TBL_TASKS)
+2. Build `vintage-manager.html`
+3. Add vintage topbar control to all 14 screens
+4. Build `inventory.html`
+5. Build `labor-rates.html`
+6. Build `task-library.html`
+7. Add change-log toggle to `financial-dashboard.html`
+8. Bump `sw.js` to `lifecycle-v10` and deploy
+
+---
+
+## Glossary
+
+| Term | Definition |
+|------|-----------|
+| Wine Lot | A batch of wine identified by a Lot ID (e.g. 26-PN-1). Tracks from fermentation through bottling. |
+| Vessel | A barrel or tank used to hold a wine lot during aging. |
+| SKU | A product configuration — bottle size, lot source, MSRP, and channel allocations. |
+| Burdened Rate | A labor rate that includes base wage plus employer taxes and insurance (e.g. $25/hr + 25% burden = $31.25/hr). |
+| COGs | Cost of Goods Sold — total per-bottle cost including fruit, labor, cellar, and packaging. |
+| Blend Recipe | A formula combining multiple wine lots at specified percentages to create a blend. |
+| Harvest Event | A single pick — records the block, date, tonnage, brix, and juice yield. |
+| Vintage | A harvest year (e.g. 2024, 2025, 2026). Vintages have Active/Locked/Finalized states. |
+| Finalized Vintage | A vintage whose numbers are permanently closed. Edits go through a change-log. |
