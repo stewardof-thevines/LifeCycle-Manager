@@ -1,16 +1,23 @@
 // Lifecycle Manager — Service Worker v2
 // Cache version — bump this number any time you deploy new files
-const CACHE = 'lifecycle-v8';
+const CACHE = 'lifecycle-v10';
 
 const SHELL = [
   '/',
   '/index.html',
-  '/Vineyard_1.4.html',
-  '/Cellar_1.6.html',
-  '/Harvest_1.4.html',
-  '/SKUs_1.4.html',
-  '/BlendingLab_1.3.html',
-  '/Finance_1.0.html',
+  '/vineyard.html',
+  '/harvest.html',
+  '/cellar.html',
+  '/blending-lab.html',
+  '/skus.html',
+  '/finance.html',
+  '/financial-dashboard.html',
+  '/suppliers.html',
+  '/overhead-opex.html',
+  '/vintage-manager.html',
+  '/inventory.html',
+  '/labor-rates.html',
+  '/task-library.html',
   '/manifest.json',
 ];
 
