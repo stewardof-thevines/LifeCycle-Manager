@@ -18,11 +18,11 @@
 
 | Constant | Table ID | Description |
 |---|---|---|
-| `TBL_VINTAGES` | *(fill after Task 1)* | Vintage years and states |
-| `TBL_VINTAGE_CHANGELOG` | *(fill after Task 1)* | Change-log entries for finalized vintages |
-| `TBL_INVENTORY` | *(fill after Task 1)* | Dry goods and packaging inventory |
-| `TBL_LABOR_RATES` | *(fill after Task 1)* | Labor rate categories by department |
-| `TBL_TASKS` | *(fill after Task 1)* | Task library for dropdowns |
+| `TBL_VINTAGES` | `tblJ8NBvXinvXpGPq` | Vintage years and states |
+| `TBL_VINTAGE_CHANGELOG` | `tblBxqjVtPtnvcIjN` | Change-log entries for finalized vintages |
+| `TBL_INVENTORY` | `tblZt25WPP5VEg8OF` | Dry goods and packaging inventory |
+| `TBL_LABOR_RATES` | `tblwX75CPEYHhIXmD` | Labor rate categories by department |
+| `TBL_TASKS` | `tblmsz91HIoI4LjHs` | Task library for dropdowns |
 
 ---
 
@@ -396,9 +396,9 @@ Fields: Rate Name (Single line text), Department (Single select: Vineyard / Cell
 ### TBL_TASKS
 Fields: Task Name (Single line text), Department (Single select: Vineyard / Cellar / Tasting Room / Events / Admin), Default Duration hrs (Number), Active (Checkbox)
 
-- [ ] **Step 1: Create all 5 tables** (via Airtable MCP or Airtable UI)
-- [ ] **Step 2: Copy table IDs into the "Airtable Table IDs" table at the top of this plan**
-- [ ] **Step 3: Note the IDs — they will be hardcoded into each new screen's `<script>` block**
+- [x] **Step 1: Create all 5 tables** (via Airtable MCP or Airtable UI)
+- [x] **Step 2: Copy table IDs into the "Airtable Table IDs" table at the top of this plan**
+- [x] **Step 3: Note the IDs — they will be hardcoded into each new screen's `<script>` block**
 
 ---
 
@@ -409,7 +409,7 @@ Fields: Task Name (Single line text), Department (Single select: Vineyard / Cell
 
 This screen manages vintage year records. Use the standard left-panel + main-area layout from the existing modules.
 
-- [ ] **Step 1: Create the file with full HTML structure**
+- [x] **Step 1: Create the file with full HTML structure**
 
 Use this template structure (fill in CSS, HTML, JS):
 
@@ -448,7 +448,7 @@ Use this template structure (fill in CSS, HTML, JS):
 </html>
 ```
 
-- [ ] **Step 2: Implement left panel form**
+- [x] **Step 2: Implement left panel form**
 
 Fields:
 - Year (number input, default current year + 1)
@@ -462,7 +462,7 @@ Fields:
 
   This ensures only one vintage is Active at any time.
 
-- [ ] **Step 3: Implement main area — vintage cards**
+- [x] **Step 3: Implement main area — vintage cards**
 
 Fetch all TBL_VINTAGES records sorted by Year descending. Render one card per vintage:
 
@@ -478,21 +478,21 @@ Fetch all TBL_VINTAGES records sorted by Year descending. Render one card per vi
 
 The "Lots: N" count comes from the `Linked Lots` field on the TBL_VINTAGES record (a linked-record field to TBL_LOTS, defined in spec Section 4). Access it as `record.fields['Linked Lots']?.length ?? 0`.
 
-- [ ] **Step 4: Implement Finalize button — two-step confirmation**
+- [x] **Step 4: Implement Finalize button — two-step confirmation**
 
 Step 1 modal:
 > "Finalizing [YEAR] is permanent. All records will be locked against direct edits. Future changes require a change-log entry. Continue?"
 
 Step 2: show a text input. User must type `FINALIZE [YEAR]` exactly. On match: PATCH record State to 'Finalized', re-render cards.
 
-- [ ] **Step 5: Add canonical nav drawer** (active item: `/vintage-manager.html`)
+- [x] **Step 5: Add canonical nav drawer** (active item: `/vintage-manager.html`)
 
-- [ ] **Step 6: Verify in browser**
+- [x] **Step 6: Verify in browser**
 - Form creates a new vintage record in Airtable
 - Cards display correct data
 - Finalize two-step works and state updates
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add vintage-manager.html
@@ -512,22 +512,22 @@ The vintage topbar control must be added to every screen. After this task, every
 
 For the 11 existing screens:
 
-- [ ] **Step 1: Add vintage CSS to `<style>` block**
+- [x] **Step 1: Add vintage CSS to `<style>` block**
 Paste the full CSS from "Vintage Topbar Control Reference → CSS" above, just before the closing `</style>` tag.
 
-- [ ] **Step 2: Add vintage control HTML to topbar**
+- [x] **Step 2: Add vintage control HTML to topbar**
 Before inserting, read the topbar section of the file to understand its existing layout (look for elements with `margin-left: auto`, flex spacers, or right-aligned action buttons). Then insert the "Vintage control" HTML block after the breadcrumb/module label and before any right-side action buttons. If a `margin-left: auto` spacer (`flex:1` div or `.topbar-spacer`) already exists, remove it — the vintage control wrapper already handles right-alignment via its own `margin-left: auto`.
 
-- [ ] **Step 3: Add banner and modal HTML**
+- [x] **Step 3: Add banner and modal HTML**
 Paste the banner + modal HTML immediately after the closing `</div>` of the topbar.
 
-- [ ] **Step 4: Add vintage JS to `<script>` block**
+- [x] **Step 4: Add vintage JS to `<script>` block**
 Replace `TBL_VINTAGES = 'FILL_IN_AFTER_TASK_1'` with the real table ID from the top of this plan. Paste the full JS block from the reference into each file's `<script>`. Check for variable name conflicts with existing code (e.g. if the file already uses `BASE_ID`, do not re-declare it).
 
-- [ ] **Step 5: Verify on finance.html (representative test)**
+- [x] **Step 5: Verify on finance.html (representative test)**
 Open `finance.html` in browser. Should see vintage pill in topbar showing current year with green dot. Click pill — dropdown shows all vintages. If no vintages exist yet in Airtable (only created in Task 1), it should auto-create a 2026 Active record.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add index.html vineyard.html harvest.html cellar.html blending-lab.html \
@@ -545,20 +545,20 @@ git commit -m "feat: add vintage topbar control to all screens"
 
 Left panel + main area layout. Tracks dry goods and packaging materials.
 
-- [ ] **Step 1: Create file with standard structure** (same scaffold as Task 2)
+- [x] **Step 1: Create file with standard structure** (same scaffold as Task 2)
 
 Constants:
 ```js
 const TBL_INVENTORY = '[TABLE_ID]';  // from Task 1
 ```
 
-- [ ] **Step 2: Implement left panel — receive shipment form**
+- [x] **Step 2: Implement left panel — receive shipment form**
 
 Fields: Item Name (text or select from existing items), Category (select: Bottles / Corks / Labels / Capsules / Boxes / Other), Supplier (select — fetch from suppliers Airtable table if it has one, otherwise free text for now), Quantity Received (number), Unit (select: ea / case / roll / box), Unit Cost (currency), Received Date (date, default today).
 
 On save: if item exists → PATCH Current Stock (add received qty) and Unit Cost Last. If new item → POST new record.
 
-- [ ] **Step 3: Implement main area — inventory table**
+- [x] **Step 3: Implement main area — inventory table**
 
 Columns: Item, Category, Current Stock, Unit, Unit Cost (Last), Reorder Threshold, Supplier, Status.
 
@@ -566,16 +566,16 @@ Rows where Current Stock ≤ Reorder Threshold: amber row highlight + "LOW" badg
 
 Filter chips above table: All / Bottles / Corks / Labels / Capsules / Boxes / Other.
 
-- [ ] **Step 4: Add vintage topbar control** (from Task 3 reference, TBL_VINTAGES = real ID)
+- [x] **Step 4: Add vintage topbar control** (from Task 3 reference, TBL_VINTAGES = real ID)
 
-- [ ] **Step 5: Add canonical nav drawer** (active item: `/inventory.html`)
+- [x] **Step 5: Add canonical nav drawer** (active item: `/inventory.html`)
 
-- [ ] **Step 6: Verify in browser**
+- [x] **Step 6: Verify in browser**
 - Form saves a new item to Airtable
 - Table reloads and shows the new item
 - Low-stock flag appears when stock ≤ threshold
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add inventory.html
@@ -591,14 +591,14 @@ git commit -m "feat: add inventory screen with low-stock flags"
 
 Left panel + main area layout. Defines labor rate categories by department.
 
-- [ ] **Step 1: Create file with standard structure**
+- [x] **Step 1: Create file with standard structure**
 
 Constants:
 ```js
 const TBL_LABOR_RATES = '[TABLE_ID]';  // from Task 1
 ```
 
-- [ ] **Step 2: Implement left panel — rate form**
+- [x] **Step 2: Implement left panel — rate form**
 
 Fields: Rate Name (text), Department (select: Vineyard / Cellar / Tasting Room / Events / Admin), Hourly Rate (currency), Burden Multiplier (number, e.g. 1.28 for 28%), Effective Date (date), Active (checkbox, default checked).
 
@@ -606,20 +606,20 @@ Live preview box below fields showing calculated Fully Burdened Rate = Hourly Ra
 
 On save: POST to TBL_LABOR_RATES.
 
-- [ ] **Step 3: Implement main area — rates by department**
+- [x] **Step 3: Implement main area — rates by department**
 
 Group records by Department. Within each group, a sub-table: Rate Name, Hourly Rate, Burden %, Fully Burdened Rate, Effective Date, Active. Inactive rows are dimmed (opacity 0.5).
 
 Toggle button in header: "Show Inactive" / "Hide Inactive".
 
-- [ ] **Step 4: Add vintage topbar control + nav drawer** (active: `/labor-rates.html`)
+- [x] **Step 4: Add vintage topbar control + nav drawer** (active: `/labor-rates.html`)
 
-- [ ] **Step 5: Verify in browser**
+- [x] **Step 5: Verify in browser**
 - Form saves a new rate to Airtable and it appears in the correct department group
 - Fully burdened rate preview updates live as Hourly Rate or Burden Multiplier is changed
 - Inactive rates are dimmed and hidden by default; "Show Inactive" toggle reveals them
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add labor-rates.html
@@ -635,20 +635,20 @@ git commit -m "feat: add labor-rates screen grouped by department"
 
 Left panel + main area layout. Master list of tasks that populate dropdowns across modules.
 
-- [ ] **Step 1: Create file with standard structure**
+- [x] **Step 1: Create file with standard structure**
 
 Constants:
 ```js
 const TBL_TASKS = '[TABLE_ID]';  // from Task 1
 ```
 
-- [ ] **Step 2: Implement left panel — task form**
+- [x] **Step 2: Implement left panel — task form**
 
 Fields: Task Name (text), Department (select: Vineyard / Cellar / Tasting Room / Events / Admin), Default Duration hrs (number, optional), Active (checkbox, default checked).
 
 On save: POST to TBL_TASKS.
 
-- [ ] **Step 3: Implement main area — tasks by department**
+- [x] **Step 3: Implement main area — tasks by department**
 
 Group by Department. Each group shows a list of tasks. Active tasks shown normally. Inactive tasks dimmed with strikethrough on task name.
 
@@ -656,14 +656,14 @@ Toggle button per group (or global): "Show Inactive".
 
 Click a task → load it into the left panel form for editing. On save → PATCH.
 
-- [ ] **Step 4: Add vintage topbar control + nav drawer** (active: `/task-library.html`)
+- [x] **Step 4: Add vintage topbar control + nav drawer** (active: `/task-library.html`)
 
-- [ ] **Step 5: Verify in browser**
+- [x] **Step 5: Verify in browser**
 - Form saves a new task to Airtable and it appears under the correct department group
 - Clicking a task row loads it into the left panel form for editing; saving PATCHes the record
 - Inactive tasks show with strikethrough and are hidden by default; toggle reveals them
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add task-library.html
@@ -679,9 +679,9 @@ git commit -m "feat: add task-library screen with department grouping and edit-i
 
 This task adds the change-log toggle and Select Changes panel described in the spec Section 6.
 
-- [ ] **Step 1: Read `financial-dashboard.html` fully** to understand its existing data model and how it renders numbers.
+- [x] **Step 1: Read `financial-dashboard.html` fully** to understand its existing data model and how it renders numbers.
 
-- [ ] **Step 2: Add change-log fetch logic**
+- [x] **Step 2: Add change-log fetch logic**
 
 When a Finalized vintage is active, after loading the dashboard data, also fetch TBL_VINTAGE_CHANGELOG filtered by the active vintage ID:
 
@@ -695,14 +695,14 @@ async function fetchChangeLog(vintageId) {
 }
 ```
 
-- [ ] **Step 3: Add change-log flag banner**
+- [x] **Step 3: Add change-log flag banner**
 
 When changeLog.length > 0 for a Finalized vintage, show a banner inside the main content area:
 ```
 ⚠ This vintage has [N] change-log entries. Showing finalized numbers.  [Toggle ▾]
 ```
 
-- [ ] **Step 4: Add toggle control**
+- [x] **Step 4: Add toggle control**
 
 Three-option toggle: **Finalized** | **All Changes** | **Select Changes**
 
@@ -710,17 +710,17 @@ Three-option toggle: **Finalized** | **All Changes** | **Select Changes**
 - All Changes: dashboard applies all change-log entries on top of finalized numbers
 - Select Changes: opens the change-log side panel
 
-- [ ] **Step 5: Build the Select Changes side panel**
+- [x] **Step 5: Build the Select Changes side panel**
 
 A slide-in panel from the right (320px wide, dark background). Groups entries by Module. For fields with one entry: checkbox. For fields with 2+ entries on the same Field Name: collapsed group row with `▶` arrow and count label ("3 changes"), no checkbox. Click arrow to expand; show individual entries each with a checkbox. Radio behavior within a group (selecting one unchecks others in the same group).
 
 On any checkbox change: re-run dashboard calculation using finalized baseline + checked entries.
 
-- [ ] **Step 6: Verify in browser with a finalized vintage**
+- [x] **Step 6: Verify in browser with a finalized vintage**
 
 If no finalized vintage exists yet, test by temporarily setting a vintage's State to 'Finalized' directly in Airtable.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add financial-dashboard.html
@@ -734,7 +734,7 @@ git commit -m "feat: add change-log toggle and select-changes panel to financial
 **Files:**
 - Modify: `sw.js`
 
-- [ ] **Step 1: Add new screen filenames to SHELL array in sw.js**
+- [x] **Step 1: Add new screen filenames to SHELL array in sw.js**
 
 Add:
 - `/vintage-manager.html`
@@ -742,23 +742,23 @@ Add:
 - `/labor-rates.html`
 - `/task-library.html`
 
-- [ ] **Step 2: Bump cache version to `lifecycle-v10`**
+- [x] **Step 2: Bump cache version to `lifecycle-v10`**
 First verify the current value in `sw.js`. It should be `lifecycle-v9` after Phase 1. If it still shows `lifecycle-v8`, Phase 1's sw.js change was not deployed — confirm Phase 1 is complete before proceeding.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add sw.js
 git commit -m "fix: bump sw cache to v10, add Phase 2 screens to SHELL"
 ```
 
-- [ ] **Step 4: Push to main**
+- [x] **Step 4: Push to main**
 
 ```bash
 git push origin main
 ```
 
-- [ ] **Step 5: Smoke test after Vercel deploy**
+- [x] **Step 5: Smoke test after Vercel deploy**
 
 1. All 14 screens load without 404
 2. Vintage pill appears in every screen's topbar

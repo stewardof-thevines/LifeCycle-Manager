@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version after Phase 1 deploy: `lifecycle-v9`
-Next version (Phase 2): `lifecycle-v10`
+Current version: `lifecycle-v10` (deployed with Phase 2)
+Next version (Phase 3): `lifecycle-v11`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 
@@ -31,7 +31,7 @@ All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html`
 
 ## File Inventory
 
-### Deployed / In Repo
+### All Deployed Screens
 
 | File | Purpose |
 |------|---------|
@@ -42,24 +42,19 @@ All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html`
 | `blending-lab.html` | Blend recipes, bench trials, commit to cellar |
 | `skus.html` | Product SKUs, COGS, margin analysis |
 | `finance.html` | Finance / P&L |
-| `financial-dashboard.html` | Financial dashboard overview |
+| `financial-dashboard.html` | Financial overview + change-log toggle for finalized vintages |
 | `suppliers.html` | Supplier management |
 | `overhead-opex.html` | Overhead and operating expenses |
+| `vintage-manager.html` | Create/manage vintages, finalize, view state badges |
+| `inventory.html` | Dry goods & packaging stock, receive shipments, low-stock flags |
+| `labor-rates.html` | Labor rate categories, burdened rate calculator (live preview) |
+| `task-library.html` | Master task list by department, edit-in-panel |
 | `winery-app.html` | UI reference shell (not a nav destination) |
 | `api/airtable.js` | Vercel proxy — GET/POST/PATCH/DELETE |
-| `sw.js` | Service worker — bump version on any CSS/JS change |
+| `sw.js` | Service worker — cache `lifecycle-v10` |
 | `manifest.json` | PWA manifest |
 
-### To Be Built (Phase 2)
-
-| File | Purpose |
-|------|---------|
-| `inventory.html` | Dry goods & packaging stock, receive shipments, low-stock flags |
-| `labor-rates.html` | Labor rate cards by department, burdened rate calculator |
-| `task-library.html` | Master task list by department, feeds dropdowns across app |
-| `vintage-manager.html` | Create/manage vintages, finalize, view state badges |
-
-`vintage-context.html` is **not** a standalone page — replaced by the topbar vintage control embedded in every screen.
+All 14 module screens include the **vintage topbar control** (pill + lock/unlock + state banners).
 
 ---
 
@@ -312,21 +307,28 @@ The proxy appends `returnFieldsByFieldId=true` to all GET requests — responses
 - Nav drawer standardized across all screens
 - `winery-app.html` added to repo as reference shell
 
-### Phase 2 — In Progress
+### Phase 2 — Complete (deployed as lifecycle-v10, merged 2026-04-01)
 Plan documents:
 - `docs/superpowers/specs/2026-03-31-screen-integration-design.md`
 - `docs/superpowers/plans/2026-03-31-phase1-rename-nav-ready-screens.md`
 - `docs/superpowers/plans/2026-03-31-phase2-new-screens-vintage-system.md`
 
-Remaining tasks:
-1. Provision 4 new Airtable tables (TBL_VINTAGES, TBL_VINTAGE_CHANGELOG, TBL_INVENTORY, TBL_LABOR_RATES, TBL_TASKS)
-2. Build `vintage-manager.html`
-3. Add vintage topbar control to all 14 screens
-4. Build `inventory.html`
-5. Build `labor-rates.html`
-6. Build `task-library.html`
-7. Add change-log toggle to `financial-dashboard.html`
-8. Bump `sw.js` to `lifecycle-v10` and deploy
+Completed:
+1. ✅ Provisioned 5 Airtable tables (TBL_VINTAGES, TBL_VINTAGE_CHANGELOG, TBL_INVENTORY, TBL_LABOR_RATES, TBL_TASKS) — pre-existing tables adopted, see field IDs above
+2. ✅ Built `vintage-manager.html` — create/manage vintages, two-step finalize confirmation
+3. ✅ Added vintage topbar control to all 14 screens — pill, dropdown, lock/unlock flow, banners
+4. ✅ Built `inventory.html` — receive shipments, low-stock flags, filter chips
+5. ✅ Built `labor-rates.html` — burdened rate calculator, grouped by Category Name
+6. ✅ Built `task-library.html` — tasks by department, edit-in-panel, Show Inactive toggle
+7. ✅ Added change-log toggle to `financial-dashboard.html` — Finalized/All Changes/Select Changes panel
+8. ✅ Bumped `sw.js` to `lifecycle-v10`, all 14 screens in SHELL array
+
+### Phase 3 — Not started
+Candidate work:
+- Vintage-aware data filtering in each module (Vineyard, Harvest, Cellar, etc.) — currently modules show all records regardless of vintage
+- Financial dashboard real recalculation from change-log entries (currently UI is wired but recalc is a stub)
+- Date range filtering across all modules
+- `manifest.json` start_url fix (still points to old PascalCase filename)
 
 ---
 
