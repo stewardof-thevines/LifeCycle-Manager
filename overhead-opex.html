@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overhead &amp; OpEx — Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── TOPBAR ── */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .topbar-hamburger { width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.65); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .topbar-hamburger:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); text-decoration:none; flex-shrink:0; }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-breadcrumb { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); flex-shrink:0; }
+    .topbar-btn { height:32px; padding:0 14px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; font-weight:600; letter-spacing:0.08em; cursor:pointer; border:none; display:flex; align-items:center; gap:6px; transition:all 0.18s; }
+    .topbar-btn.primary { background:var(--grenadine); color:#fff; }
+    .topbar-btn.primary:hover { background:#c03d1a; }
+
+    /* ── LAYOUT ── */
+    .app-body { display:flex; flex:1; height:calc(100vh - 58px); }
+    .left-panel { width:380px; flex-shrink:0; background:var(--dark); overflow-y:auto; padding:24px; }
+    .main-area { flex:1; background:var(--cream); overflow-y:auto; padding:24px; }
+
+    /* ── NAV DRAWER ── */
+    .nav-overlay { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.5); }
+    .nav-overlay.open { display:block; }
+    .nav-drawer { position:fixed; top:0; left:-320px; width:300px; height:100vh; background:var(--dark); z-index:500; transition:left 0.25s; display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-drawer.open { left:0; }
+    .nav-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nav-header-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); }
+    .nav-header-logo span { color:var(--grenadine); }
+    .nav-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .nav-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:16px 20px 6px; }
+    .nav-item { display:block; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.65); text-decoration:none; transition:background 0.15s,color 0.15s; }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:var(--white); }
+    .nav-item.active { color:var(--beeswax); background:rgba(233,167,82,0.08); }
+    .nav-setup-divider { height:1px; background:rgba(255,255,255,0.08); margin:8px 20px; }
+    .nav-item.setup { opacity:0.7; }
+    .nav-footer { margin-top:auto; padding:16px 20px; font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.25); letter-spacing:0.08em; }
+
+    /* ── VINTAGE TOPBAR CONTROL ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; flex-shrink:0; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── PANEL FORM ── */
+    .panel-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--grenadine); margin-bottom:16px; }
+
+    /* ── MAIN AREA ── */
+    .main-header { margin-bottom:24px; }
+    .main-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .main-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
+    .main-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; }
+
+    /* ── PLACEHOLDER ── */
+    .placeholder-msg { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; gap:12px; }
+    .placeholder-icon { font-size:48px; opacity:0.3; }
+    .placeholder-text { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.3); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV OVERLAY + DRAWER -->
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-header">
+      <div class="nav-header-logo">Lifecycle<span>.</span></div>
+      <button class="nav-close" onclick="closeNav()">✕</button>
+    </div>
+    <div class="nav-section-label">Field</div>
+    <a class="nav-item" href="/vineyard.html">🌿 Vineyard</a>
+    <a class="nav-item" href="/harvest.html">⚖️ Harvest</a>
+    <a class="nav-item" href="/vintage-manager.html">🗓 Vintage Manager</a>
+    <div class="nav-section-label">Cellar</div>
+    <a class="nav-item" href="/cellar.html">🍷 Cellar</a>
+    <a class="nav-item" href="/blending-lab.html">🧪 Blending Lab</a>
+    <div class="nav-section-label">Sales</div>
+    <a class="nav-item" href="/skus.html">📦 SKUs</a>
+    <div class="nav-section-label">Operations</div>
+    <a class="nav-item" href="/inventory.html">🏭 Inventory</a>
+    <a class="nav-item" href="/suppliers.html">🤝 Suppliers</a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item" href="/financial-dashboard.html">📊 Financial Dashboard</a>
+    <a class="nav-item" href="/finance.html">📈 Finance</a>
+    <a class="nav-item active" href="/overhead-opex.html">💸 Overhead &amp; OpEx</a>
+    <div class="nav-setup-divider"></div>
+    <div class="nav-section-label setup">Setup</div>
+    <a class="nav-item setup" href="/labor-rates.html">⏱ Labor Rates</a>
+    <a class="nav-item setup" href="/task-library.html">📋 Task Library</a>
+    <div class="nav-footer">Lifecycle Manager · v1.0</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" onclick="openNav()">☰</button>
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb">Overhead &amp; OpEx</div>
+
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;">
+        <span class="vintage-offline-dot"></span>Offline
+      </div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+    <button class="topbar-btn primary" onclick="openAddExpense()">+ Add Expense</button>
+  </div>
+
+  <!-- Vintage state banner -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">
+    🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+  </div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">
+    🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. Use "Request Edit" to log changes.
+  </div>
+
+  <!-- Vintage unlock confirmation modal -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+    <div class="left-panel">
+      <div class="panel-section-label">Add Expense</div>
+    </div>
+    <div class="main-area">
+      <div class="main-header">
+        <div class="main-eyebrow">Finance</div>
+        <div class="main-title">Overhead &amp; OpEx</div>
+        <div class="main-subtitle">Fixed overhead and operating expenses by category</div>
+      </div>
+      <div class="placeholder-msg">
+        <div class="placeholder-icon">💸</div>
+        <div class="placeholder-text">Expense records will appear here</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_ID = 'appJNEHG8sqXmdYGe';
+    const PROXY   = '/api/airtable';
+    const TBL_OVERHEAD_OPEX = 'tblLgn1j6SYVOr79n';
+
+    /* ── Vintage Topbar Control ── */
+    const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+    let vintageData = [];
+    let activeVintage = null;
+
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const currentYear = String(new Date().getFullYear());
+        if (cached && cached !== currentYear) disableAllInputs();
+        renderVintagePill({ year: cached || currentYear, state: 'Active' });
+        return;
+      }
+      try {
+        const PROXY_V = '/api/airtable';
+        const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+        const res = await fetch(`${PROXY_V}?baseId=${BASE_ID_V}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id: r.id,
+          year: r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+        const currentYear = String(new Date().getFullYear());
+        const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+        if (!hasActive) {
+          const existingActive = vintageData.find(v => v.state === 'Active');
+          if (existingActive) {
+            await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+            existingActive.state = 'Locked';
+          }
+          const pr = await fetch(PROXY_V, { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ fields:{ [F_VINTAGE_YEAR]:currentYear, [F_VINTAGE_STATUS]:'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id:pd.records[0].id, year:currentYear, state:'Active' });
+        }
+        const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+      } catch(e) { console.warn('Vintage init failed', e); }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') { lb.style.display = 'flex'; lb.textContent = '🔓'; lb.title = 'Unlock vintage'; }
+      else { lb.style.display = 'none'; }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year.replace(/'/g,"\\'")}',event)">
+          ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+      } else {
+        enableAllInputs();
+      }
+    }
+
+    function disableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
+    }
+    function enableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+    }
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled = false;
+        btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state !== 'Locked') return;
+      const PROXY_V = '/api/airtable';
+      const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+      const currentYear = String(new Date().getFullYear());
+      const cv = vintageData.find(v => v.year === currentYear);
+      document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+      document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+      document.getElementById('unlockModalConfirm').onclick = async () => {
+        await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:activeVintage.id, fields:{ [F_VINTAGE_STATUS]:'Active' } }] }) });
+        if (cv) await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:cv.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+        activeVintage.state = 'Active';
+        if (cv) cv.state = 'Locked';
+        renderVintagePill(activeVintage);
+        applyVintageState('Active', activeVintage.year);
+        closeUnlockModal();
+      };
+      document.getElementById('vintageUnlockModal').classList.add('open');
+    }
+    function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+    function openAddExpense() {
+      // Placeholder — expense add form to be implemented
+    }
+
+    function openNav() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+    function closeNav() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    document.addEventListener('DOMContentLoaded', initVintage);
+  </script>
+</body>
+</html>
