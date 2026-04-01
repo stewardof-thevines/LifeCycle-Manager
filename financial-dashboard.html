@@ -94,13 +94,57 @@
     .main-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
     .main-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; }
 
-    /* ── PLACEHOLDER ── */
-    .placeholder-msg { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; gap:12px; }
-    .placeholder-icon { font-size:48px; opacity:0.3; }
-    .placeholder-text { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.3); }
+    /* ── STAT CARDS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+    .stat-card { background:var(--white); border-radius:10px; border:1px solid rgba(0,0,0,0.08); padding:20px; }
+    .stat-card-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-bottom:8px; }
+    .stat-card-value { font-family:'Playfair Display',serif; font-size:26px; font-weight:900; color:var(--dark); }
+    .stat-card-sub { font-family:'Barlow',sans-serif; font-size:11px; color:var(--latte); margin-top:4px; }
+
+    /* ── CHANGE-LOG BANNER ── */
+    .cl-flag-banner { background:rgba(212,71,32,0.06); border:1px solid rgba(212,71,32,0.15); border-radius:8px; padding:12px 16px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+    .cl-flag-text { font-family:'Barlow',sans-serif; font-size:13px; color:var(--grenadine); }
+    .cl-toggle-group { display:flex; gap:4px; }
+    .cl-toggle-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:transparent; color:var(--latte); cursor:pointer; transition:all 0.15s; }
+    .cl-toggle-btn:hover { background:rgba(0,0,0,0.05); }
+    .cl-toggle-btn.active { background:var(--dark); color:var(--white); border-color:var(--dark); }
+
+    /* ── SELECT CHANGES PANEL ── */
+    .cl-panel-overlay { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.3); }
+    .cl-panel { position:fixed; top:0; right:-340px; width:320px; height:100vh; background:#2a2018; z-index:400; transition:right 0.25s; display:flex; flex-direction:column; overflow:hidden; }
+    .cl-panel.open { right:0; }
+    .cl-panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+    .cl-panel-title { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--white); }
+    .cl-panel-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .cl-panel-body { flex:1; overflow-y:auto; padding:16px; }
+    .cl-module-group { margin-bottom:20px; }
+    .cl-module-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.35); margin-bottom:8px; }
+    .cl-entry-row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .cl-entry-row:last-child { border-bottom:none; }
+    .cl-entry-info { flex:1; }
+    .cl-entry-field { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.75); margin-bottom:2px; }
+    .cl-entry-values { font-family:'Barlow',sans-serif; font-size:11px; color:rgba(255,255,255,0.4); }
+    .cl-entry-values s { color:rgba(255,255,255,0.3); }
+    .cl-group-header { display:flex; align-items:center; gap:8px; padding:10px 0; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .cl-group-arrow { font-size:10px; color:rgba(255,255,255,0.4); transition:transform 0.15s; }
+    .cl-group-arrow.open { transform:rotate(90deg); }
+    .cl-group-label { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; color:rgba(255,255,255,0.65); }
+    .cl-group-count { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.35); }
+    .cl-group-children { display:none; padding-left:16px; }
+    .cl-group-children.open { display:block; }
   </style>
 </head>
 <body>
+
+  <!-- CHANGE-LOG SELECT CHANGES PANEL -->
+  <div class="cl-panel-overlay" id="clPanelOverlay" onclick="closeCLPanel()" style="display:none;"></div>
+  <div class="cl-panel" id="clPanel">
+    <div class="cl-panel-header">
+      <div class="cl-panel-title">Select Changes</div>
+      <button class="cl-panel-close" onclick="closeCLPanel()">✕</button>
+    </div>
+    <div class="cl-panel-body" id="clPanelBody"></div>
+  </div>
 
   <!-- NAV OVERLAY + DRAWER -->
   <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
@@ -184,9 +228,21 @@
         <div class="main-title">Financial Dashboard</div>
         <div class="main-subtitle">P&amp;L summary, cost breakdowns, and vintage financials</div>
       </div>
-      <div class="placeholder-msg">
-        <div class="placeholder-icon">📊</div>
-        <div class="placeholder-text">Dashboard coming in Phase 2</div>
+      <!-- Change-log flag banner (shown only for Finalized vintage with entries) -->
+      <div class="cl-flag-banner" id="clFlagBanner" style="display:none;">
+        <span class="cl-flag-text" id="clFlagText"></span>
+        <div class="cl-toggle-group">
+          <button class="cl-toggle-btn active" data-mode="finalized" onclick="setChangeLogMode('finalized',this)">Finalized</button>
+          <button class="cl-toggle-btn" data-mode="all" onclick="setChangeLogMode('all',this)">All Changes</button>
+          <button class="cl-toggle-btn" data-mode="select" onclick="setChangeLogMode('select',this)">Select Changes</button>
+        </div>
+      </div>
+
+      <!-- KPI stat grid -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-card-label">Overhead &amp; OpEx</div><div class="stat-card-value" id="statOverhead">—</div><div class="stat-card-sub">total records</div></div>
+        <div class="stat-card"><div class="stat-card-label">Balance Sheet Entries</div><div class="stat-card-value" id="statBalance">—</div><div class="stat-card-sub">total entries</div></div>
+        <div class="stat-card"><div class="stat-card-label">Harvest Events</div><div class="stat-card-value" id="statHarvest">—</div><div class="stat-card-sub">this vintage</div></div>
       </div>
     </div>
   </div>
@@ -200,8 +256,31 @@
     const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
     const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
 
+    /* ── Dashboard Stat Tables ── */
+    const TBL_OVERHEAD_OPEX     = 'tblLgn1j6SYVOr79n';
+    const TBL_BALANCE_SHEET     = 'tblLTGFWPYqjgEcGB';
+    const TBL_HARVEST_EVENTS    = 'tblTDMmErrAssEEAB';
+
+    /* ── Change-Log Table + Field IDs ── */
+    const TBL_VINTAGE_CHANGELOG = 'tblBxqjVtPtnvcIjN';
+    const F_CL_ENTRY_ID     = 'fldprsPjnC30tG88J';
+    const F_CL_MODULE       = 'fldO2Inyw8K7wgx82';
+    const F_CL_TABLE_NAME   = 'fldkdGyuQcoTElJqL';
+    const F_CL_RECORD_ID    = 'fldGYOqM6jGzVZCVg';
+    const F_CL_FIELD_NAME   = 'fldIy9TZEm8RtPAcX';
+    const F_CL_ORIG_VALUE   = 'fldFdYAP8HLCWElBE';
+    const F_CL_NEW_VALUE    = 'fld8o1ARlaInLMhJk';
+    const F_CL_CHANGED_AT   = 'fld9Uop0IzEwtjvmV';
+    const F_CL_REASON       = 'fld5pZ2ckM8kpJthT';
+    const F_CL_VINTAGE_LINK = 'fldwdN1mVkYSDptQ0';
+
     let vintageData = [];
     let activeVintage = null;
+
+    /* ── Change-Log State ── */
+    let changeLogRecords = [];
+    let changeLogMode = 'finalized';
+    let selectedChanges = new Set();
 
     async function initVintage() {
       if (!navigator.onLine) {
@@ -282,13 +361,31 @@
         document.getElementById('bannerYearLocked').textContent = year;
         document.getElementById('vintageBannerLocked').classList.add('visible');
         disableAllInputs();
+        document.getElementById('clFlagBanner').style.display = 'none';
+        changeLogRecords = [];
+        selectedChanges.clear();
       } else if (state === 'Finalized') {
         document.getElementById('bannerYearFinalized').textContent = year;
         document.getElementById('vintageBannerFinalized').classList.add('visible');
         disableAllInputs();
         replaceSubmitWithRequestEdit();
+        if (activeVintage?.id) {
+          fetchChangeLog(activeVintage.id).then(records => {
+            changeLogRecords = records;
+            if (records.length > 0) {
+              document.getElementById('clFlagText').textContent =
+                `⚠ This vintage has ${records.length} change-log entr${records.length === 1 ? 'y' : 'ies'}. Numbers below reflect finalized values.`;
+              document.getElementById('clFlagBanner').style.display = 'flex';
+            } else {
+              document.getElementById('clFlagBanner').style.display = 'none';
+            }
+          });
+        }
       } else {
         enableAllInputs();
+        document.getElementById('clFlagBanner').style.display = 'none';
+        changeLogRecords = [];
+        selectedChanges.clear();
       }
     }
 
@@ -340,7 +437,136 @@
       document.getElementById('navOverlay').classList.remove('open');
     }
 
-    document.addEventListener('DOMContentLoaded', initVintage);
+    /* ── Change-Log Functions ── */
+    async function fetchChangeLog(vintageId) {
+      if (!vintageId) return [];
+      try {
+        const filter = encodeURIComponent(`FIND('${vintageId}', ARRAYJOIN({${F_CL_VINTAGE_LINK}}))`);
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGE_CHANGELOG}&filterByFormula=${filter}`);
+        const data = await res.json();
+        return data.records || [];
+      } catch(e) { console.error('Failed to fetch changelog', e); return []; }
+    }
+
+    function setChangeLogMode(mode, el) {
+      changeLogMode = mode;
+      document.querySelectorAll('.cl-toggle-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      if (mode === 'select') {
+        openCLPanel();
+      } else {
+        closeCLPanel();
+      }
+      // Recalculation hook — future phase
+    }
+
+    function openCLPanel() {
+      renderCLPanel();
+      document.getElementById('clPanel').classList.add('open');
+      document.getElementById('clPanelOverlay').style.display = 'block';
+    }
+
+    function closeCLPanel() {
+      document.getElementById('clPanel').classList.remove('open');
+      document.getElementById('clPanelOverlay').style.display = 'none';
+    }
+
+    function renderCLPanel() {
+      const body = document.getElementById('clPanelBody');
+      if (!changeLogRecords.length) {
+        body.innerHTML = '<p style="font-family:Barlow,sans-serif;font-size:13px;color:rgba(255,255,255,0.4);padding:16px 0;">No change-log entries for this vintage.</p>';
+        return;
+      }
+      // Group by module then by field name
+      const groups = {};
+      changeLogRecords.forEach(r => {
+        const module = r.fields[F_CL_MODULE]?.name || 'Other';
+        if (!groups[module]) groups[module] = {};
+        const fieldName = r.fields[F_CL_FIELD_NAME] || 'Unknown Field';
+        if (!groups[module][fieldName]) groups[module][fieldName] = [];
+        groups[module][fieldName].push(r);
+      });
+
+      body.innerHTML = Object.entries(groups).map(([module, fields]) => `
+        <div class="cl-module-group">
+          <div class="cl-module-label">${module}</div>
+          ${Object.entries(fields).map(([fieldName, entries]) => {
+            if (entries.length === 1) {
+              const r = entries[0];
+              const checked = selectedChanges.has(r.id) ? 'checked' : '';
+              return `<div class="cl-entry-row">
+                <input type="checkbox" ${checked} onchange="toggleChange('${r.id}',this)" style="margin-top:2px;accent-color:var(--grenadine);" />
+                <div class="cl-entry-info">
+                  <div class="cl-entry-field">${fieldName}</div>
+                  <div class="cl-entry-values"><s>${r.fields[F_CL_ORIG_VALUE]||'—'}</s> → ${r.fields[F_CL_NEW_VALUE]||'—'}</div>
+                </div>
+              </div>`;
+            } else {
+              const groupId = ('clg_' + module + '_' + fieldName).replace(/\s+/g,'_');
+              return `<div class="cl-group-header" onclick="toggleCLGroup('${groupId}')">
+                  <span class="cl-group-arrow" id="arr_${groupId}">▶</span>
+                  <span class="cl-group-label">${fieldName}</span>
+                  <span class="cl-group-count">${entries.length} changes</span>
+                </div>
+                <div class="cl-group-children" id="${groupId}">
+                  ${entries.map(r => {
+                    const checked = selectedChanges.has(r.id) ? 'checked' : '';
+                    const date = r.fields[F_CL_CHANGED_AT] ? new Date(r.fields[F_CL_CHANGED_AT]+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+                    return `<div class="cl-entry-row">
+                      <input type="radio" name="clg_${module}_${fieldName}" ${checked} value="${r.id}" onchange="selectRadioChange('${module}','${fieldName}','${r.id}')" style="margin-top:2px;accent-color:var(--grenadine);" />
+                      <div class="cl-entry-info">
+                        <div class="cl-entry-values"><s>${r.fields[F_CL_ORIG_VALUE]||'—'}</s> → ${r.fields[F_CL_NEW_VALUE]||'—'}</div>
+                        <div style="font-family:Barlow,sans-serif;font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;">${date}</div>
+                      </div>
+                    </div>`;
+                  }).join('')}
+                </div>`;
+            }
+          }).join('')}
+        </div>
+      `).join('');
+    }
+
+    function toggleCLGroup(groupId) {
+      const children = document.getElementById(groupId);
+      const arrow = document.getElementById('arr_' + groupId);
+      if (!children) return;
+      const isOpen = children.classList.toggle('open');
+      arrow?.classList.toggle('open', isOpen);
+    }
+
+    function toggleChange(recordId, checkbox) {
+      if (checkbox.checked) selectedChanges.add(recordId);
+      else selectedChanges.delete(recordId);
+      // Recalculation hook — future phase
+    }
+
+    function selectRadioChange(module, fieldName, recordId) {
+      changeLogRecords
+        .filter(r => r.fields[F_CL_MODULE]?.name === module && r.fields[F_CL_FIELD_NAME] === fieldName)
+        .forEach(r => selectedChanges.delete(r.id));
+      selectedChanges.add(recordId);
+      // Recalculation hook — future phase
+    }
+
+    /* ── Dashboard Stats ── */
+    async function loadDashboardStats() {
+      try {
+        const [oh, bs, he] = await Promise.all([
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_OVERHEAD_OPEX}&maxRecords=1`).then(r=>r.json()),
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_BALANCE_SHEET}&maxRecords=1`).then(r=>r.json()),
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_HARVEST_EVENTS}&maxRecords=1`).then(r=>r.json()),
+        ]);
+        document.getElementById('statOverhead').textContent = oh.records?.length > 0 ? 'Active' : '—';
+        document.getElementById('statBalance').textContent  = bs.records?.length > 0 ? 'Active' : '—';
+        document.getElementById('statHarvest').textContent  = he.records?.length > 0 ? 'Active' : '—';
+      } catch(e) { console.warn('Stats fetch failed', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initVintage();
+      await loadDashboardStats();
+    });
   </script>
 </body>
 </html>
