@@ -17,6 +17,11 @@
       --cream:     #f0e8d8;
       --fog:       rgba(240,232,216,0.08);
       --fog2:      rgba(240,232,216,0.04);
+      /* Design system tokens for vintage control */
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --dark:      #1e1710;
+      --white:     #ffffff;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -334,9 +339,87 @@
     .nav-card:nth-child(4) { animation: fadeUp 0.5s ease 0.35s both; }
     .nav-card:nth-child(5) { animation: fadeUp 0.5s ease 0.4s both; }
     .nav-card:nth-child(6) { animation: fadeUp 0.5s ease 0.45s both; }
+
+    /* ── Index Topbar ── */
+    .topbar { height:48px; background:rgba(30,23,16,0.95); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:200; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .topbar-logo { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:600; color:var(--cream); text-decoration:none; letter-spacing:0.04em; }
+    .topbar-logo span { color:var(--grenadine); }
+
+    /* ── Vintage Topbar Control ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow Condensed',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
   </style>
 </head>
 <body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <!-- Vintage control -->
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;">
+        <span class="vintage-offline-dot"></span>Offline
+      </div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+  </div>
+
+  <!-- Vintage state banner -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">
+    🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+  </div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">
+    🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. Use "Request Edit" to log changes.
+  </div>
+
+  <!-- Vintage unlock confirmation modal -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
   <div class="page">
     <header>
       <div class="header-rule">
@@ -438,6 +521,144 @@
   <script>
     const BASE_ID  = 'appJNEHG8sqXmdYGe';
     const TBL_BLOCKS  = 'tblPuFD0fbiLmITXK';
+
+    /* ── Vintage Topbar Control ── */
+    const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+    let vintageData = [];
+    let activeVintage = null;
+
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const currentYear = String(new Date().getFullYear());
+        if (cached && cached !== currentYear) disableAllInputs();
+        renderVintagePill({ year: cached || currentYear, state: 'Active' });
+        return;
+      }
+      try {
+        const PROXY_V = '/api/airtable';
+        const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+        const res = await fetch(`${PROXY_V}?baseId=${BASE_ID_V}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id: r.id,
+          year: r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+        const currentYear = String(new Date().getFullYear());
+        const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+        if (!hasActive) {
+          const existingActive = vintageData.find(v => v.state === 'Active');
+          if (existingActive) {
+            await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+            existingActive.state = 'Locked';
+          }
+          const pr = await fetch(PROXY_V, { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ fields:{ [F_VINTAGE_YEAR]:currentYear, [F_VINTAGE_STATUS]:'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id:pd.records[0].id, year:currentYear, state:'Active' });
+        }
+        const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+      } catch(e) { console.warn('Vintage init failed', e); }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') { lb.style.display = 'flex'; lb.textContent = '🔓'; lb.title = 'Unlock vintage'; }
+      else { lb.style.display = 'none'; }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year.replace(/'/g,"\\'")}',event)">
+          ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+      } else {
+        enableAllInputs();
+      }
+    }
+
+    function disableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
+    }
+    function enableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+    }
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled = false;
+        btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state !== 'Locked') return;
+      const PROXY_V = '/api/airtable';
+      const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+      const currentYear = String(new Date().getFullYear());
+      const cv = vintageData.find(v => v.year === currentYear);
+      document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+      document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+      document.getElementById('unlockModalConfirm').onclick = async () => {
+        await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:activeVintage.id, fields:{ [F_VINTAGE_STATUS]:'Active' } }] }) });
+        if (cv) await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:cv.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+        activeVintage.state = 'Active';
+        if (cv) cv.state = 'Locked';
+        renderVintagePill(activeVintage);
+        applyVintageState('Active', activeVintage.year);
+        closeUnlockModal();
+      };
+      document.getElementById('vintageUnlockModal').classList.add('open');
+    }
+    function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+    document.addEventListener('DOMContentLoaded', initVintage);
     const TBL_LOTS    = 'tblcBMCwq1ng8ykMb';
     const TBL_EVENTS  = 'tblTDMmErrAssEEAB';
 

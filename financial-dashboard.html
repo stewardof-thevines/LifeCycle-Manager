@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financial Dashboard — Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── TOPBAR ── */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .topbar-hamburger { width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.65); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .topbar-hamburger:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); text-decoration:none; flex-shrink:0; }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-breadcrumb { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); flex-shrink:0; }
+
+    /* ── LAYOUT ── */
+    .app-body { display:flex; flex:1; height:calc(100vh - 58px); }
+    .left-panel { width:380px; flex-shrink:0; background:var(--dark); overflow-y:auto; padding:24px; }
+    .main-area { flex:1; background:var(--cream); overflow-y:auto; padding:24px; }
+
+    /* ── NAV DRAWER ── */
+    .nav-overlay { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.5); }
+    .nav-overlay.open { display:block; }
+    .nav-drawer { position:fixed; top:0; left:-320px; width:300px; height:100vh; background:var(--dark); z-index:500; transition:left 0.25s; display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-drawer.open { left:0; }
+    .nav-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nav-header-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); }
+    .nav-header-logo span { color:var(--grenadine); }
+    .nav-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .nav-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:16px 20px 6px; }
+    .nav-item { display:block; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.65); text-decoration:none; transition:background 0.15s,color 0.15s; }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:var(--white); }
+    .nav-item.active { color:var(--beeswax); background:rgba(233,167,82,0.08); }
+    .nav-setup-divider { height:1px; background:rgba(255,255,255,0.08); margin:8px 20px; }
+    .nav-item.setup { opacity:0.7; }
+    .nav-footer { margin-top:auto; padding:16px 20px; font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.25); letter-spacing:0.08em; }
+
+    /* ── VINTAGE TOPBAR CONTROL ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; flex-shrink:0; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── PANEL FORM ── */
+    .panel-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--grenadine); margin-bottom:16px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:6px; }
+
+    /* ── MAIN AREA ── */
+    .main-header { margin-bottom:24px; }
+    .main-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .main-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
+    .main-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; }
+
+    /* ── STAT CARDS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+    .stat-card { background:var(--white); border-radius:10px; border:1px solid rgba(0,0,0,0.08); padding:20px; }
+    .stat-card-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-bottom:8px; }
+    .stat-card-value { font-family:'Playfair Display',serif; font-size:26px; font-weight:900; color:var(--dark); }
+    .stat-card-sub { font-family:'Barlow',sans-serif; font-size:11px; color:var(--latte); margin-top:4px; }
+
+    /* ── CHANGE-LOG BANNER ── */
+    .cl-flag-banner { background:rgba(212,71,32,0.06); border:1px solid rgba(212,71,32,0.15); border-radius:8px; padding:12px 16px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+    .cl-flag-text { font-family:'Barlow',sans-serif; font-size:13px; color:var(--grenadine); }
+    .cl-toggle-group { display:flex; gap:4px; }
+    .cl-toggle-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:6px; border:1px solid rgba(0,0,0,0.12); background:transparent; color:var(--latte); cursor:pointer; transition:all 0.15s; }
+    .cl-toggle-btn:hover { background:rgba(0,0,0,0.05); }
+    .cl-toggle-btn.active { background:var(--dark); color:var(--white); border-color:var(--dark); }
+
+    /* ── SELECT CHANGES PANEL ── */
+    .cl-panel-overlay { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.3); }
+    .cl-panel { position:fixed; top:0; right:-340px; width:320px; height:100vh; background:#2a2018; z-index:400; transition:right 0.25s; display:flex; flex-direction:column; overflow:hidden; }
+    .cl-panel.open { right:0; }
+    .cl-panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+    .cl-panel-title { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--white); }
+    .cl-panel-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .cl-panel-body { flex:1; overflow-y:auto; padding:16px; }
+    .cl-module-group { margin-bottom:20px; }
+    .cl-module-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.35); margin-bottom:8px; }
+    .cl-entry-row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .cl-entry-row:last-child { border-bottom:none; }
+    .cl-entry-info { flex:1; }
+    .cl-entry-field { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.75); margin-bottom:2px; }
+    .cl-entry-values { font-family:'Barlow',sans-serif; font-size:11px; color:rgba(255,255,255,0.4); }
+    .cl-entry-values s { color:rgba(255,255,255,0.3); }
+    .cl-group-header { display:flex; align-items:center; gap:8px; padding:10px 0; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .cl-group-arrow { font-size:10px; color:rgba(255,255,255,0.4); transition:transform 0.15s; }
+    .cl-group-arrow.open { transform:rotate(90deg); }
+    .cl-group-label { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; color:rgba(255,255,255,0.65); }
+    .cl-group-count { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.35); }
+    .cl-group-children { display:none; padding-left:16px; }
+    .cl-group-children.open { display:block; }
+  </style>
+</head>
+<body>
+
+  <!-- CHANGE-LOG SELECT CHANGES PANEL -->
+  <div class="cl-panel-overlay" id="clPanelOverlay" onclick="closeCLPanel()" style="display:none;"></div>
+  <div class="cl-panel" id="clPanel">
+    <div class="cl-panel-header">
+      <div class="cl-panel-title">Select Changes</div>
+      <button class="cl-panel-close" onclick="closeCLPanel()">✕</button>
+    </div>
+    <div class="cl-panel-body" id="clPanelBody"></div>
+  </div>
+
+  <!-- NAV OVERLAY + DRAWER -->
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-header">
+      <div class="nav-header-logo">Lifecycle<span>.</span></div>
+      <button class="nav-close" onclick="closeNav()">✕</button>
+    </div>
+    <div class="nav-section-label">Field</div>
+    <a class="nav-item" href="/vineyard.html">🌿 Vineyard</a>
+    <a class="nav-item" href="/harvest.html">⚖️ Harvest</a>
+    <a class="nav-item" href="/vintage-manager.html">🗓 Vintage Manager</a>
+    <div class="nav-section-label">Cellar</div>
+    <a class="nav-item" href="/cellar.html">🍷 Cellar</a>
+    <a class="nav-item" href="/blending-lab.html">🧪 Blending Lab</a>
+    <div class="nav-section-label">Sales</div>
+    <a class="nav-item" href="/skus.html">📦 SKUs</a>
+    <div class="nav-section-label">Operations</div>
+    <a class="nav-item" href="/inventory.html">🏭 Inventory</a>
+    <a class="nav-item" href="/suppliers.html">🤝 Suppliers</a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item active" href="/financial-dashboard.html">📊 Financial Dashboard</a>
+    <a class="nav-item" href="/finance.html">📈 Finance</a>
+    <a class="nav-item" href="/overhead-opex.html">💸 Overhead &amp; OpEx</a>
+    <div class="nav-setup-divider"></div>
+    <div class="nav-section-label setup">Setup</div>
+    <a class="nav-item setup" href="/labor-rates.html">⏱ Labor Rates</a>
+    <a class="nav-item setup" href="/task-library.html">📋 Task Library</a>
+    <div class="nav-footer">Lifecycle Manager · v1.0</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" onclick="openNav()">☰</button>
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb">Financial Dashboard</div>
+
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;">
+        <span class="vintage-offline-dot"></span>Offline
+      </div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+  </div>
+
+  <!-- Vintage state banner -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">
+    🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+  </div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">
+    🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. Use "Request Edit" to log changes.
+  </div>
+
+  <!-- Vintage unlock confirmation modal -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+    <div class="left-panel">
+      <div class="panel-section-label">Financial Dashboard</div>
+    </div>
+    <div class="main-area">
+      <div class="main-header">
+        <div class="main-eyebrow">Finance</div>
+        <div class="main-title">Financial Dashboard</div>
+        <div class="main-subtitle">P&amp;L summary, cost breakdowns, and vintage financials</div>
+      </div>
+      <!-- Change-log flag banner (shown only for Finalized vintage with entries) -->
+      <div class="cl-flag-banner" id="clFlagBanner" style="display:none;">
+        <span class="cl-flag-text" id="clFlagText"></span>
+        <div class="cl-toggle-group">
+          <button class="cl-toggle-btn active" data-mode="finalized" onclick="setChangeLogMode('finalized',this)">Finalized</button>
+          <button class="cl-toggle-btn" data-mode="all" onclick="setChangeLogMode('all',this)">All Changes</button>
+          <button class="cl-toggle-btn" data-mode="select" onclick="setChangeLogMode('select',this)">Select Changes</button>
+        </div>
+      </div>
+
+      <!-- KPI stat grid -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-card-label">Overhead &amp; OpEx</div><div class="stat-card-value" id="statOverhead">—</div><div class="stat-card-sub">total records</div></div>
+        <div class="stat-card"><div class="stat-card-label">Balance Sheet Entries</div><div class="stat-card-value" id="statBalance">—</div><div class="stat-card-sub">total entries</div></div>
+        <div class="stat-card"><div class="stat-card-label">Harvest Events</div><div class="stat-card-value" id="statHarvest">—</div><div class="stat-card-sub">this vintage</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_ID = 'appJNEHG8sqXmdYGe';
+    const PROXY   = '/api/airtable';
+
+    /* ── Vintage Topbar Control ── */
+    const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+    /* ── Dashboard Stat Tables ── */
+    const TBL_OVERHEAD_OPEX     = 'tblLgn1j6SYVOr79n';
+    const TBL_BALANCE_SHEET     = 'tblLTGFWPYqjgEcGB';
+    const TBL_HARVEST_EVENTS    = 'tblTDMmErrAssEEAB';
+
+    /* ── Change-Log Table + Field IDs ── */
+    const TBL_VINTAGE_CHANGELOG = 'tblBxqjVtPtnvcIjN';
+    const F_CL_ENTRY_ID     = 'fldprsPjnC30tG88J';
+    const F_CL_MODULE       = 'fldO2Inyw8K7wgx82';
+    const F_CL_TABLE_NAME   = 'fldkdGyuQcoTElJqL';
+    const F_CL_RECORD_ID    = 'fldGYOqM6jGzVZCVg';
+    const F_CL_FIELD_NAME   = 'fldIy9TZEm8RtPAcX';
+    const F_CL_ORIG_VALUE   = 'fldFdYAP8HLCWElBE';
+    const F_CL_NEW_VALUE    = 'fld8o1ARlaInLMhJk';
+    const F_CL_CHANGED_AT   = 'fld9Uop0IzEwtjvmV';
+    const F_CL_REASON       = 'fld5pZ2ckM8kpJthT';
+    const F_CL_VINTAGE_LINK = 'fldwdN1mVkYSDptQ0';
+
+    let vintageData = [];
+    let activeVintage = null;
+
+    /* ── Change-Log State ── */
+    let changeLogRecords = [];
+    let changeLogMode = 'finalized';
+    let selectedChanges = new Set();
+
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const currentYear = String(new Date().getFullYear());
+        if (cached && cached !== currentYear) disableAllInputs();
+        renderVintagePill({ year: cached || currentYear, state: 'Active' });
+        return;
+      }
+      try {
+        const PROXY_V = '/api/airtable';
+        const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+        const res = await fetch(`${PROXY_V}?baseId=${BASE_ID_V}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id: r.id,
+          year: r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+        const currentYear = String(new Date().getFullYear());
+        const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+        if (!hasActive) {
+          const existingActive = vintageData.find(v => v.state === 'Active');
+          if (existingActive) {
+            await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+            existingActive.state = 'Locked';
+          }
+          const pr = await fetch(PROXY_V, { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ fields:{ [F_VINTAGE_YEAR]:currentYear, [F_VINTAGE_STATUS]:'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id:pd.records[0].id, year:currentYear, state:'Active' });
+        }
+        const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+      } catch(e) { console.warn('Vintage init failed', e); }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') { lb.style.display = 'flex'; lb.textContent = '🔓'; lb.title = 'Unlock vintage'; }
+      else { lb.style.display = 'none'; }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year.replace(/'/g,"\\'")}',event)">
+          ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+        document.getElementById('clFlagBanner').style.display = 'none';
+        changeLogRecords = [];
+        selectedChanges.clear();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+        if (activeVintage?.id) {
+          fetchChangeLog(activeVintage.id).then(records => {
+            changeLogRecords = records;
+            if (records.length > 0) {
+              document.getElementById('clFlagText').textContent =
+                `⚠ This vintage has ${records.length} change-log entr${records.length === 1 ? 'y' : 'ies'}. Numbers below reflect finalized values.`;
+              document.getElementById('clFlagBanner').style.display = 'flex';
+            } else {
+              document.getElementById('clFlagBanner').style.display = 'none';
+            }
+          });
+        }
+      } else {
+        enableAllInputs();
+        document.getElementById('clFlagBanner').style.display = 'none';
+        changeLogRecords = [];
+        selectedChanges.clear();
+      }
+    }
+
+    function disableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
+    }
+    function enableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+    }
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled = false;
+        btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state !== 'Locked') return;
+      const PROXY_V = '/api/airtable';
+      const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+      const currentYear = String(new Date().getFullYear());
+      const cv = vintageData.find(v => v.year === currentYear);
+      document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+      document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+      document.getElementById('unlockModalConfirm').onclick = async () => {
+        await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:activeVintage.id, fields:{ [F_VINTAGE_STATUS]:'Active' } }] }) });
+        if (cv) await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:cv.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+        activeVintage.state = 'Active';
+        if (cv) cv.state = 'Locked';
+        renderVintagePill(activeVintage);
+        applyVintageState('Active', activeVintage.year);
+        closeUnlockModal();
+      };
+      document.getElementById('vintageUnlockModal').classList.add('open');
+    }
+    function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+    function openNav() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+    function closeNav() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    /* ── Change-Log Functions ── */
+    async function fetchChangeLog(vintageId) {
+      if (!vintageId) return [];
+      try {
+        const filter = encodeURIComponent(`FIND('${vintageId}', ARRAYJOIN({${F_CL_VINTAGE_LINK}}))`);
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGE_CHANGELOG}&filterByFormula=${filter}`);
+        const data = await res.json();
+        return data.records || [];
+      } catch(e) { console.error('Failed to fetch changelog', e); return []; }
+    }
+
+    function setChangeLogMode(mode, el) {
+      changeLogMode = mode;
+      document.querySelectorAll('.cl-toggle-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      if (mode === 'select') {
+        openCLPanel();
+      } else {
+        closeCLPanel();
+      }
+      // Recalculation hook — future phase
+    }
+
+    function openCLPanel() {
+      renderCLPanel();
+      document.getElementById('clPanel').classList.add('open');
+      document.getElementById('clPanelOverlay').style.display = 'block';
+    }
+
+    function closeCLPanel() {
+      document.getElementById('clPanel').classList.remove('open');
+      document.getElementById('clPanelOverlay').style.display = 'none';
+    }
+
+    function renderCLPanel() {
+      const body = document.getElementById('clPanelBody');
+      if (!changeLogRecords.length) {
+        body.innerHTML = '<p style="font-family:Barlow,sans-serif;font-size:13px;color:rgba(255,255,255,0.4);padding:16px 0;">No change-log entries for this vintage.</p>';
+        return;
+      }
+      // Group by module then by field name
+      const groups = {};
+      changeLogRecords.forEach(r => {
+        const module = r.fields[F_CL_MODULE]?.name || 'Other';
+        if (!groups[module]) groups[module] = {};
+        const fieldName = r.fields[F_CL_FIELD_NAME] || 'Unknown Field';
+        if (!groups[module][fieldName]) groups[module][fieldName] = [];
+        groups[module][fieldName].push(r);
+      });
+
+      body.innerHTML = Object.entries(groups).map(([module, fields]) => `
+        <div class="cl-module-group">
+          <div class="cl-module-label">${module}</div>
+          ${Object.entries(fields).map(([fieldName, entries]) => {
+            if (entries.length === 1) {
+              const r = entries[0];
+              const checked = selectedChanges.has(r.id) ? 'checked' : '';
+              return `<div class="cl-entry-row">
+                <input type="checkbox" ${checked} onchange="toggleChange('${r.id}',this)" style="margin-top:2px;accent-color:var(--grenadine);" />
+                <div class="cl-entry-info">
+                  <div class="cl-entry-field">${fieldName}</div>
+                  <div class="cl-entry-values"><s>${r.fields[F_CL_ORIG_VALUE]||'—'}</s> → ${r.fields[F_CL_NEW_VALUE]||'—'}</div>
+                </div>
+              </div>`;
+            } else {
+              const groupId = ('clg_' + module + '_' + fieldName).replace(/\s+/g,'_');
+              return `<div class="cl-group-header" onclick="toggleCLGroup('${groupId}')">
+                  <span class="cl-group-arrow" id="arr_${groupId}">▶</span>
+                  <span class="cl-group-label">${fieldName}</span>
+                  <span class="cl-group-count">${entries.length} changes</span>
+                </div>
+                <div class="cl-group-children" id="${groupId}">
+                  ${entries.map(r => {
+                    const checked = selectedChanges.has(r.id) ? 'checked' : '';
+                    const date = r.fields[F_CL_CHANGED_AT] ? new Date(r.fields[F_CL_CHANGED_AT]+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+                    return `<div class="cl-entry-row">
+                      <input type="radio" name="clg_${module}_${fieldName}" ${checked} value="${r.id}" onchange="selectRadioChange('${module}','${fieldName}','${r.id}')" style="margin-top:2px;accent-color:var(--grenadine);" />
+                      <div class="cl-entry-info">
+                        <div class="cl-entry-values"><s>${r.fields[F_CL_ORIG_VALUE]||'—'}</s> → ${r.fields[F_CL_NEW_VALUE]||'—'}</div>
+                        <div style="font-family:Barlow,sans-serif;font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;">${date}</div>
+                      </div>
+                    </div>`;
+                  }).join('')}
+                </div>`;
+            }
+          }).join('')}
+        </div>
+      `).join('');
+    }
+
+    function toggleCLGroup(groupId) {
+      const children = document.getElementById(groupId);
+      const arrow = document.getElementById('arr_' + groupId);
+      if (!children) return;
+      const isOpen = children.classList.toggle('open');
+      arrow?.classList.toggle('open', isOpen);
+    }
+
+    function toggleChange(recordId, checkbox) {
+      if (checkbox.checked) selectedChanges.add(recordId);
+      else selectedChanges.delete(recordId);
+      // Recalculation hook — future phase
+    }
+
+    function selectRadioChange(module, fieldName, recordId) {
+      changeLogRecords
+        .filter(r => r.fields[F_CL_MODULE]?.name === module && r.fields[F_CL_FIELD_NAME] === fieldName)
+        .forEach(r => selectedChanges.delete(r.id));
+      selectedChanges.add(recordId);
+      // Recalculation hook — future phase
+    }
+
+    /* ── Dashboard Stats ── */
+    async function loadDashboardStats() {
+      try {
+        const [oh, bs, he] = await Promise.all([
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_OVERHEAD_OPEX}&maxRecords=1`).then(r=>r.json()),
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_BALANCE_SHEET}&maxRecords=1`).then(r=>r.json()),
+          fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_HARVEST_EVENTS}&maxRecords=1`).then(r=>r.json()),
+        ]);
+        document.getElementById('statOverhead').textContent = oh.records?.length > 0 ? 'Active' : '—';
+        document.getElementById('statBalance').textContent  = bs.records?.length > 0 ? 'Active' : '—';
+        document.getElementById('statHarvest').textContent  = he.records?.length > 0 ? 'Active' : '—';
+      } catch(e) { console.warn('Stats fetch failed', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initVintage();
+      await loadDashboardStats();
+    });
+  </script>
+</body>
+</html>

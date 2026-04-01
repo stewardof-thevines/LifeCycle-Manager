@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vintage Manager — Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── TOPBAR ── */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .topbar-hamburger { width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.65); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .topbar-hamburger:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); text-decoration:none; flex-shrink:0; }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-breadcrumb { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); flex-shrink:0; }
+
+    /* ── LAYOUT ── */
+    .app-body { display:flex; flex:1; height:calc(100vh - 58px); }
+    .left-panel { width:380px; flex-shrink:0; background:var(--dark); overflow-y:auto; padding:24px; }
+    .main-area { flex:1; background:var(--cream); overflow-y:auto; padding:24px; }
+
+    /* ── NAV DRAWER ── */
+    .nav-overlay { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.5); }
+    .nav-overlay.open { display:block; }
+    .nav-drawer { position:fixed; top:0; left:-320px; width:300px; height:100vh; background:var(--dark); z-index:500; transition:left 0.25s; display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-drawer.open { left:0; }
+    .nav-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nav-header-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); }
+    .nav-header-logo span { color:var(--grenadine); }
+    .nav-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .nav-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:16px 20px 6px; }
+    .nav-item { display:block; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.65); text-decoration:none; transition:background 0.15s,color 0.15s; }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:var(--white); }
+    .nav-item.active { color:var(--beeswax); background:rgba(233,167,82,0.08); }
+    .nav-setup-divider { height:1px; background:rgba(255,255,255,0.08); margin:8px 20px; }
+    .nav-item.setup { opacity:0.7; }
+    .nav-footer { margin-top:auto; padding:16px 20px; font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.25); letter-spacing:0.08em; }
+
+    /* ── VINTAGE TOPBAR CONTROL ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; flex-shrink:0; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:400px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:20px; }
+    .vintage-modal-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:var(--white); padding:10px 12px; font-family:'Barlow',sans-serif; font-size:14px; margin-bottom:20px; box-sizing:border-box; }
+    .vintage-modal-input::placeholder { color:rgba(255,255,255,0.3); }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm:disabled { opacity:0.4; cursor:not-allowed; }
+
+    /* ── PANEL FORM ── */
+    .panel-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--grenadine); margin-bottom:16px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:6px; }
+    .form-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:var(--white); padding:10px 12px; font-family:'Barlow',sans-serif; font-size:14px; box-sizing:border-box; }
+    .form-input:focus { outline:none; border-color:rgba(255,255,255,0.3); }
+    .form-input::placeholder { color:rgba(255,255,255,0.25); }
+    .btn-save { width:100%; background:var(--grenadine); color:#fff; border:none; border-radius:6px; padding:12px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; margin-top:8px; transition:opacity 0.15s; }
+    .btn-save:hover { opacity:0.88; }
+    .btn-save:disabled { opacity:0.4; cursor:not-allowed; }
+
+    /* ── MAIN AREA ── */
+    .main-header { margin-bottom:24px; }
+    .main-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .main-title { font-family:'Playfair Display',serif; font-size:32px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
+    .main-subtitle { font-size:13px; color:rgba(30,23,16,0.4); margin-top:5px; font-weight:300; }
+
+    /* ── VINTAGE CARDS ── */
+    .vintage-card { background:var(--white); border-radius:10px; border:1px solid rgba(0,0,0,0.08); box-shadow:0 1px 4px rgba(0,0,0,0.06); padding:20px 24px; margin-bottom:12px; }
+    .vintage-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .vintage-card-year { font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:var(--dark); }
+    .vintage-card-meta { display:flex; flex-direction:column; gap:4px; font-family:'Barlow',sans-serif; font-size:13px; color:var(--latte); margin-bottom:16px; }
+    .vintage-card-actions { display:flex; justify-content:flex-end; }
+    .btn-finalize { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:7px 14px; border-radius:6px; border:1px solid rgba(0,0,0,0.15); background:transparent; color:var(--latte); cursor:pointer; transition:all 0.15s; }
+    .btn-finalize:hover { background:rgba(212,71,32,0.08); color:var(--grenadine); border-color:var(--grenadine); }
+
+    /* ── LOADING STATE ── */
+    .loading-msg { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.4); padding:16px 0; }
+    .empty-msg { color:var(--latte); font-family:'Barlow',sans-serif; font-size:14px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV OVERLAY + DRAWER -->
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-header">
+      <div class="nav-header-logo">Lifecycle<span>.</span></div>
+      <button class="nav-close" onclick="closeNav()">✕</button>
+    </div>
+    <div class="nav-section-label">Field</div>
+    <a class="nav-item" href="/vineyard.html">🌿 Vineyard</a>
+    <a class="nav-item" href="/harvest.html">⚖️ Harvest</a>
+    <a class="nav-item active" href="/vintage-manager.html">🗓 Vintage Manager</a>
+    <div class="nav-section-label">Cellar</div>
+    <a class="nav-item" href="/cellar.html">🍷 Cellar</a>
+    <a class="nav-item" href="/blending-lab.html">🧪 Blending Lab</a>
+    <div class="nav-section-label">Sales</div>
+    <a class="nav-item" href="/skus.html">📦 SKUs</a>
+    <div class="nav-section-label">Operations</div>
+    <a class="nav-item" href="/inventory.html">🏭 Inventory</a>
+    <a class="nav-item" href="/suppliers.html">🤝 Suppliers</a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item" href="/financial-dashboard.html">📊 Financial Dashboard</a>
+    <a class="nav-item" href="/finance.html">📈 Finance</a>
+    <a class="nav-item" href="/overhead-opex.html">💸 Overhead &amp; OpEx</a>
+    <div class="nav-setup-divider"></div>
+    <div class="nav-section-label setup">Setup</div>
+    <a class="nav-item setup" href="/labor-rates.html">⏱ Labor Rates</a>
+    <a class="nav-item setup" href="/task-library.html">📋 Task Library</a>
+    <div class="nav-footer">Lifecycle Manager · v1.0</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" onclick="openNav()">☰</button>
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb">Vintage Manager</div>
+
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;">
+        <span class="vintage-offline-dot"></span>Offline
+      </div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+  </div>
+
+  <!-- VINTAGE BANNERS -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">
+    🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+  </div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">
+    🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. Use "Request Edit" to log changes.
+  </div>
+
+  <!-- UNLOCK CONFIRMATION MODAL -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINALIZE CONFIRMATION MODAL (TWO-STEP) -->
+  <div class="vintage-modal-overlay" id="finalizeModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="finalizeModalTitle">Finalize Vintage</div>
+      <div class="vintage-modal-body" id="finalizeModalBody"></div>
+      <input class="vintage-modal-input" id="finalizeConfirmInput" placeholder="Type FINALIZE YEAR to confirm" style="display:none;" oninput="checkFinalizeInput()" />
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeFinalizeModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="finalizeStep1Btn">Continue</button>
+        <button class="vintage-modal-confirm" id="finalizeStep2Btn" style="display:none;" disabled onclick="confirmFinalize()">Finalize</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- LEFT PANEL: Create Vintage Form -->
+    <div class="left-panel">
+      <div class="panel-section-label">New Vintage</div>
+
+      <div class="form-group">
+        <label class="form-label">Vintage Year</label>
+        <input type="text" id="newYear" class="form-input" placeholder="e.g. 2027" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Harvest Start</label>
+        <input type="date" id="newHarvestStart" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Harvest End</label>
+        <input type="date" id="newHarvestEnd" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tons Target</label>
+        <input type="number" id="newTonsTarget" class="form-input" placeholder="e.g. 45" />
+      </div>
+      <button class="btn-save" onclick="createVintage()">Create Vintage</button>
+    </div>
+
+    <!-- MAIN AREA: Vintage Cards -->
+    <div class="main-area">
+      <div class="main-header">
+        <div class="main-eyebrow">Winery Operations</div>
+        <div class="main-title">Vintage Manager</div>
+        <div class="main-subtitle">Manage harvest years — create, lock, and finalize vintages.</div>
+      </div>
+      <div id="vintageCards">
+        <p class="empty-msg">Loading vintages…</p>
+      </div>
+    </div>
+
+  </div><!-- /.app-body -->
+
+  <script>
+    const PROXY   = '/api/airtable';
+    const BASE_ID = 'appJNEHG8sqXmdYGe';
+    const TBL_VINTAGES     = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+    const F_HARVEST_START  = 'fldYMgmK6fH2ZfNm6';
+    const F_HARVEST_END    = 'fldvNTmOxXCGNDWMf';
+    const F_TONS_TARGET    = 'fldGiKHuV1nO6XkYa';
+    const F_WINE_LOTS_LINK = 'flds5uGyFP119emOO';
+
+    /* ── Nav Drawer ── */
+    function openNav()  { document.getElementById('navDrawer').classList.add('open');    document.getElementById('navOverlay').classList.add('open');    }
+    function closeNav() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
+
+    /* ── Vintage Topbar Control ── */
+    let vintageData  = [];
+    let activeVintage = null;
+
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const currentYear = String(new Date().getFullYear());
+        if (cached && cached !== currentYear) disableAllInputs();
+        renderVintagePill({ year: cached || currentYear, state: 'Active' });
+        return;
+      }
+      try {
+        const res  = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id:    r.id,
+          year:  r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+
+        const currentYear = String(new Date().getFullYear());
+        const hasActive   = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+        if (!hasActive) {
+          const existingActive = vintageData.find(v => v.state === 'Active');
+          if (existingActive) {
+            await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+            existingActive.state = 'Locked';
+          }
+          const pr = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ fields:{ [F_VINTAGE_YEAR]:currentYear, [F_VINTAGE_STATUS]:'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id:pd.records[0].id, year:currentYear, state:'Active' });
+        }
+
+        const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+      } catch(e) { console.warn('Vintage init failed', e); }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') {
+        lb.style.display = 'flex';
+        lb.textContent   = '🔓';
+        lb.title         = 'Unlock vintage';
+      } else {
+        lb.style.display = 'none';
+      }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year}',event)">
+          ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+      } else {
+        enableAllInputs();
+      }
+    }
+
+    function disableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
+    }
+    function enableAllInputs() {
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel');
+      if (panel) {
+        panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+        // Restore Create button text and handler
+        const saveBtn = panel.querySelector('.btn-save');
+        if (saveBtn && saveBtn.textContent.trim() === 'Request Edit') {
+          saveBtn.textContent = 'Create Vintage';
+          saveBtn.onclick = createVintage;
+        }
+      }
+    }
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled    = false;
+        btn.onclick     = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state === 'Active') return;
+      if (activeVintage.state === 'Locked') {
+        const currentYear = String(new Date().getFullYear());
+        const cv = vintageData.find(v => v.year === currentYear);
+        document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+        document.getElementById('unlockModalBody').textContent  = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+        document.getElementById('unlockModalConfirm').onclick   = async () => {
+          await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:activeVintage.id, fields:{ [F_VINTAGE_STATUS]:'Active' } }] }) });
+          if (cv) await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:cv.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+          activeVintage.state = 'Active';
+          if (cv) cv.state    = 'Locked';
+          renderVintagePill(activeVintage);
+          applyVintageState('Active', activeVintage.year);
+          closeUnlockModal();
+        };
+        document.getElementById('vintageUnlockModal').classList.add('open');
+      }
+    }
+    function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+    /* ── Finalize Flow ── */
+    let finalizeRecordId = null;
+    let finalizeYear     = null;
+
+    function startFinalize(recordId, year) {
+      finalizeRecordId = recordId;
+      finalizeYear     = year;
+      document.getElementById('finalizeModalTitle').textContent              = `Finalize ${year} Vintage`;
+      document.getElementById('finalizeModalBody').textContent               = `Finalizing ${year} is permanent. All records will be locked against direct edits. Future changes require a change-log entry. Continue?`;
+      document.getElementById('finalizeConfirmInput').style.display          = 'none';
+      document.getElementById('finalizeConfirmInput').value                  = '';
+      document.getElementById('finalizeStep1Btn').style.display              = 'inline-flex';
+      document.getElementById('finalizeStep2Btn').style.display              = 'none';
+      document.getElementById('finalizeStep2Btn').disabled                   = true;
+      document.getElementById('finalizeModal').classList.add('open');
+      document.getElementById('finalizeStep1Btn').onclick = () => {
+        document.getElementById('finalizeModalBody').textContent      = `Type FINALIZE ${year} to confirm. This cannot be undone.`;
+        document.getElementById('finalizeConfirmInput').style.display = 'block';
+        document.getElementById('finalizeConfirmInput').placeholder   = `FINALIZE ${year}`;
+        document.getElementById('finalizeStep1Btn').style.display     = 'none';
+        document.getElementById('finalizeStep2Btn').style.display     = 'inline-flex';
+      };
+    }
+
+    function checkFinalizeInput() {
+      const val      = document.getElementById('finalizeConfirmInput').value.trim();
+      const expected = `FINALIZE ${finalizeYear}`;
+      document.getElementById('finalizeStep2Btn').disabled = (val !== expected);
+    }
+
+    async function confirmFinalize() {
+      if (!finalizeRecordId) return;
+      try {
+        const res = await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:finalizeRecordId, fields:{ [F_VINTAGE_STATUS]:'Finalized' } }] }) });
+        if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+        closeFinalizeModal();
+        await loadAndRenderVintages();
+        if (activeVintage && activeVintage.id === finalizeRecordId) {
+          activeVintage.state = 'Finalized';
+          renderVintagePill(activeVintage);
+          applyVintageState('Finalized', activeVintage.year);
+        }
+      } catch(e) {
+        console.error('Failed to finalize vintage', e);
+        alert('Failed to finalize. Please check your connection and try again.');
+      }
+    }
+
+    function closeFinalizeModal() { document.getElementById('finalizeModal').classList.remove('open'); }
+
+    /* ── Helpers ── */
+    function formatDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    }
+
+    /* ── Data ── */
+    async function loadAndRenderVintages() {
+      const res  = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+      const data = await res.json();
+      const records = data.records || [];
+      // Rebuild vintageData for topbar dropdown
+      vintageData = records.map(r => ({
+        id:    r.id,
+        year:  r.fields[F_VINTAGE_YEAR] || '',
+        state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+      }));
+      renderCards(records);
+    }
+
+    function renderCards(records) {
+      const container = document.getElementById('vintageCards');
+      if (!records.length) {
+        container.innerHTML = '<p class="empty-msg">No vintages yet. Create one in the panel.</p>';
+        return;
+      }
+      container.innerHTML = records.map(r => {
+        const year        = r.fields[F_VINTAGE_YEAR] || '—';
+        const safeYear    = String(year).replace(/'/g, "\\'");
+        const status      = r.fields[F_VINTAGE_STATUS]?.name || 'Active';
+        const statusLower = status.toLowerCase();
+        const start       = formatDate(r.fields[F_HARVEST_START]);
+        const end         = formatDate(r.fields[F_HARVEST_END]);
+        const tons        = r.fields[F_TONS_TARGET] ?? '—';
+        const lots        = Array.isArray(r.fields[F_WINE_LOTS_LINK]) ? r.fields[F_WINE_LOTS_LINK].length : 0;
+        const finalizeBtn = status !== 'Finalized'
+          ? `<button class="btn-finalize" onclick="startFinalize('${r.id}','${safeYear}')">Finalize Vintage</button>`
+          : '';
+        return `
+          <div class="vintage-card">
+            <div class="vintage-card-header">
+              <div class="vintage-card-year">${year}</div>
+              <span class="vintage-badge ${statusLower}">${status}</span>
+            </div>
+            <div class="vintage-card-meta">
+              <span>Harvest: ${start} – ${end}</span>
+              <span>Tons Target: ${tons}</span>
+              <span>Lots: ${lots}</span>
+            </div>
+            <div class="vintage-card-actions">${finalizeBtn}</div>
+          </div>`;
+      }).join('');
+    }
+
+    async function createVintage() {
+      const year = document.getElementById('newYear').value.trim();
+      if (!year) { alert('Please enter a vintage year.'); return; }
+      const start  = document.getElementById('newHarvestStart').value || undefined;
+      const end    = document.getElementById('newHarvestEnd').value   || undefined;
+      const tons   = parseFloat(document.getElementById('newTonsTarget').value) || undefined;
+      const fields = { [F_VINTAGE_YEAR]: year, [F_VINTAGE_STATUS]: 'Active' };
+      if (start) fields[F_HARVEST_START] = start;
+      if (end)   fields[F_HARVEST_END]   = end;
+      if (tons)  fields[F_TONS_TARGET]   = tons;
+
+      try {
+        // Lock any currently Active vintage
+        const existingActive = vintageData.find(v => v.state === 'Active');
+        if (existingActive) {
+          const lockRes = await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+          if (!lockRes.ok) throw new Error(`PATCH failed: ${lockRes.status}`);
+        }
+
+        const postRes = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ fields }] }) });
+        if (!postRes.ok) throw new Error(`POST failed: ${postRes.status}`);
+
+        // Reset form
+        document.getElementById('newYear').value         = String(new Date().getFullYear() + 1);
+        document.getElementById('newHarvestStart').value = '';
+        document.getElementById('newHarvestEnd').value   = '';
+        document.getElementById('newTonsTarget').value   = '';
+
+        await loadAndRenderVintages();
+        localStorage.setItem('lm_active_vintage', year);
+        activeVintage = vintageData.find(v => v.year === year);
+        if (activeVintage) renderVintagePill(activeVintage);
+      } catch(e) {
+        console.error('Failed to create vintage', e);
+        alert('Failed to save. Please check your connection and try again.');
+      }
+    }
+
+    /* ── Boot ── */
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('newYear').value = String(new Date().getFullYear() + 1);
+      await initVintage();
+      await loadAndRenderVintages();
+    });
+  </script>
+</body>
+</html>

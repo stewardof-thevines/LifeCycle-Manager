@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vineyard — Winery Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --darlington: #ACCAB2;
+      --beeswax:    #E9A752;
+      --grenadine:  #D44720;
+      --latte:      #786140;
+      --latte-dark: #4a3a26;
+      --cream:      #F5EFE4;
+      --white:      #ffffff;
+      --dark:       #1e1710;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; }
+
+    /* TOPBAR */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 32px; gap:20px; position:sticky; top:0; z-index:100; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); }
+    .topbar-section { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+    .topbar-current { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); }
+    .topbar-sep2 { color:rgba(255,255,255,0.2); font-size:12px; }
+    .topbar-spacer { flex:1; }
+    .topbar-btn { height:32px; padding:0 14px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; font-weight:600; letter-spacing:0.08em; cursor:pointer; border:none; display:flex; align-items:center; gap:6px; transition:all 0.18s; }
+    .topbar-btn.primary { background:var(--grenadine); color:#fff; }
+    .topbar-btn.primary:hover { background:#c03d1a; }
+    .topbar-btn.ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.1); }
+    .topbar-btn.ghost:hover { background:rgba(255,255,255,0.12); color:#fff; }
+
+    /* LAYOUT */
+    .layout { display:grid; grid-template-columns:1fr 400px; min-height:calc(100vh - 58px); }
+
+    /* LEFT PANEL */
+    .left-panel { padding:32px 36px; border-right:1px solid rgba(120,97,64,0.12); overflow-y:auto; }
+    .section-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px; }
+    .section-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .section-title { font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:var(--dark); line-height:1; letter-spacing:-0.02em; }
+    .section-count { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.1em; color:rgba(30,23,16,0.35); text-transform:uppercase; padding-bottom:4px; }
+
+    /* BLOCK CARDS */
+    .blocks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-bottom:36px; }
+    .block-card { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; cursor:pointer; transition:all 0.2s; }
+    .block-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(30,23,16,0.1); border-color:var(--grenadine); }
+    .block-card.selected { border-color:var(--grenadine); box-shadow:0 0 0 3px rgba(212,71,32,0.12); }
+    .block-card-top { height:6px; }
+    .block-card-body { padding:16px 16px 14px; }
+    .block-variety { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:4px; }
+    .block-name { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--dark); line-height:1.15; margin-bottom:4px; }
+    .block-rows { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.1em; color:rgba(30,23,16,0.4); margin-bottom:12px; }
+    .block-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .block-stat { background:rgba(120,97,64,0.05); border-radius:7px; padding:8px 10px; }
+    .block-stat-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-bottom:3px; }
+    .block-stat-value { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--dark); line-height:1; }
+    .block-stat-unit { font-size:9px; font-weight:400; color:rgba(30,23,16,0.4); margin-left:2px; }
+    .block-cost-bar { margin-top:12px; padding-top:10px; border-top:1px solid rgba(120,97,64,0.08); display:flex; align-items:center; justify-content:space-between; }
+    .block-cost-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
+    .block-cost-value { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:var(--latte); }
+
+    /* Season Costs section inside block card */
+    .cost-section { margin-top:12px; background:rgba(120,97,64,0.06); border:1px solid rgba(120,97,64,0.13); border-radius:8px; overflow:hidden; }
+    .cost-section-title { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(30,23,16,0.4); padding:9px 12px 7px; border-bottom:1px solid rgba(120,97,64,0.1); }
+    .cost-row { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-bottom:1px solid rgba(120,97,64,0.07); }
+    .cost-row:last-child { border-bottom:none; }
+    .cost-label { font-family:'Barlow Condensed',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:0.06em; color:rgba(30,23,16,0.5); }
+    .cost-val { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; color:var(--dark); }
+    .cost-row-highlight { background:rgba(212,71,32,0.05); }
+    .cost-row-highlight .cost-label { color:var(--latte); font-weight:700; }
+    .cost-row-highlight .cost-val { font-size:13px; color:var(--grenadine); }
+    .block-card-add { background:transparent; border-radius:14px; border:2px dashed rgba(120,97,64,0.2); cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:160px; padding:20px; }
+    .block-card-add:hover { border-color:var(--grenadine); background:rgba(212,71,32,0.03); }
+    .block-card-add-icon { font-size:24px; opacity:0.4; }
+    .block-card-add-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
+
+    /* LOG TABLE */
+    .log-section { margin-top:8px; }
+    .log-table-wrap { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
+    .log-table-header { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:11px 20px; background:rgba(120,97,64,0.05); border-bottom:1px solid rgba(120,97,64,0.1); }
+    .log-th { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.4); }
+    .log-row { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:13px 20px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; }
+    .log-row:last-child { border-bottom:none; }
+    .log-row:hover { background:rgba(120,97,64,0.03); }
+    .log-delete-btn { opacity:0; width:26px; height:26px; border-radius:6px; background:rgba(212,71,32,0.08); border:none; cursor:pointer; color:var(--grenadine); font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .log-row:hover .log-delete-btn { opacity:1; }
+    .log-delete-btn:hover { background:rgba(212,71,32,0.18); }
+    .log-delete-btn.deleting { opacity:0.4; pointer-events:none; } }
+    .log-td { font-size:12.5px; color:var(--dark); padding-right:12px; }
+    .log-td.muted { color:rgba(30,23,16,0.45); font-size:11.5px; }
+    .log-td.bold { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; }
+    .log-td.cost { font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--latte); }
+    .dept-tag { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 8px; border-radius:4px; white-space:nowrap; }
+    .dept-vineyard  { background:rgba(172,202,178,0.25); color:#3a7a50; }
+    .dept-cellar    { background:rgba(120,97,64,0.12); color:var(--latte); }
+    .dept-admin     { background:rgba(233,167,82,0.18); color:#8a6010; }
+    .dept-sales     { background:rgba(212,71,32,0.1); color:var(--grenadine); }
+    .dept-events    { background:rgba(172,202,178,0.2); color:#2e7a6a; }
+    .harvest-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--grenadine); margin-right:5px; vertical-align:middle; }
+    .multi-tag { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; background:rgba(233,167,82,0.2); color:#8a6010; margin-left:4px; vertical-align:middle; }
+    .log-empty { padding:40px 20px; text-align:center; color:rgba(30,23,16,0.3); font-size:13px; }
+    .filter-bar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .filter-chip { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid rgba(120,97,64,0.2); color:rgba(30,23,16,0.5); background:transparent; transition:all 0.18s; }
+    .filter-chip:hover { border-color:var(--grenadine); color:var(--grenadine); }
+    .filter-chip.active { background:var(--grenadine); border-color:var(--grenadine); color:#fff; }
+    .filter-chip.amber.active { background:var(--beeswax); border-color:var(--beeswax); color:var(--dark); }
+
+    /* RIGHT PANEL */
+    .right-panel { background:var(--dark); display:flex; flex-direction:column; position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto; }
+    .right-panel::-webkit-scrollbar { width:4px; }
+    .right-panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+    .form-header { padding:28px 28px 20px; border-bottom:1px solid rgba(255,255,255,0.07); position:relative; overflow:hidden; }
+    .form-header::before { content:''; position:absolute; top:-40px; right:-40px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(212,71,32,0.18) 0%,transparent 70%); pointer-events:none; }
+    .form-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:5px; }
+    .form-title { font-family:'Playfair Display',serif; font-size:22px; font-weight:900; color:var(--cream); line-height:1.1; }
+    .form-subtitle { font-size:12px; color:rgba(255,255,255,0.3); margin-top:5px; font-weight:300; }
+
+    /* COST PREVIEW */
+    .cost-preview { margin:20px 28px 0; padding:14px 18px; background:rgba(233,167,82,0.1); border:1px solid rgba(233,167,82,0.2); border-radius:10px; display:flex; justify-content:space-between; align-items:center; }
+    .cost-preview-label { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+    .cost-preview-value { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:var(--beeswax); line-height:1; }
+    .cost-preview-breakdown { font-size:11px; color:rgba(255,255,255,0.25); margin-top:2px; text-align:right; }
+
+    /* FORM */
+    .form-body { padding:20px 28px 24px; display:flex; flex-direction:column; gap:14px; flex:1; }
+    .form-row { display:grid; gap:12px; }
+    .form-row.two { grid-template-columns:1fr 1fr; }
+    .field-group { display:flex; flex-direction:column; gap:6px; }
+    .field-label { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.35); display:flex; align-items:center; gap:6px; }
+    .field-required { color:var(--grenadine); font-size:11px; }
+    .field-input { width:100%; height:40px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:0 13px; font-family:'Barlow',sans-serif; font-size:13px; color:var(--cream); outline:none; transition:all 0.18s; -webkit-appearance:none; }
+    .field-input:focus { border-color:var(--grenadine); background:rgba(255,255,255,0.09); box-shadow:0 0 0 3px rgba(212,71,32,0.12); }
+    .field-input::placeholder { color:rgba(255,255,255,0.2); }
+    select.field-input { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px; }
+    select.field-input option { background:#2a1f14; color:var(--cream); }
+    textarea.field-input { height:72px; padding:10px 13px; resize:none; line-height:1.5; }
+
+    /* BLOCK FIELD — animated show/hide */
+    .block-field-wrap {
+      overflow:hidden;
+      max-height:0;
+      opacity:0;
+      transform:translateY(-6px);
+      transition:max-height 0.3s ease, opacity 0.25s ease, transform 0.25s ease;
+      pointer-events:none;
+    }
+    .block-field-wrap.visible {
+      max-height:200px;
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:all;
+    }
+
+    /* SPLIT PREVIEW */
+    .split-preview {
+      margin-top:8px;
+      background:rgba(233,167,82,0.07);
+      border:1px solid rgba(233,167,82,0.15);
+      border-radius:8px;
+      padding:10px 12px;
+      display:none;
+      flex-direction:column;
+      gap:5px;
+    }
+    .split-preview.show { display:flex; }
+    .split-preview-title {
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:9px; font-weight:700; letter-spacing:0.18em;
+      text-transform:uppercase; color:rgba(255,255,255,0.25);
+      margin-bottom:2px;
+    }
+    .split-row {
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .split-block-name {
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:12px; font-weight:600; color:rgba(255,255,255,0.6);
+    }
+    .split-pct {
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:11px; color:rgba(255,255,255,0.35);
+    }
+    .split-amount {
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:13px; font-weight:700; color:var(--beeswax);
+      min-width:60px; text-align:right;
+    }
+    .split-bar-wrap { width:100%; height:3px; background:rgba(255,255,255,0.07); border-radius:2px; margin-top:1px; }
+    .split-bar { height:3px; border-radius:2px; background:var(--beeswax); transition:width 0.3s ease; }
+
+    /* DEPT PILLS */
+    .dept-pills { display:flex; flex-wrap:wrap; gap:6px; }
+    .dept-pill { font-family:'Barlow Condensed',sans-serif; font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:5px 11px; border-radius:20px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); background:transparent; transition:all 0.18s; }
+    .dept-pill:hover { border-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.7); }
+    .dept-pill.active { color:var(--dark); border-color:transparent; }
+    .dept-pill.d-vineyard.active { background:var(--darlington); }
+    .dept-pill.d-cellar.active   { background:var(--beeswax); }
+    .dept-pill.d-admin.active    { background:rgba(255,255,255,0.7); }
+    .dept-pill.d-sales.active    { background:var(--grenadine); color:#fff; }
+    .dept-pill.d-events.active   { background:#6ecfc0; }
+
+    /* HARVEST TOGGLE */
+    .harvest-toggle { display:flex; align-items:center; gap:10px; padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; cursor:pointer; transition:all 0.18s; user-select:none; }
+    .harvest-toggle:hover { background:rgba(255,255,255,0.07); }
+    .harvest-toggle.on { background:rgba(212,71,32,0.12); border-color:rgba(212,71,32,0.3); }
+    .toggle-switch { width:34px; height:18px; border-radius:9px; background:rgba(255,255,255,0.15); position:relative; transition:background 0.2s; flex-shrink:0; }
+    .harvest-toggle.on .toggle-switch { background:var(--grenadine); }
+    .toggle-knob { width:12px; height:12px; border-radius:50%; background:#fff; position:absolute; top:3px; left:3px; transition:transform 0.2s; }
+    .harvest-toggle.on .toggle-knob { transform:translateX(16px); }
+    .toggle-label { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.08em; color:rgba(255,255,255,0.6); }
+    .harvest-toggle.on .toggle-label { color:var(--grenadine); }
+    .toggle-hint { margin-left:auto; font-size:10px; color:rgba(255,255,255,0.18); font-family:'Barlow Condensed',sans-serif; letter-spacing:0.06em; }
+
+    .form-divider { height:1px; background:rgba(255,255,255,0.06); margin:2px 0; }
+
+    /* FOOTER */
+    .form-footer { padding:0 28px 24px; display:flex; flex-direction:column; gap:10px; }
+    .submit-btn { width:100%; height:46px; background:var(--grenadine); color:#fff; border:none; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .submit-btn:hover { background:#c03d1a; transform:translateY(-1px); box-shadow:0 6px 20px rgba(212,71,32,0.35); }
+    .submit-btn:active { transform:translateY(0); }
+    .clear-btn { width:100%; height:36px; background:transparent; color:rgba(255,255,255,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:8px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.18s; }
+    .clear-btn:hover { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.5); }
+
+    /* MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(10,6,2,0.7); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+    .modal-overlay.open { opacity:1; pointer-events:all; }
+    .modal { background:var(--dark); border-radius:18px; width:460px; overflow:hidden; transform:translateY(20px); transition:transform 0.25s; border:1px solid rgba(255,255,255,0.08); }
+    .modal-overlay.open .modal { transform:translateY(0); }
+    .modal-header { padding:24px 28px 18px; border-bottom:1px solid rgba(255,255,255,0.07); }
+    .modal-eyebrow { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--grenadine); margin-bottom:4px; }
+    .modal-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--cream); }
+    .modal-body { padding:20px 28px; display:flex; flex-direction:column; gap:14px; }
+    .modal-footer { padding:0 28px 24px; display:flex; gap:10px; }
+    .modal-row { display:grid; gap:12px; }
+    .modal-row.two { grid-template-columns:1fr 1fr; }
+    .modal-row.three { grid-template-columns:1fr 1fr 1fr; }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:28px; right:28px; color:#fff; padding:14px 20px; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; display:flex; align-items:center; gap:10px; box-shadow:0 8px 28px rgba(0,0,0,0.25); transform:translateY(80px); opacity:0; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index:999; }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+    .blocks-grid { animation:fadeUp 0.4s ease both; }
+    .log-section { animation:fadeUp 0.4s 0.08s ease both; }
+  
+  /* ── Shared Nav Drawer ── */
+  .nav-toggle {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: all 0.18s; flex-shrink: 0;
+  }
+  .nav-toggle:hover { background: rgba(255,255,255,0.13); color: #fff; }
+  .nav-toggle.open { background: var(--grenadine); border-color: var(--grenadine); color: #fff; }
+
+  .nav-overlay {
+    display: none; position: fixed; inset: 0; z-index: 490;
+    background: rgba(0,0,0,0.45);
+  }
+  .nav-overlay.visible { display: block; }
+
+  .nav-drawer {
+    position: fixed; top: 0; left: -280px; width: 280px; height: 100vh;
+    background: var(--dark); z-index: 500;
+    display: flex; flex-direction: column;
+    transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+  }
+  .nav-drawer.open { left: 0; }
+
+  .nav-header {
+    height: 58px; display: flex; align-items: center;
+    padding: 0 20px; gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  .nav-header-logo {
+    font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 900;
+    color: var(--cream); flex: 1;
+  }
+  .nav-header-logo span { color: var(--grenadine); }
+  .nav-close {
+    width: 28px; height: 28px; border-radius: 5px;
+    background: rgba(255,255,255,0.07); border: none;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .nav-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+  .nav-section-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    padding: 20px 20px 6px;
+  }
+  .nav-section-label:first-of-type { padding-top: 16px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; cursor: pointer;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-left-color: rgba(255,255,255,0.15);
+  }
+  .nav-item.active {
+    background: rgba(233,167,82,0.1);
+    border-left-color: var(--beeswax);
+  }
+  .nav-item-icon {
+    font-size: 16px; width: 22px; text-align: center; flex-shrink: 0;
+    opacity: 0.75;
+  }
+  .nav-item.active .nav-item-icon { opacity: 1; }
+  .nav-item-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    transition: color 0.15s;
+  }
+  .nav-item:hover .nav-item-label { color: rgba(255,255,255,0.85); }
+  .nav-item.active .nav-item-label { color: var(--beeswax); }
+
+  .nav-footer {
+    margin-top: auto; padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+  }
+      @media (max-width: 768px) 
+  {
+    body { overflow-x: hidden; }
+    .layout { grid-template-columns: 1fr; }
+    .left-panel { padding: 16px 20px; border-right: none; }
+    .right-panel { position: relative; top: auto; height: auto; }
+    .blocks-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .log-table-header { grid-template-columns: 60px 1fr 80px 60px; }
+    .log-row { grid-template-columns: 60px 1fr 80px 60px; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-row.two { grid-template-columns: 1fr; }
+    .modal { max-width: 96vw; }
+    .modal-row.two { grid-template-columns: 1fr; }
+    .modal-row.three { grid-template-columns: 1fr; }
+  }
+
+    /* ── Vintage Topbar Control ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="nav-toggle" id="navToggleBtn" onclick="openNav()" title="Navigation">&#9776;</button>
+  <a href="/index.html" style="text-decoration:none;color:inherit;">
+    <div class="topbar-logo">Lifecycle<span>.</span></div>
+  </a>
+  <div class="topbar-sep"></div>
+  <div class="topbar-section">Operations</div>
+  <span class="topbar-sep2">›</span>
+  <div class="topbar-current">Vineyard</div>
+  
+  <!-- Vintage control -->
+  <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+    <div class="vintage-offline" id="vintageOffline" style="display:none;">
+      <span class="vintage-offline-dot"></span>Offline
+    </div>
+    <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+      <span class="vintage-pill-dot active" id="vintageDot"></span>
+      <span id="vintageYear">—</span>
+      <span class="vintage-pill-arrow">▾</span>
+      <div class="vintage-dropdown" id="vintageDropdown"></div>
+    </div>
+    <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+  </div>
+  <button class="topbar-btn ghost">↗ Export Logs</button>
+  <button class="topbar-btn primary" onclick="document.getElementById('log-form').scrollIntoView({behavior:'smooth'})">+ Log Labor</button>
+</div>
+
+<!-- Vintage state banner -->
+<div class="vintage-banner locked" id="vintageBannerLocked">
+  🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+</div>
+<div class="vintage-banner finalized" id="vintageBannerFinalized">
+  🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. Use "Request Edit" to log changes.
+</div>
+
+<!-- Vintage unlock confirmation modal -->
+<div class="vintage-modal-overlay" id="vintageUnlockModal">
+  <div class="vintage-modal">
+    <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+    <div class="vintage-modal-body" id="unlockModalBody"></div>
+    <div class="vintage-modal-actions">
+      <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+      <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item active" href="Vineyard_1.4.html">
+    <span class="nav-item-icon">🌿</span>
+    <span class="nav-item-label">Vineyard</span>
+  </a>
+  <a class="nav-item" href="Harvest_1.4.html">
+    <span class="nav-item-icon">⚖</span>
+    <span class="nav-item-label">Harvest</span>
+  </a>
+  <div class="nav-section-label">Packaging</div>
+  <a class="nav-item" href="SKUs_1.4.html">
+    <span class="nav-item-icon">📦</span>
+    <span class="nav-item-label">SKUs</span>
+  </a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item" href="Cellar_1.6.html">
+    <span class="nav-item-icon">🍷</span>
+    <span class="nav-item-label">Cellar</span>
+  </a>
+  <a class="nav-item" href="BlendingLab_1.3.html">
+    <span class="nav-item-icon">🧪</span>
+    <span class="nav-item-label">Blending Lab</span>
+  </a>
+  <div class="nav-section-label">Finance</div>
+  <a class="nav-item" href="/Finance_1.0.html">
+    <span class="nav-item-icon">📊</span>
+    <span class="nav-item-label">Finance</span>
+  </a>
+  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+</div>
+
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="left-panel">
+    <div class="section-header">
+      <div>
+        <div class="section-eyebrow">2026 Season</div>
+        <div class="section-title">Vineyard Blocks</div>
+      </div>
+      <div class="section-count" id="block-count">3 Blocks · 12 Acres</div>
+    </div>
+
+    <div class="blocks-grid" id="blocks-grid">
+     
+      <div class="block-card-add" onclick="openModal()">
+        <div class="block-card-add-icon">＋</div>
+        <div class="block-card-add-label">Add Block</div>
+      </div>
+    </div>
+
+    <!-- Labor Log -->
+    <div class="log-section">
+      <div class="section-header" style="margin-bottom:12px">
+        <div>
+          <div class="section-eyebrow">History</div>
+          <div class="section-title" style="font-size:22px">Labor Logs</div>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="filterLogs(this,'all')">All</button>
+        <button class="filter-chip" onclick="filterLogs(this,'Vineyard')">🍇 Vineyard</button>
+        <button class="filter-chip" onclick="filterLogs(this,'Cellar/Productions')">🍷 Cellar</button>
+        <button class="filter-chip" onclick="filterLogs(this,'Admin')">📋 Admin</button>
+        <button class="filter-chip" onclick="filterLogs(this,'Sales/Tasting Room')">🏷️ Sales</button>
+        <button class="filter-chip amber" onclick="filterLogs(this,'harvest')">⚖️ Harvest Only</button>
+      </div>
+      <div class="log-table-wrap">
+        <div class="log-table-header">
+          <div class="log-th">Date</div>
+          <div class="log-th">Task</div>
+          <div class="log-th">Block(s)</div>
+          <div class="log-th">Workers</div>
+          <div class="log-th">Hrs</div>
+          <div class="log-th">Dept</div>
+          <div class="log-th">Cost</div>
+          <div class="log-th"></div>
+        </div>
+        </div>
+        <div id="log-body">
+          <div class="log-empty">No labor logs yet — use the form to log your first entry.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: FORM -->
+  <div class="right-panel" id="log-form">
+    <div class="form-header">
+      <div class="form-eyebrow">New Entry</div>
+      <div class="form-title">Log Labor</div>
+      <div class="form-subtitle">Fields marked <span style="color:var(--grenadine)">✦</span> are required</div>
+    </div>
+
+    <div class="cost-preview">
+      <div>
+        <div class="cost-preview-label">Estimated Entry Cost</div>
+        <div class="cost-preview-breakdown" id="cost-breakdown">— select provider, workers & hours</div>
+      </div>
+      <div class="cost-preview-value" id="cost-display">$—</div>
+    </div>
+
+    <div class="form-body">
+
+      <!-- Date -->
+      <div class="field-group">
+        <label class="field-label">Date <span class="field-required">✦</span></label>
+        <input type="date" class="field-input" id="field-date" />
+      </div>
+
+      <!-- Provider -->
+      <div class="field-group">
+        <label class="field-label">Labor Provider <span class="field-required">✦</span></label>
+        <select class="field-input" id="field-category" onchange="updateCost()">
+          <option value="">Select provider…</option>
+          <option value="Contract/Seasonal|29.375">Contract/Seasonal</option>
+          <option value="NWF|30.625">NWF</option>
+          <option value="Domaine Mathiot|37.5">Domaine Mathiot</option>
+          <option value="Other|26">Other</option>
+        </select>
+      </div>
+
+      <!-- Department pills -->
+      <div class="field-group">
+        <label class="field-label">Department <span class="field-required">✦</span></label>
+        <div class="dept-pills">
+          <button class="dept-pill d-vineyard active" onclick="setDept(this,'Vineyard')">🍇 Vineyard</button>
+          <button class="dept-pill d-cellar"          onclick="setDept(this,'Cellar')">🍷 Cellar</button>
+          <button class="dept-pill d-admin"           onclick="setDept(this,'Admin')">📋 Admin</button>
+          <button class="dept-pill d-sales"           onclick="setDept(this,'Sales')">🏷️ Sales</button>
+          <button class="dept-pill d-events"          onclick="setDept(this,'Events')">🎪 Events</button>
+        </div>
+      </div>
+
+      <!-- Block selector — only visible for Vineyard -->
+      <div class="block-field-wrap visible" id="block-field-wrap">
+        <div class="field-group">
+          <label class="field-label">Vineyard Block <span class="field-required">✦</span></label>
+          <select class="field-input" id="field-block" onchange="onBlockChange()">
+            <option value="">Select block…</option>
+            <optgroup label="── Specific Blocks ──">
+              <option value="single|Pinot Noir 1|5">Pinot Noir 1</option>
+              <option value="single|Chardonnay 1|3">Chardonnay 1</option>
+              <option value="single|Riesling 1|4">Riesling 1</option>
+            </optgroup>
+            <optgroup label="── By Varietal ──">
+              <option value="varietal|Pinot Noir">All Pinot Noir</option>
+              <option value="varietal|Chardonnay">All Chardonnay</option>
+              <option value="varietal|Riesling">All Riesling</option>
+            </optgroup>
+            <optgroup label="── Whole Vineyard ──">
+              <option value="all|All Vineyard">All Vineyard</option>
+            </optgroup>
+          </select>
+
+          <!-- Acreage split preview -->
+          <div class="split-preview" id="split-preview">
+            <div class="split-preview-title">Cost split by acreage</div>
+            <div id="split-rows"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task -->
+      <div class="field-group">
+        <label class="field-label">Task <span class="field-required">✦</span></label>
+        <select class="field-input" id="field-task">
+          <option value="">Select task…</option>
+        </select>
+      </div>
+
+      <!-- Workers + Hours -->
+      <div class="form-row two">
+        <div class="field-group">
+          <label class="field-label">Workers <span class="field-required">✦</span></label>
+          <input type="number" class="field-input" id="field-workers" min="1" placeholder="e.g. 4" oninput="updateCost()" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Hrs / Worker <span class="field-required">✦</span></label>
+          <input type="number" class="field-input" id="field-hours" min="0.5" step="0.5" placeholder="e.g. 8" oninput="updateCost()" />
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- Harvest toggle — only shown for Vineyard -->
+      <div class="harvest-toggle" id="harvest-toggle" onclick="toggleHarvest()">
+        <div class="toggle-switch"><div class="toggle-knob"></div></div>
+        <div class="toggle-label">Harvest Labor</div>
+        <span class="toggle-hint">Mark if harvest-specific</span>
+      </div>
+
+      <!-- Notes -->
+      <div class="field-group">
+        <label class="field-label">Notes</label>
+        <textarea class="field-input" id="field-notes" placeholder="Observations, conditions, anything worth logging…"></textarea>
+      </div>
+
+    </div>
+
+    <div class="form-footer">
+      <button class="submit-btn" onclick="submitLog()">✦ Save Labor Log</button>
+      <button class="clear-btn" onclick="clearForm()">Clear Form</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BLOCK MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-eyebrow">Vineyard</div>
+      <div class="modal-title">Add New Block</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Block Name <span class="field-required">✦</span></label>
+          <input type="text" class="field-input" id="m-name" placeholder="e.g. Pinot Noir 2" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Variety</label>
+          <input type="text" class="field-input" id="m-variety" placeholder="e.g. Pinot Noir" />
+        </div>
+      </div>
+      <div class="modal-row three">
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Acres</label>
+          <input type="number" class="field-input" id="m-acres" placeholder="e.g. 2.5" step="0.1" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Row Start</label>
+          <input type="number" class="field-input" id="m-rowstart" placeholder="e.g. 1" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Row End</label>
+          <input type="number" class="field-input" id="m-rowend" placeholder="e.g. 15" />
+        </div>
+      </div>
+      <div class="modal-row two">
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Est. Tons / Acre</label>
+          <input type="number" class="field-input" id="m-tons" placeholder="e.g. 1.5" step="0.1" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Block Color</label>
+          <select class="field-input" id="m-color">
+            <option value="var(--grenadine)">Grenadine</option>
+            <option value="var(--beeswax)">Beeswax</option>
+            <option value="var(--darlington)">Darlington</option>
+            <option value="var(--latte)">Latte</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="submit-btn" style="flex:1" onclick="addBlock()">✦ Add Block</button>
+      <button class="clear-btn" style="width:100px" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+  /* ── Vintage Topbar Control ── */
+  const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
+  const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+  const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+  let vintageData = [];
+  let activeVintage = null;
+
+  async function initVintage() {
+    if (!navigator.onLine) {
+      document.getElementById('vintageOffline').style.display = 'flex';
+      document.getElementById('vintageLockBtn').style.display = 'none';
+      const cached = localStorage.getItem('lm_active_vintage');
+      const currentYear = String(new Date().getFullYear());
+      if (cached && cached !== currentYear) disableAllInputs();
+      renderVintagePill({ year: cached || currentYear, state: 'Active' });
+      return;
+    }
+    try {
+      const PROXY_V = '/api/airtable';
+      const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+      const res = await fetch(`${PROXY_V}?baseId=${BASE_ID_V}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+      const data = await res.json();
+      vintageData = (data.records || []).map(r => ({
+        id: r.id,
+        year: r.fields[F_VINTAGE_YEAR] || '',
+        state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+      }));
+      const currentYear = String(new Date().getFullYear());
+      const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+      if (!hasActive) {
+        const existingActive = vintageData.find(v => v.state === 'Active');
+        if (existingActive) {
+          await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+          existingActive.state = 'Locked';
+        }
+        const pr = await fetch(PROXY_V, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ fields:{ [F_VINTAGE_YEAR]:currentYear, [F_VINTAGE_STATUS]:'Active' } }] }) });
+        const pd = await pr.json();
+        if (pd.records?.[0]) vintageData.unshift({ id:pd.records[0].id, year:currentYear, state:'Active' });
+      }
+      const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+      activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+      if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+    } catch(e) { console.warn('Vintage init failed', e); }
+  }
+
+  function renderVintagePill(v) {
+    if (!v) return;
+    document.getElementById('vintageYear').textContent = v.year;
+    const dot = document.getElementById('vintageDot');
+    dot.className = 'vintage-pill-dot';
+    const sl = (v.state || 'Active').toLowerCase();
+    dot.classList.add(sl);
+    const lb = document.getElementById('vintageLockBtn');
+    if (sl === 'locked') { lb.style.display = 'flex'; lb.textContent = '🔓'; lb.title = 'Unlock vintage'; }
+    else { lb.style.display = 'none'; }
+    document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+      `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year.replace(/'/g,"\\'")}',event)">
+        ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+    ).join('');
+  }
+
+  function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+  document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+  function selectVintage(year, e) {
+    e.stopPropagation();
+    document.getElementById('vintageDropdown').classList.remove('open');
+    const sel = vintageData.find(v => v.year === year);
+    if (!sel || sel.year === activeVintage?.year) return;
+    activeVintage = sel;
+    localStorage.setItem('lm_active_vintage', year);
+    renderVintagePill(activeVintage);
+    applyVintageState(activeVintage.state, activeVintage.year);
+  }
+
+  function applyVintageState(state, year) {
+    document.getElementById('vintageBannerLocked').classList.remove('visible');
+    document.getElementById('vintageBannerFinalized').classList.remove('visible');
+    if (state === 'Locked') {
+      document.getElementById('bannerYearLocked').textContent = year;
+      document.getElementById('vintageBannerLocked').classList.add('visible');
+      disableAllInputs();
+    } else if (state === 'Finalized') {
+      document.getElementById('bannerYearFinalized').textContent = year;
+      document.getElementById('vintageBannerFinalized').classList.add('visible');
+      disableAllInputs();
+      replaceSubmitWithRequestEdit();
+    } else {
+      enableAllInputs();
+    }
+  }
+
+  function disableAllInputs() {
+    const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+    if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
+  }
+  function enableAllInputs() {
+    const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel') || document.querySelector('.panel');
+    if (panel) {
+      panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+    }
+  }
+  function replaceSubmitWithRequestEdit() {
+    document.querySelectorAll('.btn-save').forEach(btn => {
+      btn.textContent = 'Request Edit';
+      btn.disabled = false;
+      btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+    });
+  }
+
+  function handleLockToggle() {
+    if (!activeVintage || activeVintage.state !== 'Locked') return;
+    const PROXY_V = '/api/airtable';
+    const BASE_ID_V = 'appJNEHG8sqXmdYGe';
+    const currentYear = String(new Date().getFullYear());
+    const cv = vintageData.find(v => v.year === currentYear);
+    document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+    document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+    document.getElementById('unlockModalConfirm').onclick = async () => {
+      await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:activeVintage.id, fields:{ [F_VINTAGE_STATUS]:'Active' } }] }) });
+      if (cv) await fetch(PROXY_V, { method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ baseId:BASE_ID_V, tableId:TBL_VINTAGES, records:[{ id:cv.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+      activeVintage.state = 'Active';
+      if (cv) cv.state = 'Locked';
+      renderVintagePill(activeVintage);
+      applyVintageState('Active', activeVintage.year);
+      closeUnlockModal();
+    };
+    document.getElementById('vintageUnlockModal').classList.add('open');
+  }
+  function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+  document.addEventListener('DOMContentLoaded', initVintage);
+
+  // ─── Airtable Proxy ────────────────────────────────────────────────────────
+  // All Airtable calls go through /api/airtable (Vercel serverless function).
+  // The proxy holds AIRTABLE_API_KEY as an env var — never exposed client-side.
+  const BASE_ID = 'appJNEHG8sqXmdYGe';
+
+  async function airtableFetch(tableId, params = {}) {
+    const url = new URL('/api/airtable', window.location.origin);
+    url.searchParams.set('baseId', BASE_ID);
+    url.searchParams.set('tableId', tableId);
+    Object.entries(params).forEach(([k, v]) =>
+      url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v)
+    );
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Airtable proxy error: ${res.status}`);
+    return res.json();
+  }
+
+  async function airtableCreate(tableId, fields) {
+    const res = await fetch('/api/airtable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+    });
+    if (!res.ok) throw new Error(`Airtable create error: ${res.status}`);
+    return res.json();
+  }
+  async function airtableDelete(tableId, recordId) {
+    const url = new URL('/api/airtable', window.location.origin);
+    url.searchParams.set('baseId', BASE_ID);
+    url.searchParams.set('tableId', tableId);
+    url.searchParams.set('recordId', recordId);
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Airtable delete error: ${res.status}`);
+    return res.json();
+  }
+
+  // ─── Table & Field IDs ──────────────────────────────────────────────────
+  const T_BLOCKS = 'tblPuFD0fbiLmITXK';
+  const T_LOGS   = 'tblVbpvTPxEQpw6Hz';
+  const T_RATES  = 'tblwX75CPEYHhIXmD';
+  const T_TASKS  = 'tblmsz91HIoI4LjHs';
+
+  // Vineyard Blocks
+  const F_BLOCK_NAME    = 'fld3BU2ADl8oypAWe';
+  const F_BLOCK_ACRES   = 'fldmXtigs8eGYXN5Z';
+  const F_BLOCK_TPACRE  = 'fldfIqiJp6Jh6EIt8';
+  const F_BLOCK_ESTTONS = 'fld5REiPH0brFntsK';
+  const F_BLOCK_ACTTONS = 'fldcBL3ubZuCv9UFE';
+  const F_BLOCK_FARMCST = 'fldSOJnI9FBQN6Lb2';
+  const F_BLOCK_HARVCST = 'fldDnnDSy6zeLwfe1';
+  const F_BLOCK_ROWST   = 'fldZN27h4lMi2Nrqn';
+  const F_BLOCK_ROWEND  = 'fld0GBcrWFrV77sWi';
+
+  // Labor Logs
+  const F_LOG_DATE     = 'fld22ciVaTERAAbAa';
+  const F_LOG_HARVEST  = 'fld3YoRvi1f6cvlym';
+  const F_LOG_CATEGORY = 'fldKMKC5QTPFD3kcA';  // link → Labor Rates
+  const F_LOG_TASK     = 'flde8KdHNcN0NTgl2';   // link → Tasks
+  const F_LOG_WORKERS  = 'fldf6mtvht1DzO2DR';
+  const F_LOG_HOURS    = 'fldfV7W6zaXQo9K8m';
+  const F_LOG_BLOCKS   = 'fldEQBFeLzv8QX8Vb';   // link → Vineyard Blocks
+  const F_LOG_TOTAL    = 'fldabZyNtq13klfcz';
+  const F_LOG_NOTES    = 'fldhE27kDDyt1RDxj';
+
+  // Labor Rates
+  const F_RATE_NAME     = 'fldQA7KgGa6CzLkut';
+  const F_RATE_BURDENED = 'fldXELasLWF8wO1UP';
+
+  // Tasks
+  const F_TASK_NAME   = 'fldi3tHNfdITzZ0DX';
+  const F_TASK_DEPT   = 'fldo9F41LBtLTm5kL';
+  const F_TASK_ACTIVE = 'fldjhr6hV10Kk3Lr0';
+
+  // ─── Runtime data (populated on load) ───────────────────────────────────
+  let BLOCKS    = [];  // { id, name, variety, acres, estTons, actTons, farmCost, harvestCost, rowStart, rowEnd, color }
+  let RATES     = [];  // { id, name, burdened }
+  let TASKS_MAP = {};  // dept label → [{ id, name }]
+  const DEPT_MAP = { Vineyard:'Vineyard', Cellar:'Cellar/Productions', Admin:'Admin', Sales:'Sales/Tasting Room', Events:'Venue/Events' };
+
+  function varietyColor(name) {
+    if (!name) return 'var(--latte)';
+    const n = name.toLowerCase();
+    if (n.includes('pinot')) return 'var(--grenadine)';
+    if (n.includes('chardonnay')) return 'var(--beeswax)';
+    if (n.includes('riesling')) return 'var(--darlington)';
+    if (n.includes('ros')) return '#D4827A';
+    return 'var(--latte)';
+  }
+
+  let logs = [];
+  let currentFilter = 'all';
+  let harvestOn = false;
+  let burdenedRate = 0;
+  let currentDept = 'Vineyard';
+  let totalCosts = {}; // block name -> accumulated cost
+
+  document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
+
+  // ─── App Initialisation ──────────────────────────────────────────────────
+  async function initApp() {
+    showLoading(true);
+    try {
+      await Promise.all([loadBlocks(), loadRates(), loadTasks(), loadLogs()]);
+      populateTasks('Vineyard');
+    } catch(e) {
+      showToast('Failed to load data — check proxy connection.', true);
+      console.error(e);
+      // Fall back so UI is at least functional
+      populateTasks('Vineyard');
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  async function loadBlocks() {
+    const data = await airtableFetch(T_BLOCKS, {
+      fields: JSON.stringify([F_BLOCK_NAME, F_BLOCK_ACRES, F_BLOCK_TPACRE,
+                              F_BLOCK_ESTTONS, F_BLOCK_ACTTONS, F_BLOCK_FARMCST,
+                              F_BLOCK_HARVCST, F_BLOCK_ROWST, F_BLOCK_ROWEND])
+    });
+    BLOCKS = (data.records || []).map(r => {
+      const f = r.fields || r.cellValuesByFieldId || {};
+      const name = f[F_BLOCK_NAME] || '';
+      return {
+        id:        r.id,
+        name,
+        variety:   guessVariety(name),
+        acres:     f[F_BLOCK_ACRES]   || 0,
+        estTons:   f[F_BLOCK_ESTTONS] || 0,
+        actTons:   f[F_BLOCK_ACTTONS] || 0,
+        farmCost:    f[F_BLOCK_FARMCST] || 0,
+        harvestCost: f[F_BLOCK_HARVCST] || 0,
+        rowStart:    f[F_BLOCK_ROWST]   || '',
+        rowEnd:    f[F_BLOCK_ROWEND]  || '',
+        color:     varietyColor(name),
+      };
+    });
+    renderBlockCards();
+    buildBlockDropdown();
+    updateBlockSummary();
+  }
+
+  async function loadRates() {
+    const data = await airtableFetch(T_RATES, {
+      fields: JSON.stringify([F_RATE_NAME, F_RATE_BURDENED])
+    });
+    RATES = (data.records || []).map(r => {
+      const f = r.fields || r.cellValuesByFieldId || {};
+      return { id: r.id, name: f[F_RATE_NAME] || '', burdened: f[F_RATE_BURDENED] || 0 };
+    });
+    populateRateSelect();
+  }
+
+  async function loadTasks() {
+    const data = await airtableFetch(T_TASKS, {
+      fields: JSON.stringify([F_TASK_NAME, F_TASK_DEPT, F_TASK_ACTIVE])
+    });
+    TASKS_MAP = {};
+    (data.records || []).forEach(r => {
+      const f = r.fields || r.cellValuesByFieldId || {};
+      const dept = (f[F_TASK_DEPT]?.name || f[F_TASK_DEPT] || 'Vineyard');
+      // Map Airtable dept names to UI dept keys
+      const deptKey = Object.keys(DEPT_MAP).find(k => DEPT_MAP[k] === dept) || dept;
+      if (!TASKS_MAP[deptKey]) TASKS_MAP[deptKey] = [];
+      TASKS_MAP[deptKey].push({ id: r.id, name: f[F_TASK_NAME] || '' });
+    });
+  }
+
+  async function loadLogs() {
+    const data = await airtableFetch(T_LOGS, {
+      fields: JSON.stringify([F_LOG_DATE, F_LOG_HARVEST, F_LOG_CATEGORY,
+                              F_LOG_TASK, F_LOG_WORKERS, F_LOG_HOURS,
+                              F_LOG_BLOCKS, F_LOG_TOTAL, F_LOG_NOTES]),
+      sort: JSON.stringify([{ field: F_LOG_DATE, direction: 'desc' }]),
+      maxRecords: 100
+    });
+    logs = (data.records || []).map(r => {
+      const f = r.fields || r.cellValuesByFieldId || {};
+      // Resolve linked names from our local caches
+      const catIds   = f[F_LOG_CATEGORY] || [];
+      const catName  = RATES.find(rt => catIds.includes?.(rt.id))?.name || (catIds[0] || '—');
+      const taskIds  = f[F_LOG_TASK] || [];
+      const taskName = findTaskName(taskIds[0]) || '—';
+      const blockIds = f[F_LOG_BLOCKS] || [];
+      const blockName = BLOCKS.find(b => blockIds.includes?.(b.id))?.name || '—';
+      const dept = guessDept(taskName);
+      return {
+        airtableId: r.id,
+        date:       f[F_LOG_DATE]    || '',
+        harvest:    !!(f[F_LOG_HARVEST]),
+        category:   catName,
+        task:       taskName,
+        block:      blockName,
+        blockLabel: blockName,
+        workers:    f[F_LOG_WORKERS] || 0,
+        hours:      f[F_LOG_HOURS]   || 0,
+        total:      f[F_LOG_TOTAL]   || 0,
+        dept,
+        notes:      f[F_LOG_NOTES]   || '',
+        multi:      false,
+      };
+    });
+    renderLogs();
+  }
+
+  function guessVariety(name) {
+    if (!name) return 'Unknown';
+    if (name.toLowerCase().includes('pinot')) return 'Pinot Noir';
+    if (name.toLowerCase().includes('chardonnay')) return 'Chardonnay';
+    if (name.toLowerCase().includes('riesling')) return 'Riesling';
+    if (name.toLowerCase().includes('ros')) return 'Rosé';
+    return name.split(' ').slice(0,-1).join(' ') || name;
+  }
+
+  function guessDept(taskName) {
+    for (const [key, tasks] of Object.entries(TASKS_MAP)) {
+      if (tasks.some(t => t.name === taskName)) return DEPT_MAP[key] || key;
+    }
+    return 'Vineyard';
+  }
+
+  function findTaskName(taskId) {
+    for (const tasks of Object.values(TASKS_MAP)) {
+      const t = tasks.find(t => t.id === taskId);
+      if (t) return t.name;
+    }
+    return null;
+  }
+
+  function populateRateSelect() {
+    const sel = document.getElementById('field-category');
+    const prevVal = sel.value;
+    sel.innerHTML = '<option value="">— Select Provider —</option>';
+    RATES.forEach(r => {
+      const o = document.createElement('option');
+      o.value = `${r.name}|${r.burdened}|${r.id}`;
+      o.textContent = `${r.name} ($${r.burdened.toFixed(2)}/hr burdened)`;
+      sel.appendChild(o);
+    });
+    if (prevVal) sel.value = prevVal;
+  }
+
+  function renderBlockCards() {
+    const grid = document.getElementById('blocks-grid');
+    const addCard = grid.querySelector('.block-card-add');
+    // Remove existing data cards
+    grid.querySelectorAll('.block-card:not(.block-card-add)').forEach(c => c.remove());
+
+    BLOCKS.forEach(b => {
+      const estTons = b.estTons || (b.acres * (b.estTons / b.acres || 0));
+      const rowLabel = (b.rowStart && b.rowEnd) ? `Rows ${b.rowStart} – ${b.rowEnd}` : '';
+      const card = document.createElement('div');
+      card.className = 'block-card';
+      card.setAttribute('data-block', b.name);
+      card.setAttribute('data-variety', b.variety);
+      card.onclick = function() { selectBlock(this, b.name); };
+      card.innerHTML = `
+        <div class="block-card-top" style="background:${b.color}"></div>
+        <div class="block-card-body">
+          <div class="block-variety">${b.variety}</div>
+          <div class="block-name">${b.name}</div>
+          ${rowLabel ? `<div class="block-rows">${rowLabel}</div>` : ''}
+          <div class="block-stats">
+            <div class="block-stat"><div class="block-stat-label">Acres</div><div class="block-stat-value">${b.acres||'—'}<span class="block-stat-unit">${b.acres?'ac':''}</span></div></div>
+            <div class="block-stat"><div class="block-stat-label">Est. Tons</div><div class="block-stat-value">${b.estTons>0?b.estTons:'—'}<span class="block-stat-unit">${b.estTons>0?'t':''}</span></div></div>
+            <div class="block-stat"><div class="block-stat-label">Actual</div><div class="block-stat-value">${b.actTons>0?b.actTons:'—'}<span class="block-stat-unit">${b.actTons>0?'t':''}</span></div></div>
+            <div class="block-stat"><div class="block-stat-label">Remaining</div><div class="block-stat-value">${b.actTons>0?(b.estTons-b.actTons).toFixed(1):b.estTons||'—'}<span class="block-stat-unit">t</span></div></div>
+          </div>
+          <div class="cost-section">
+            <div class="cost-section-title">Season Costs</div>
+            <div class="cost-row">
+              <span class="cost-label">Total Farming Cost</span>
+              <span class="cost-val" id="cost-${b.id}">$${(b.farmCost||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+            </div>
+            <div class="cost-row">
+              <span class="cost-label">Harvest Labor</span>
+              <span class="cost-val">$${(b.harvestCost||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+            </div>
+            <div class="cost-row cost-row-highlight">
+              <span class="cost-label">Cost / Acre</span>
+              <span class="cost-val" id="cpa-${b.id}">${b.acres > 0 ? '$' + Math.round(b.farmCost / b.acres).toLocaleString() : '—'}</span>
+            </div>
+          </div>
+        </div>`;
+      grid.insertBefore(card, addCard);
+    });
+  }
+
+  function buildBlockDropdown() {
+    const sel = document.getElementById('field-block');
+    const sg = sel.querySelector('optgroup:nth-of-type(1)');
+    const vg = sel.querySelector('optgroup:nth-of-type(2)');
+    sg.innerHTML = '';
+    BLOCKS.forEach(b => {
+      const o = document.createElement('option');
+      o.value = `single|${b.name}|${b.acres}`;
+      o.textContent = b.name;
+      sg.appendChild(o);
+    });
+    vg.innerHTML = '';
+    const varieties = [...new Set(BLOCKS.map(b => b.variety))];
+    varieties.forEach(v => {
+      const o = document.createElement('option');
+      o.value = `varietal|${v}`;
+      o.textContent = `All ${v}`;
+      vg.appendChild(o);
+    });
+  }
+
+  function updateBlockSummary() {
+    const el = document.getElementById('block-count');
+    if (el) el.textContent = `${BLOCKS.length} Blocks · ${BLOCKS.reduce((s,b)=>s+b.acres,0)} Acres`;
+  }
+
+  function showLoading(on) {
+    const el = document.getElementById('blocks-grid');
+    if (!el) return;
+    if (on) {
+      el.style.opacity = '0.4';
+      el.style.pointerEvents = 'none';
+    } else {
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+    }
+  }
+
+  initApp();
+
+  // ─── Department ──────────────────────────────────────────────────────────
+  function setDept(el, dept) {
+    document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    currentDept = dept;
+    populateTasks(dept);
+
+    // Show/hide block selector and harvest toggle
+    const isVineyard = dept === 'Vineyard';
+    document.getElementById('block-field-wrap').classList.toggle('visible', isVineyard);
+    document.getElementById('harvest-toggle').style.display = isVineyard ? '' : 'none';
+
+    // Clear block selection and split preview when switching away
+    if (!isVineyard) {
+      document.getElementById('field-block').value = '';
+      hideSplitPreview();
+    }
+    updateCost();
+  }
+
+  function populateTasks(dept) {
+    const sel = document.getElementById('field-task');
+    sel.innerHTML = '<option value="">Select task…</option>';
+    (TASKS_MAP[dept] || []).forEach(t => {
+      const o = document.createElement('option');
+      o.value = `${t.name}|${t.id}`;
+      o.textContent = t.name;
+      sel.appendChild(o);
+    });
+  }
+
+  // ─── Block selection (card click syncs dropdown) ──────────────────────────
+  function selectBlock(el, name) {
+    document.querySelectorAll('.block-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    const sel = document.getElementById('field-block');
+    for (let o of sel.options) {
+      if (o.value.includes(`|${name}|`)) { o.selected = true; break; }
+    }
+    onBlockChange();
+  }
+
+  // ─── Block dropdown change ────────────────────────────────────────────────
+  function onBlockChange() {
+    const val = document.getElementById('field-block').value;
+    if (!val) { hideSplitPreview(); updateCost(); return; }
+
+    const [type] = val.split('|');
+
+    if (type === 'single') {
+      hideSplitPreview();
+    } else {
+      buildSplitPreview(val);
+    }
+    updateCost();
+  }
+
+  function getBlocksForSelection(val) {
+    if (!val) return [];
+    const [type, param] = val.split('|');
+    if (type === 'single') {
+      const b = BLOCKS.find(b => b.name === param);
+      return b ? [b] : [];
+    }
+    if (type === 'varietal') return BLOCKS.filter(b => b.variety === param);
+    if (type === 'all')      return [...BLOCKS];
+    return [];
+  }
+
+  function buildSplitPreview(val) {
+    const blocks = getBlocksForSelection(val);
+    if (!blocks.length) { hideSplitPreview(); return; }
+
+    const totalAcres = blocks.reduce((s, b) => s + b.acres, 0);
+    const totalCost  = calcTotalCost();
+
+    const rowsEl = document.getElementById('split-rows');
+    rowsEl.innerHTML = blocks.map(b => {
+      const pct  = b.acres / totalAcres;
+      const amt  = totalCost * pct;
+      const pctDisplay = Math.round(pct * 100);
+      return `
+        <div class="split-row">
+          <span class="split-block-name">${b.name}</span>
+          <span class="split-pct">${b.acres}ac · ${pctDisplay}%</span>
+          <span class="split-amount">${totalCost > 0 ? '$'+amt.toFixed(2) : '—'}</span>
+        </div>
+        <div class="split-bar-wrap"><div class="split-bar" style="width:${pctDisplay}%"></div></div>`;
+    }).join('');
+
+    document.getElementById('split-preview').classList.add('show');
+  }
+
+  function hideSplitPreview() {
+    document.getElementById('split-preview').classList.remove('show');
+  }
+
+  // ─── Cost calculation ─────────────────────────────────────────────────────
+  function calcTotalCost() {
+    const workers = parseFloat(document.getElementById('field-workers').value) || 0;
+    const hours   = parseFloat(document.getElementById('field-hours').value)   || 0;
+    return burdenedRate * workers * hours;
+  }
+
+  function updateCost() {
+    const catVal = document.getElementById('field-category').value;
+    if (catVal) burdenedRate = parseFloat(catVal.split('|')[1]);
+
+    const total   = calcTotalCost();
+    const workers = parseFloat(document.getElementById('field-workers').value) || 0;
+    const hours   = parseFloat(document.getElementById('field-hours').value)   || 0;
+
+    if (burdenedRate > 0 && workers > 0 && hours > 0) {
+      document.getElementById('cost-display').textContent = '$' + total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      document.getElementById('cost-breakdown').textContent = `${workers} workers × ${hours} hrs`;
+    } else {
+      document.getElementById('cost-display').textContent = '$—';
+      document.getElementById('cost-breakdown').textContent = '— select provider, workers & hours';
+    }
+
+    // Refresh split preview with updated amounts
+    const blockVal = document.getElementById('field-block').value;
+    if (blockVal) {
+      const [type] = blockVal.split('|');
+      if (type !== 'single') buildSplitPreview(blockVal);
+    }
+  }
+
+  // ─── Harvest toggle ───────────────────────────────────────────────────────
+  function toggleHarvest() {
+    harvestOn = !harvestOn;
+    document.getElementById('harvest-toggle').classList.toggle('on', harvestOn);
+  }
+
+  // ─── Submit ───────────────────────────────────────────────────────────────
+  async function submitLog() {
+    const date     = document.getElementById('field-date').value;
+    const catRaw   = document.getElementById('field-category').value;
+    const blockVal = document.getElementById('field-block').value;
+    const taskRaw  = document.getElementById('field-task').value;
+    const workers  = parseFloat(document.getElementById('field-workers').value);
+    const hours    = parseFloat(document.getElementById('field-hours').value);
+    const notes    = document.getElementById('field-notes').value;
+
+    const needsBlock = currentDept === 'Vineyard';
+    if (!date || !catRaw || !taskRaw || !workers || !hours || (needsBlock && !blockVal)) {
+      showToast('Please fill in all required fields.', true); return;
+    }
+
+    const [catName, , catId] = catRaw.split('|');
+    const [taskName, taskId] = taskRaw.split('|');
+    const total    = calcTotalCost();
+    const dept     = DEPT_MAP[currentDept];
+    const blockSel = getBlocksForSelection(blockVal);
+    const totalAcres = blockSel.reduce((s, b) => s + b.acres, 0);
+
+    const [type, param] = blockVal ? blockVal.split('|') : ['none','—'];
+    let blockLabel = '—';
+    if (type === 'single')   blockLabel = param;
+    if (type === 'varietal') blockLabel = `All ${param}`;
+    if (type === 'all')      blockLabel = 'All Vineyard';
+
+    // Optimistically update UI first
+    if (blockSel.length > 1) {
+      blockSel.forEach(b => {
+        const share = total * (b.acres / totalAcres);
+        logs.unshift({ airtableId: null, date, block: b.name, blockLabel, task: taskName, category: catName, workers, hours, total: share, dept, harvest: harvestOn, notes, multi: true });
+        updateBlockCostDisplay(b.id, share);
+      });
+    } else {
+      const bn = blockSel[0]?.name || '—';
+      logs.unshift({ airtableId: null, date, block: bn, blockLabel, task: taskName, category: catName, workers, hours, total, dept, harvest: harvestOn, notes, multi: false });
+      if (blockSel[0]) updateBlockCostDisplay(blockSel[0].id, total);
+    }
+    renderLogs();
+    showToast(`Saving…`);
+    clearForm();
+
+    // Write to Airtable for each block
+    try {
+      const entries = blockSel.length > 1 ? blockSel.map(b => ({ b, share: total * (b.acres / totalAcres) })) : [{ b: blockSel[0], share: total }];
+      for (const { b, share } of entries) {
+        const fields = {
+          [F_LOG_DATE]:    date,
+          [F_LOG_WORKERS]: workers,
+          [F_LOG_HOURS]:   hours,
+          ...(notes ? { [F_LOG_NOTES]: notes } : {}),
+          [F_LOG_HARVEST]: harvestOn,
+        };
+        if (catId) fields[F_LOG_CATEGORY] = [catId];
+        if (taskId) fields[F_LOG_TASK] = [taskId];
+        if (b?.id)  fields[F_LOG_BLOCKS] = [b.id];
+        const created = await airtableCreate(T_LOGS, fields);
+        // Backfill the airtableId on the matching log entry
+        const match = logs.find(l => !l.airtableId && l.date === date && l.task === taskName && (l.block === (b?.name || '—')));
+        if (match && created?.id) match.airtableId = created.id;;
+      }
+      showToast(`Saved — $${total.toFixed(2)} logged${blockLabel !== '—' ? ' to '+blockLabel : ''}`);
+    } catch(e) {
+      showToast('Saved locally — Airtable write failed. Check proxy.', true);
+      console.error(e);
+    }
+  }
+
+  function updateBlockCostDisplay(blockId, amount) {
+    // Update the farm cost display card in the grid
+    const el = document.getElementById(`cost-${blockId}`);
+    if (!el) return;
+    const block = BLOCKS.find(b => b.id === blockId);
+    if (!block) return;
+    block.farmCost = (block.farmCost || 0) + amount;
+    el.textContent = '$' + block.farmCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+    const cpaEl = document.getElementById(`cpa-${blockId}`);
+    if (cpaEl) {
+      cpaEl.textContent = block.acres > 0
+        ? '$' + Math.round(block.farmCost / block.acres).toLocaleString()
+        : '—';
+    }
+  }
+
+  // ─── Render logs ──────────────────────────────────────────────────────────
+  function renderLogs() {
+    const body = document.getElementById('log-body');
+
+    // Deduplicate multi-block entries for display — show as one row
+    const displayLogs = [];
+    const seen = new Set();
+    logs.forEach(l => {
+      const key = `${l.date}|${l.task}|${l.blockLabel}|${l.category}`;
+      if (l.multi && seen.has(key)) return;
+      seen.add(key);
+      displayLogs.push({ ...l, displayCost: l.multi ? getTotalForKey(key) : l.total });
+    });
+
+    const filtered = displayLogs.filter(l => {
+      if (currentFilter === 'all')     return true;
+      if (currentFilter === 'harvest') return l.harvest;
+      return l.dept === currentFilter;
+    });
+
+    if (!filtered.length) {
+      body.innerHTML = '<div class="log-empty">No entries match this filter.</div>'; return;
+    }
+
+    body.innerHTML = filtered.map(l => `
+      <div class="log-row">
+        <div class="log-td muted">${fmtDate(l.date)}</div>
+        <div class="log-td">${l.harvest ? '<span class="harvest-dot"></span>':''} ${l.task}</div>
+        <div class="log-td bold">${l.blockLabel}${l.multi ? '<span class="multi-tag">Split</span>':''}</div>
+        <div class="log-td">${l.workers}</div>
+        <div class="log-td">${l.hours}</div>
+        <div class="log-td"><span class="dept-tag ${deptClass(l.dept)}">${l.dept.split('/')[0]}</span></div>
+        <div class="log-td cost">$${l.displayCost.toFixed(2)}</div>
+        <div class="log-td" style="padding-right:0">
+          <button class="log-delete-btn" onclick="deleteLog('${l.date}|${l.task}|${l.blockLabel}|${l.category}', this)" title="Delete entry">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function getTotalForKey(key) {
+    return logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` === key).reduce((s, l) => s + l.total, 0);
+  }
+
+  function fmtDate(d) { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+  function deptClass(d) {
+    if (d==='Vineyard') return 'dept-vineyard';
+    if (d==='Cellar/Productions') return 'dept-cellar';
+    if (d==='Admin') return 'dept-admin';
+    if (d==='Sales/Tasting Room') return 'dept-sales';
+    return 'dept-events';
+  }
+
+  function filterLogs(el, f) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentFilter = f;
+    renderLogs();
+  }
+  async function deleteLog(key, btnEl) {
+    if (!confirm('Delete this labor log entry? This cannot be undone.')) return;
+    btnEl.classList.add('deleting');
+
+    // Find all matching entries in the logs array (multi-block entries share a key)
+    const toDelete = logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` === key);
+    const recordIds = toDelete.map(l => l.airtableId).filter(Boolean);
+
+    // Optimistically remove from UI
+    logs = logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` !== key);
+    renderLogs();
+
+    // Delete from Airtable
+    if (recordIds.length) {
+      try {
+        await Promise.all(recordIds.map(id => airtableDelete(T_LOGS, id)));
+        showToast('Entry deleted.');
+      } catch(e) {
+        showToast('Deleted locally — Airtable sync failed.', true);
+        console.error(e);
+      }
+    } else {
+      showToast('Entry removed (no Airtable record to delete).');
+    }
+  }
+  // ─── Add Block Modal ──────────────────────────────────────────────────────
+  function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    ['m-name','m-variety','m-acres','m-rowstart','m-rowend','m-tons'].forEach(id => document.getElementById(id).value = '');
+  }
+  function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+
+  async function addBlock() {
+    const name     = document.getElementById('m-name').value.trim();
+    const variety  = document.getElementById('m-variety').value.trim() || 'Unknown';
+    const acres    = parseFloat(document.getElementById('m-acres').value) || 0;
+    const rowStart = parseInt(document.getElementById('m-rowstart').value) || null;
+    const rowEnd   = parseInt(document.getElementById('m-rowend').value)   || null;
+    const tons     = parseFloat(document.getElementById('m-tons').value) || 0;
+    const color    = document.getElementById('m-color').value;
+
+    if (!name) { showToast('Block name is required.', true); return; }
+
+    // Optimistically add to local registry and render
+    const tempId = 'temp-' + Date.now();
+    const newBlock = { id: tempId, name, variety, acres, estTons: parseFloat((acres*tons).toFixed(1)), actTons: 0, farmCost: 0, harvestCost: 0, rowStart, rowEnd, color };
+    BLOCKS.push(newBlock);
+    renderBlockCards();
+    buildBlockDropdown();
+    updateBlockSummary();
+    showToast(`Block "${name}" added`);
+    closeModal();
+
+    // Write to Airtable
+    try {
+      const fields = { [F_BLOCK_NAME]: name, [F_BLOCK_ACRES]: acres };
+      if (tons) fields[F_BLOCK_TPACRE] = tons;
+      if (rowStart) fields[F_BLOCK_ROWST] = rowStart;
+      if (rowEnd)   fields[F_BLOCK_ROWEND] = rowEnd;
+      const result = await airtableCreate(T_BLOCKS, fields);
+      // Update tempId with real record id
+      const idx = BLOCKS.findIndex(b => b.id === tempId);
+      if (idx >= 0 && result.id) BLOCKS[idx].id = result.id;
+    } catch(e) {
+      showToast(`Block added locally — Airtable write failed.`, true);
+      console.error(e);
+    }
+  }
+
+  function refreshVarietalOptions() {
+    const sel = document.getElementById('field-block');
+    const varietalGroup = sel.querySelector('optgroup:nth-of-type(2)');
+    varietalGroup.innerHTML = '';
+    const varieties = [...new Set(BLOCKS.map(b => b.variety))];
+    varieties.forEach(v => {
+      const o = document.createElement('option');
+      o.value = `varietal|${v}`;
+      o.textContent = `All ${v}`;
+      varietalGroup.appendChild(o);
+    });
+  }
+
+  // ─── Clear form ───────────────────────────────────────────────────────────
+  function clearForm() {
+    ['field-task','field-category','field-block','field-workers','field-hours','field-notes'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('cost-display').textContent   = '$—';
+    document.getElementById('cost-breakdown').textContent = '— select provider, workers & hours';
+    document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
+    burdenedRate = 0; harvestOn = false;
+    document.getElementById('harvest-toggle').classList.remove('on');
+    document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
+    document.querySelector('.dept-pill.d-vineyard').classList.add('active');
+    currentDept = 'Vineyard';
+    populateTasks('Vineyard');
+    document.getElementById('block-field-wrap').classList.add('visible');
+    document.getElementById('harvest-toggle').style.display = '';
+    hideSplitPreview();
+  }
+
+  function showToast(msg, isError=false) {
+    const t = document.getElementById('toast');
+    t.textContent = (isError ? '⚠️ ' : '✅ ') + msg;
+    t.style.background = isError ? '#7a2d1a' : '#2d5a3d';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // ── Shared Nav Drawer ──
+  function openNav() {
+    document.getElementById('navDrawer').classList.add('open');
+    document.getElementById('navOverlay').classList.add('visible');
+    document.getElementById('navToggleBtn').classList.add('open');
+  }
+  function closeNav() {
+    document.getElementById('navDrawer').classList.remove('open');
+    document.getElementById('navOverlay').classList.remove('visible');
+    document.getElementById('navToggleBtn').classList.remove('open');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeNav();
+  });
+
+</script>
+<script>
+  // — Clerk session guard (disabled) —
+  // Re-enable when custom domain + Clerk production keys are ready
+  /*
+  const CLERK_PK = 'YOUR_CLERK_PUBLISHABLE_KEY';
+  (async () => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+    s.setAttribute('data-clerk-publishable-key', CLERK_PK);
+    document.head.appendChild(s);
+    await new Promise(r => s.onload = r);
+    await window.Clerk.load();
+    if (!window.Clerk.user) { window.location.href = '/login.html'; return; }
+    const _fetch = window.fetch;
+    window.fetch = async (url, opts = {}) => {
+      if (typeof url === 'string' && url.includes('/api/')) {
+        const token = await window.Clerk.session.getToken();
+        opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
+      }
+      return _fetch(url, opts);
+    };
+  })();
+  */
+</script>
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
