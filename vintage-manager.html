@@ -363,7 +363,15 @@
     }
     function enableAllInputs() {
       const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel');
-      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+      if (panel) {
+        panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
+        // Restore Create button text and handler
+        const saveBtn = panel.querySelector('.btn-save');
+        if (saveBtn && saveBtn.textContent.trim() === 'Request Edit') {
+          saveBtn.textContent = 'Create Vintage';
+          saveBtn.onclick = createVintage;
+        }
+      }
     }
     function replaceSubmitWithRequestEdit() {
       document.querySelectorAll('.btn-save').forEach(btn => {
@@ -428,17 +436,20 @@
 
     async function confirmFinalize() {
       if (!finalizeRecordId) return;
-      await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:finalizeRecordId, fields:{ [F_VINTAGE_STATUS]:'Finalized' } }] }) });
-      closeFinalizeModal();
-      await loadAndRenderVintages();
-      const updated = vintageData.find(v => v.id === finalizeRecordId);
-      if (updated) { updated.state = 'Finalized'; }
-      // Update activeVintage reference if it was the finalized record
-      if (activeVintage && activeVintage.id === finalizeRecordId) {
-        activeVintage.state = 'Finalized';
-        renderVintagePill(activeVintage);
-        applyVintageState('Finalized', activeVintage.year);
+      try {
+        const res = await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:finalizeRecordId, fields:{ [F_VINTAGE_STATUS]:'Finalized' } }] }) });
+        if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+        closeFinalizeModal();
+        await loadAndRenderVintages();
+        if (activeVintage && activeVintage.id === finalizeRecordId) {
+          activeVintage.state = 'Finalized';
+          renderVintagePill(activeVintage);
+          applyVintageState('Finalized', activeVintage.year);
+        }
+      } catch(e) {
+        console.error('Failed to finalize vintage', e);
+        alert('Failed to finalize. Please check your connection and try again.');
       }
     }
 
@@ -472,6 +483,7 @@
       }
       container.innerHTML = records.map(r => {
         const year        = r.fields[F_VINTAGE_YEAR] || '—';
+        const safeYear    = String(year).replace(/'/g, "\\'");
         const status      = r.fields[F_VINTAGE_STATUS]?.name || 'Active';
         const statusLower = status.toLowerCase();
         const start       = formatDate(r.fields[F_HARVEST_START]);
@@ -479,7 +491,7 @@
         const tons        = r.fields[F_TONS_TARGET] ?? '—';
         const lots        = Array.isArray(r.fields[F_WINE_LOTS_LINK]) ? r.fields[F_WINE_LOTS_LINK].length : 0;
         const finalizeBtn = status !== 'Finalized'
-          ? `<button class="btn-finalize" onclick="startFinalize('${r.id}','${year}')">Finalize Vintage</button>`
+          ? `<button class="btn-finalize" onclick="startFinalize('${r.id}','${safeYear}')">Finalize Vintage</button>`
           : '';
         return `
           <div class="vintage-card">
@@ -508,26 +520,33 @@
       if (end)   fields[F_HARVEST_END]   = end;
       if (tons)  fields[F_TONS_TARGET]   = tons;
 
-      // Lock any currently Active vintage
-      const existingActive = vintageData.find(v => v.state === 'Active');
-      if (existingActive) {
-        await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+      try {
+        // Lock any currently Active vintage
+        const existingActive = vintageData.find(v => v.state === 'Active');
+        if (existingActive) {
+          const lockRes = await fetch(PROXY, { method:'PATCH', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ id:existingActive.id, fields:{ [F_VINTAGE_STATUS]:'Locked' } }] }) });
+          if (!lockRes.ok) throw new Error(`PATCH failed: ${lockRes.status}`);
+        }
+
+        const postRes = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ fields }] }) });
+        if (!postRes.ok) throw new Error(`POST failed: ${postRes.status}`);
+
+        // Reset form
+        document.getElementById('newYear').value         = String(new Date().getFullYear() + 1);
+        document.getElementById('newHarvestStart').value = '';
+        document.getElementById('newHarvestEnd').value   = '';
+        document.getElementById('newTonsTarget').value   = '';
+
+        await loadAndRenderVintages();
+        localStorage.setItem('lm_active_vintage', year);
+        activeVintage = vintageData.find(v => v.year === year);
+        if (activeVintage) renderVintagePill(activeVintage);
+      } catch(e) {
+        console.error('Failed to create vintage', e);
+        alert('Failed to save. Please check your connection and try again.');
       }
-
-      await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ baseId:BASE_ID, tableId:TBL_VINTAGES, records:[{ fields }] }) });
-
-      // Reset form
-      document.getElementById('newYear').value         = String(new Date().getFullYear() + 1);
-      document.getElementById('newHarvestStart').value = '';
-      document.getElementById('newHarvestEnd').value   = '';
-      document.getElementById('newTonsTarget').value   = '';
-
-      await loadAndRenderVintages();
-      localStorage.setItem('lm_active_vintage', year);
-      activeVintage = vintageData.find(v => v.year === year);
-      if (activeVintage) renderVintagePill(activeVintage);
     }
 
     /* ── Boot ── */
