@@ -313,12 +313,12 @@
       const sl = (v.state || 'Active').toLowerCase();
       dot.classList.add(sl);
       const lb = document.getElementById('vintageLockBtn');
-      if (sl === 'active') {
-        lb.style.display = 'none';
-      } else {
+      if (sl === 'locked') {
         lb.style.display = 'flex';
-        lb.textContent   = sl === 'locked' ? '🔓' : '📋';
-        lb.title         = sl === 'locked' ? 'Unlock vintage' : 'View change log';
+        lb.textContent   = '🔓';
+        lb.title         = 'Unlock vintage';
+      } else {
+        lb.style.display = 'none';
       }
       document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
         `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected':''}" onclick="selectVintage('${vd.year}',event)">
@@ -358,10 +358,12 @@
     }
 
     function disableAllInputs() {
-      document.querySelectorAll('input, select, textarea, button[type="submit"], .btn-save').forEach(el => el.disabled = true);
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = true);
     }
     function enableAllInputs() {
-      document.querySelectorAll('input, select, textarea, button[type="submit"], .btn-save').forEach(el => el.disabled = false);
+      const panel = document.querySelector('.left-panel') || document.querySelector('#leftPanel');
+      if (panel) panel.querySelectorAll('input, select, textarea, .btn-save').forEach(el => el.disabled = false);
     }
     function replaceSubmitWithRequestEdit() {
       document.querySelectorAll('.btn-save').forEach(btn => {
@@ -431,7 +433,13 @@
       closeFinalizeModal();
       await loadAndRenderVintages();
       const updated = vintageData.find(v => v.id === finalizeRecordId);
-      if (updated) { updated.state = 'Finalized'; renderVintagePill(activeVintage); }
+      if (updated) { updated.state = 'Finalized'; }
+      // Update activeVintage reference if it was the finalized record
+      if (activeVintage && activeVintage.id === finalizeRecordId) {
+        activeVintage.state = 'Finalized';
+        renderVintagePill(activeVintage);
+        applyVintageState('Finalized', activeVintage.year);
+      }
     }
 
     function closeFinalizeModal() { document.getElementById('finalizeModal').classList.remove('open'); }
