@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Labor Rates — Winery Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── TOPBAR ── */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .topbar-hamburger { width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.65); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .topbar-hamburger:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); text-decoration:none; flex-shrink:0; }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-breadcrumb { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); flex-shrink:0; }
+
+    /* ── LAYOUT ── */
+    .app-body { display:flex; flex:1; height:calc(100vh - 58px); }
+    .left-panel { width:380px; flex-shrink:0; background:var(--dark); overflow-y:auto; padding:24px; }
+    .main-area { flex:1; background:var(--cream); overflow-y:auto; padding:24px; }
+
+    /* ── NAV DRAWER ── */
+    .nav-overlay { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.5); }
+    .nav-overlay.open { display:block; }
+    .nav-drawer { position:fixed; top:0; left:-320px; width:300px; height:100vh; background:var(--dark); z-index:500; transition:left 0.25s; display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-drawer.open { left:0; }
+    .nav-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nav-header-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); }
+    .nav-header-logo span { color:var(--grenadine); }
+    .nav-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .nav-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:16px 20px 6px; }
+    .nav-item { display:block; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.65); text-decoration:none; transition:background 0.15s,color 0.15s; }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:var(--white); }
+    .nav-item.active { color:var(--beeswax); background:rgba(233,167,82,0.08); }
+    .nav-setup-divider { height:1px; background:rgba(255,255,255,0.08); margin:8px 20px; }
+    .nav-item.setup { opacity:0.7; }
+    .nav-footer { margin-top:auto; padding:16px 20px; font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.25); letter-spacing:0.08em; }
+
+    /* ── VINTAGE TOPBAR CONTROL ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; flex-shrink:0; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── LEFT PANEL FORM ── */
+    .panel-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--grenadine); margin-bottom:16px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:6px; }
+    .form-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:var(--white); padding:10px 12px; font-family:'Barlow',sans-serif; font-size:14px; box-sizing:border-box; }
+    .form-input:focus { outline:none; border-color:rgba(255,255,255,0.3); }
+    .form-input::placeholder { color:rgba(255,255,255,0.25); }
+    .form-hint { font-family:'Barlow',sans-serif; font-size:11px; color:rgba(255,255,255,0.3); margin-top:4px; }
+    .burden-preview { background:rgba(233,167,82,0.1); border:1px solid rgba(233,167,82,0.2); border-radius:8px; padding:12px 14px; margin-bottom:16px; }
+    .burden-preview-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:4px; }
+    .burden-preview-value { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; color:var(--beeswax); }
+    .btn-save { width:100%; background:var(--grenadine); color:#fff; border:none; border-radius:6px; padding:12px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; margin-top:8px; transition:opacity 0.15s; }
+    .btn-save:hover { opacity:0.88; }
+
+    /* ── MAIN AREA TABLE ── */
+    .section-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--dark); margin-bottom:16px; }
+    .table-wrap { background:var(--white); border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,0.08); margin-bottom:24px; }
+    .rates-table { width:100%; border-collapse:collapse; }
+    .rates-table th { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); padding:12px 16px; text-align:left; border-bottom:1px solid rgba(0,0,0,0.08); }
+    .rates-table td { font-family:'Barlow',sans-serif; font-size:13px; color:var(--dark); padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.05); }
+    .rates-table tr:last-child td { border-bottom:none; }
+    .empty-state { text-align:center; color:var(--latte); font-family:'Barlow',sans-serif; font-size:13px; padding:32px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .app-body { flex-direction:column; height:auto; }
+      .left-panel { width:100%; height:auto; }
+      .main-area { height:auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV OVERLAY + DRAWER -->
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-header">
+      <div class="nav-header-logo">Lifecycle<span>.</span></div>
+      <button class="nav-close" onclick="closeNav()">✕</button>
+    </div>
+    <div class="nav-section-label">Field</div>
+    <a class="nav-item" href="/vineyard.html">🌿 Vineyard</a>
+    <a class="nav-item" href="/harvest.html">⚖️ Harvest</a>
+    <a class="nav-item" href="/vintage-manager.html">🗓 Vintage Manager</a>
+    <div class="nav-section-label">Cellar</div>
+    <a class="nav-item" href="/cellar.html">🍷 Cellar</a>
+    <a class="nav-item" href="/blending-lab.html">🧪 Blending Lab</a>
+    <div class="nav-section-label">Sales</div>
+    <a class="nav-item" href="/skus.html">📦 SKUs</a>
+    <div class="nav-section-label">Operations</div>
+    <a class="nav-item" href="/inventory.html">🏭 Inventory</a>
+    <a class="nav-item" href="/suppliers.html">🤝 Suppliers</a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item" href="/financial-dashboard.html">📊 Financial Dashboard</a>
+    <a class="nav-item" href="/finance.html">📈 Finance</a>
+    <a class="nav-item" href="/overhead-opex.html">💸 Overhead &amp; OpEx</a>
+    <div class="nav-setup-divider"></div>
+    <div class="nav-section-label setup">Setup</div>
+    <a class="nav-item setup active" href="/labor-rates.html">⏱ Labor Rates</a>
+    <a class="nav-item setup" href="/task-library.html">📋 Task Library</a>
+    <div class="nav-footer">Lifecycle Manager · v1.0</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" onclick="openNav()">☰</button>
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb">Labor Rates</div>
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;"><span class="vintage-offline-dot"></span>Offline</div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+  </div>
+
+  <!-- VINTAGE BANNERS -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.</div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized.</div>
+
+  <!-- VINTAGE UNLOCK MODAL -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- LEFT PANEL — Add Rate Form -->
+    <div class="left-panel">
+      <div class="panel-section-label">Add Rate</div>
+
+      <div class="form-group">
+        <label class="form-label">Category Name</label>
+        <input type="text" id="fCategoryName" class="form-input" placeholder="e.g. Harvest Crew" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Hourly Rate ($)</label>
+        <input type="number" id="fHourlyRate" class="form-input" placeholder="0.00" step="0.01" min="0" oninput="updateBurdenPreview()" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tax &amp; Insurance (%)</label>
+        <input type="number" id="fTaxIns" class="form-input" placeholder="e.g. 25" step="0.1" min="0" max="100" oninput="updateBurdenPreview()" />
+        <div class="form-hint">Enter as a percentage (e.g. 25 = 25%)</div>
+      </div>
+
+      <div class="burden-preview" id="burdenPreview" style="display:none;">
+        <div class="burden-preview-label">Fully Burdened Rate</div>
+        <div class="burden-preview-value" id="burdenValue">$0.00 / hr</div>
+      </div>
+
+      <button class="btn-save" onclick="saveRate()">Add Rate</button>
+    </div>
+
+    <!-- MAIN AREA — Rates Table -->
+    <div class="main-area">
+      <div class="section-title">Labor Rates</div>
+      <div class="table-wrap">
+        <table class="rates-table">
+          <thead>
+            <tr>
+              <th>Category Name</th>
+              <th>Hourly Rate</th>
+              <th>Tax &amp; Ins %</th>
+              <th>Fully Burdened</th>
+            </tr>
+          </thead>
+          <tbody id="ratesBody">
+            <tr><td colspan="4" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /.app-body -->
+
+  <script>
+    const PROXY    = '/api/airtable';
+    const BASE_ID  = 'appJNEHG8sqXmdYGe';
+
+    // Labor Rates table
+    const TBL_LABOR_RATES  = 'tblwX75CPEYHhIXmD';
+    const F_CATEGORY_NAME  = 'fldQA7KgGa6CzLkut';
+    const F_HOURLY_RATE    = 'fldoSTNC6UTrEmGmL';
+    const F_TAX_INS_MULT   = 'fldhC8utqAsDDsip1';
+    const F_BURDENED_RATE  = 'fldXELasLWF8wO1UP';
+
+    // ── VINTAGE SYSTEM ─────────────────────────────────────────────────────────
+    const TBL_VINTAGES     = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+    let vintageData = [], activeVintage = null;
+
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const cy = String(new Date().getFullYear());
+        if (cached && cached !== cy) disableAllInputs();
+        renderVintagePill({ year: cached || cy, state: 'Active' });
+        return;
+      }
+      try {
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id: r.id,
+          year: r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+        const cy = String(new Date().getFullYear());
+        if (!vintageData.some(v => v.state === 'Active' && v.year === cy)) {
+          const ea = vintageData.find(v => v.state === 'Active');
+          if (ea) {
+            await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: ea.id, fields: { [F_VINTAGE_STATUS]: 'Locked' } }] }) });
+            ea.state = 'Locked';
+          }
+          const pr = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ fields: { [F_VINTAGE_YEAR]: cy, [F_VINTAGE_STATUS]: 'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id: pd.records[0].id, year: cy, state: 'Active' });
+        }
+        const cached = localStorage.getItem('lm_active_vintage') || cy;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === cy);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || cy);
+      } catch (e) {
+        console.warn('Vintage init failed', e);
+      }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') {
+        lb.style.display = 'flex';
+        lb.textContent = '🔓';
+        lb.title = 'Unlock vintage';
+      } else {
+        lb.style.display = 'none';
+      }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected' : ''}" onclick="selectVintage('${vd.year.replace(/'/g, "\\'")}',event)">${vd.year}<span class="vintage-badge ${(vd.state || 'Active').toLowerCase()}">${vd.state || 'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.toggle('open');
+    }
+
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+      } else {
+        enableAllInputs();
+      }
+    }
+
+    function disableAllInputs() {
+      const p = document.querySelector('.left-panel');
+      if (p) p.querySelectorAll('input,select,textarea,.btn-save').forEach(el => el.disabled = true);
+    }
+
+    function enableAllInputs() {
+      const p = document.querySelector('.left-panel');
+      if (p) p.querySelectorAll('input,select,textarea,.btn-save').forEach(el => el.disabled = false);
+    }
+
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled = false;
+        btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state !== 'Locked') return;
+      const cy = String(new Date().getFullYear());
+      const cv = vintageData.find(v => v.year === cy);
+      document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+      document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${cy}. Continue?`;
+      document.getElementById('unlockModalConfirm').onclick = async () => {
+        await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: activeVintage.id, fields: { [F_VINTAGE_STATUS]: 'Active' } }] }) });
+        if (cv) await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: cv.id, fields: { [F_VINTAGE_STATUS]: 'Locked' } }] }) });
+        activeVintage.state = 'Active';
+        if (cv) cv.state = 'Locked';
+        renderVintagePill(activeVintage);
+        applyVintageState('Active', activeVintage.year);
+        closeUnlockModal();
+      };
+      document.getElementById('vintageUnlockModal').classList.add('open');
+    }
+
+    function closeUnlockModal() {
+      document.getElementById('vintageUnlockModal').classList.remove('open');
+    }
+
+    // ── NAV ────────────────────────────────────────────────────────────────────
+    function openNav()  { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
+    function closeNav() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
+
+    // ── BURDEN PREVIEW ─────────────────────────────────────────────────────────
+    function updateBurdenPreview() {
+      const h = parseFloat(document.getElementById('fHourlyRate').value) || 0;
+      const t = parseFloat(document.getElementById('fTaxIns').value) || 0;
+      const p = document.getElementById('burdenPreview');
+      if (h > 0) {
+        document.getElementById('burdenValue').textContent = `$${(h * (1 + t / 100)).toFixed(2)} / hr`;
+        p.style.display = 'block';
+      } else {
+        p.style.display = 'none';
+      }
+    }
+
+    // ── SAVE RATE ──────────────────────────────────────────────────────────────
+    async function saveRate() {
+      const name = document.getElementById('fCategoryName').value.trim();
+      if (!name) { alert('Category name is required.'); return; }
+      const hourly = parseFloat(document.getElementById('fHourlyRate').value);
+      if (!hourly || hourly <= 0) { alert('Hourly rate is required.'); return; }
+      const taxPct = parseFloat(document.getElementById('fTaxIns').value) || 0;
+      try {
+        const res = await fetch(PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            baseId: BASE_ID,
+            tableId: TBL_LABOR_RATES,
+            records: [{ fields: { [F_CATEGORY_NAME]: name, [F_HOURLY_RATE]: hourly, [F_TAX_INS_MULT]: taxPct / 100 } }]
+          })
+        });
+        if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+        document.getElementById('fCategoryName').value = '';
+        document.getElementById('fHourlyRate').value = '';
+        document.getElementById('fTaxIns').value = '';
+        document.getElementById('burdenPreview').style.display = 'none';
+        await loadRates();
+      } catch (e) {
+        console.error('Failed to save rate', e);
+        alert('Failed to save. Please try again.');
+      }
+    }
+
+    // ── LOAD RATES ─────────────────────────────────────────────────────────────
+    async function loadRates() {
+      try {
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_LABOR_RATES}&sort[0][field]=${F_CATEGORY_NAME}&sort[0][direction]=asc`);
+        const data = await res.json();
+        const records = data.records || [];
+        const tbody = document.getElementById('ratesBody');
+        if (!records.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No rates yet. Add one in the panel.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = records.map(r => {
+          const name     = r.fields[F_CATEGORY_NAME] || '—';
+          const hourly   = r.fields[F_HOURLY_RATE] != null ? `$${Number(r.fields[F_HOURLY_RATE]).toFixed(2)}` : '—';
+          const taxRaw   = r.fields[F_TAX_INS_MULT];
+          const taxDisp  = taxRaw != null ? `${(taxRaw * 100).toFixed(1)}%` : '—';
+          const burdened = r.fields[F_BURDENED_RATE] != null ? `$${Number(r.fields[F_BURDENED_RATE]).toFixed(2)}` : '—';
+          return `<tr>
+            <td>${name}</td>
+            <td>${hourly}</td>
+            <td>${taxDisp}</td>
+            <td style="font-weight:600;color:var(--beeswax);">${burdened}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load rates', e);
+        document.getElementById('ratesBody').innerHTML = '<tr><td colspan="4" class="empty-state">Error loading rates.</td></tr>';
+      }
+    }
+
+    // ── INIT ───────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initVintage();
+      await loadRates();
+    });
+  </script>
+</body>
+</html>
