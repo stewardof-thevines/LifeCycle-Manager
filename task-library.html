@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Library — Winery Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine: #D44720;
+      --beeswax:   #E9A752;
+      --darlington:#ACCAB2;
+      --latte:     #786140;
+      --cream:     #F5EFE4;
+      --dark:      #1e1710;
+      --white:     #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Barlow',sans-serif; background:var(--cream); color:var(--dark); min-height:100vh; display:flex; flex-direction:column; }
+
+    /* ── TOPBAR ── */
+    .topbar { height:58px; background:var(--dark); display:flex; align-items:center; padding:0 16px; gap:12px; position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .topbar-hamburger { width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.65); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+    .topbar-hamburger:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .topbar-logo { font-family:'Playfair Display',serif; font-size:17px; font-weight:900; color:var(--cream); text-decoration:none; flex-shrink:0; }
+    .topbar-logo span { color:var(--grenadine); }
+    .topbar-sep { width:1px; height:20px; background:rgba(255,255,255,0.12); flex-shrink:0; }
+    .topbar-breadcrumb { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--beeswax); flex-shrink:0; }
+
+    /* ── LAYOUT ── */
+    .app-body { display:flex; flex:1; height:calc(100vh - 58px); }
+    .left-panel { width:380px; flex-shrink:0; background:var(--dark); overflow-y:auto; padding:24px; }
+    .main-area { flex:1; background:var(--cream); overflow-y:auto; padding:24px; }
+
+    /* ── NAV DRAWER ── */
+    .nav-overlay { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.5); }
+    .nav-overlay.open { display:block; }
+    .nav-drawer { position:fixed; top:0; left:-320px; width:300px; height:100vh; background:var(--dark); z-index:500; transition:left 0.25s; display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-drawer.open { left:0; }
+    .nav-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nav-header-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); }
+    .nav-header-logo span { color:var(--grenadine); }
+    .nav-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:16px; cursor:pointer; padding:4px; }
+    .nav-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:16px 20px 6px; }
+    .nav-item { display:block; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.04em; color:rgba(255,255,255,0.65); text-decoration:none; transition:background 0.15s,color 0.15s; }
+    .nav-item:hover { background:rgba(255,255,255,0.06); color:var(--white); }
+    .nav-item.active { color:var(--beeswax); background:rgba(233,167,82,0.08); }
+    .nav-setup-divider { height:1px; background:rgba(255,255,255,0.08); margin:8px 20px; }
+    .nav-item.setup { opacity:0.7; }
+    .nav-footer { margin-top:auto; padding:16px 20px; font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.25); letter-spacing:0.08em; }
+
+    /* ── VINTAGE TOPBAR CONTROL ── */
+    .vintage-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:4px 10px; cursor:pointer; transition:background 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cream); position:relative; }
+    .vintage-pill:hover { background:rgba(255,255,255,0.12); }
+    .vintage-pill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .vintage-pill-dot.active { background:#4ade80; }
+    .vintage-pill-dot.locked { background:var(--beeswax); }
+    .vintage-pill-dot.finalized { background:var(--grenadine); }
+    .vintage-pill-arrow { opacity:0.5; font-size:10px; }
+    .vintage-lock-btn { width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .vintage-lock-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+    .vintage-offline { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; color:var(--beeswax); display:flex; align-items:center; gap:5px; }
+    .vintage-offline-dot { width:6px; height:6px; border-radius:50%; background:var(--beeswax); }
+    .vintage-dropdown { position:absolute; top:calc(100% + 8px); left:0; background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:8px; min-width:200px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden; display:none; }
+    .vintage-dropdown.open { display:block; }
+    .vintage-dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:pointer; transition:background 0.12s; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+    .vintage-dropdown-item:hover { background:rgba(255,255,255,0.07); }
+    .vintage-dropdown-item.selected { color:var(--beeswax); }
+    .vintage-badge { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+    .vintage-badge.active { background:rgba(74,222,128,0.15); color:#4ade80; }
+    .vintage-badge.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); }
+    .vintage-badge.finalized { background:rgba(212,71,32,0.15); color:var(--grenadine); }
+    .vintage-banner { display:none; padding:8px 20px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; align-items:center; gap:10px; flex-shrink:0; }
+    .vintage-banner.locked { background:rgba(233,167,82,0.15); color:var(--beeswax); border-bottom:1px solid rgba(233,167,82,0.2); }
+    .vintage-banner.finalized { background:rgba(212,71,32,0.1); color:var(--grenadine); border-bottom:1px solid rgba(212,71,32,0.2); }
+    .vintage-banner.visible { display:flex; }
+    .vintage-modal-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .vintage-modal-overlay.open { display:flex; }
+    .vintage-modal { background:#2a2018; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:28px; max-width:380px; width:calc(100% - 40px); }
+    .vintage-modal-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:12px; }
+    .vintage-modal-body { font-family:'Barlow',sans-serif; font-size:14px; color:rgba(255,255,255,0.65); line-height:1.5; margin-bottom:24px; }
+    .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+    .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── LEFT PANEL FORM ── */
+    .panel-section-label { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--grenadine); margin-bottom:16px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:6px; }
+    .form-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:var(--white); padding:10px 12px; font-family:'Barlow',sans-serif; font-size:14px; box-sizing:border-box; }
+    .form-input:focus { outline:none; border-color:rgba(255,255,255,0.3); }
+    .form-input::placeholder { color:rgba(255,255,255,0.25); }
+    /* Style select options */
+    .form-input option { background:#2a2018; color:var(--white); }
+    .btn-save { background:var(--grenadine); color:#fff; border:none; border-radius:6px; padding:12px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:opacity 0.15s; }
+    .btn-save:hover { opacity:0.88; }
+    .btn-cancel { padding:12px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:transparent; color:rgba(255,255,255,0.6); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
+
+    /* ── MAIN AREA ── */
+    .section-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--dark); }
+    .task-group { background:var(--white); border-radius:10px; border:1px solid rgba(0,0,0,0.08); margin-bottom:16px; overflow:hidden; }
+    .task-group-header { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); padding:10px 16px; border-bottom:1px solid rgba(0,0,0,0.06); background:rgba(0,0,0,0.02); }
+    .task-row { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; cursor:pointer; transition:background 0.12s; border-bottom:1px solid rgba(0,0,0,0.04); }
+    .task-row:last-child { border-bottom:none; }
+    .task-row:hover { background:rgba(0,0,0,0.03); }
+    .task-name { font-family:'Barlow',sans-serif; font-size:13px; color:var(--dark); }
+    .task-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .task-empty { font-family:'Barlow',sans-serif; font-size:12px; color:var(--latte); padding:12px 16px; }
+    .empty-state { text-align:center; color:var(--latte); font-family:'Barlow',sans-serif; font-size:13px; padding:32px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .app-body { flex-direction:column; height:auto; }
+      .left-panel { width:100%; height:auto; }
+      .main-area { height:auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV OVERLAY + DRAWER -->
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="nav-header">
+      <div class="nav-header-logo">Lifecycle<span>.</span></div>
+      <button class="nav-close" onclick="closeNav()">✕</button>
+    </div>
+    <div class="nav-section-label">Field</div>
+    <a class="nav-item" href="/vineyard.html">🌿 Vineyard</a>
+    <a class="nav-item" href="/harvest.html">⚖️ Harvest</a>
+    <a class="nav-item" href="/vintage-manager.html">🗓 Vintage Manager</a>
+    <div class="nav-section-label">Cellar</div>
+    <a class="nav-item" href="/cellar.html">🍷 Cellar</a>
+    <a class="nav-item" href="/blending-lab.html">🧪 Blending Lab</a>
+    <div class="nav-section-label">Sales</div>
+    <a class="nav-item" href="/skus.html">📦 SKUs</a>
+    <div class="nav-section-label">Operations</div>
+    <a class="nav-item" href="/inventory.html">🏭 Inventory</a>
+    <a class="nav-item" href="/suppliers.html">🤝 Suppliers</a>
+    <div class="nav-section-label">Finance</div>
+    <a class="nav-item" href="/financial-dashboard.html">📊 Financial Dashboard</a>
+    <a class="nav-item" href="/finance.html">📈 Finance</a>
+    <a class="nav-item" href="/overhead-opex.html">💸 Overhead &amp; OpEx</a>
+    <div class="nav-setup-divider"></div>
+    <div class="nav-section-label setup">Setup</div>
+    <a class="nav-item setup" href="/labor-rates.html">⏱ Labor Rates</a>
+    <a class="nav-item setup active" href="/task-library.html">📋 Task Library</a>
+    <div class="nav-footer">Lifecycle Manager · v1.0</div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-hamburger" onclick="openNav()">☰</button>
+    <a class="topbar-logo" href="/index.html">Lifecycle<span>.</span></a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-breadcrumb">Task Library</div>
+    <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <div class="vintage-offline" id="vintageOffline" style="display:none;"><span class="vintage-offline-dot"></span>Offline</div>
+      <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+        <span class="vintage-pill-dot active" id="vintageDot"></span>
+        <span id="vintageYear">—</span>
+        <span class="vintage-pill-arrow">▾</span>
+        <div class="vintage-dropdown" id="vintageDropdown"></div>
+      </div>
+      <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+    </div>
+  </div>
+
+  <!-- VINTAGE BANNERS -->
+  <div class="vintage-banner locked" id="vintageBannerLocked">🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.</div>
+  <div class="vintage-banner finalized" id="vintageBannerFinalized">🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized.</div>
+
+  <!-- VINTAGE UNLOCK MODAL -->
+  <div class="vintage-modal-overlay" id="vintageUnlockModal">
+    <div class="vintage-modal">
+      <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+      <div class="vintage-modal-body" id="unlockModalBody"></div>
+      <div class="vintage-modal-actions">
+        <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+        <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- LEFT PANEL — Task Form -->
+    <div class="left-panel">
+      <div class="panel-section-label" id="panelTitle">Add Task</div>
+      <input type="hidden" id="editingRecordId" value="" />
+
+      <div class="form-group">
+        <label class="form-label">Task Name</label>
+        <input type="text" id="fTaskName" class="form-input" placeholder="e.g. Pruning" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <select id="fDepartment" class="form-input">
+          <option value="">— Select —</option>
+          <option value="Vineyard">Vineyard</option>
+          <option value="Cellar">Cellar</option>
+          <option value="Tasting Room">Tasting Room</option>
+          <option value="Events">Events</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="fActive" checked style="width:16px;height:16px;accent-color:var(--grenadine);" />
+        <label for="fActive" class="form-label" style="margin-bottom:0;cursor:pointer;">Active</label>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-save" id="saveBtn" onclick="saveTask()" style="flex:1;">Save Task</button>
+        <button class="btn-cancel" id="cancelBtn" onclick="clearForm()" style="display:none;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- MAIN AREA — Tasks Grouped by Department -->
+    <div class="main-area">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div class="section-title">Task Library</div>
+        <label style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--latte);cursor:pointer;">
+          <input type="checkbox" id="showInactive" onchange="renderTasks()" style="accent-color:var(--grenadine);" />
+          Show Inactive
+        </label>
+      </div>
+      <div id="taskGroups"><div class="empty-state">Loading…</div></div>
+    </div>
+
+  </div><!-- /.app-body -->
+
+  <script>
+    const PROXY   = '/api/airtable';
+    const BASE_ID = 'appJNEHG8sqXmdYGe';
+
+    // Tasks table
+    const TBL_TASKS    = 'tblmsz91HIoI4LjHs';
+    const F_TASK_NAME  = 'fldi3tHNfdITzZ0DX';  // singleLineText
+    const F_DEPARTMENT = 'fldo9F41LBtLTm5kL';  // singleSelect
+    const F_ACTIVE     = 'fldjhr6hV10Kk3Lr0';  // checkbox
+
+    // Vintage system
+    const TBL_VINTAGES     = 'tblJ8NBvXinvXpGPq';
+    const F_VINTAGE_YEAR   = 'fldgc54uvUaT7GwQX';
+    const F_VINTAGE_STATUS = 'fldho6518UjJmfRqX';
+
+    let vintageData = [], activeVintage = null;
+
+    // ── VINTAGE SYSTEM ──────────────────────────────────────────────────────────
+    async function initVintage() {
+      if (!navigator.onLine) {
+        document.getElementById('vintageOffline').style.display = 'flex';
+        document.getElementById('vintageLockBtn').style.display = 'none';
+        const cached = localStorage.getItem('lm_active_vintage');
+        const cy = String(new Date().getFullYear());
+        if (cached && cached !== cy) disableAllInputs();
+        renderVintagePill({ year: cached || cy, state: 'Active' });
+        return;
+      }
+      try {
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_VINTAGES}&sort[0][field]=${F_VINTAGE_YEAR}&sort[0][direction]=desc`);
+        const data = await res.json();
+        vintageData = (data.records || []).map(r => ({
+          id: r.id,
+          year: r.fields[F_VINTAGE_YEAR] || '',
+          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        }));
+        const cy = String(new Date().getFullYear());
+        if (!vintageData.some(v => v.state === 'Active' && v.year === cy)) {
+          const ea = vintageData.find(v => v.state === 'Active');
+          if (ea) {
+            await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: ea.id, fields: { [F_VINTAGE_STATUS]: 'Locked' } }] }) });
+            ea.state = 'Locked';
+          }
+          const pr = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ fields: { [F_VINTAGE_YEAR]: cy, [F_VINTAGE_STATUS]: 'Active' } }] }) });
+          const pd = await pr.json();
+          if (pd.records?.[0]) vintageData.unshift({ id: pd.records[0].id, year: cy, state: 'Active' });
+        }
+        const cached = localStorage.getItem('lm_active_vintage') || cy;
+        activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === cy);
+        if (activeVintage) localStorage.setItem('lm_active_vintage', activeVintage.year);
+        renderVintagePill(activeVintage);
+        applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || cy);
+      } catch (e) {
+        console.warn('Vintage init failed', e);
+      }
+    }
+
+    function renderVintagePill(v) {
+      if (!v) return;
+      document.getElementById('vintageYear').textContent = v.year;
+      const dot = document.getElementById('vintageDot');
+      dot.className = 'vintage-pill-dot';
+      const sl = (v.state || 'Active').toLowerCase();
+      dot.classList.add(sl);
+      const lb = document.getElementById('vintageLockBtn');
+      if (sl === 'locked') {
+        lb.style.display = 'flex';
+        lb.textContent = '🔓';
+        lb.title = 'Unlock vintage';
+      } else {
+        lb.style.display = 'none';
+      }
+      document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+        `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected' : ''}" onclick="selectVintage('${vd.year.replace(/'/g, "\\'")}',event)">${vd.year}<span class="vintage-badge ${(vd.state || 'Active').toLowerCase()}">${vd.state || 'Active'}</span></div>`
+      ).join('');
+    }
+
+    function toggleVintageDropdown(e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.toggle('open');
+    }
+
+    document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+    function selectVintage(year, e) {
+      e.stopPropagation();
+      document.getElementById('vintageDropdown').classList.remove('open');
+      const sel = vintageData.find(v => v.year === year);
+      if (!sel || sel.year === activeVintage?.year) return;
+      activeVintage = sel;
+      localStorage.setItem('lm_active_vintage', year);
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage.state, activeVintage.year);
+    }
+
+    function applyVintageState(state, year) {
+      document.getElementById('vintageBannerLocked').classList.remove('visible');
+      document.getElementById('vintageBannerFinalized').classList.remove('visible');
+      if (state === 'Locked') {
+        document.getElementById('bannerYearLocked').textContent = year;
+        document.getElementById('vintageBannerLocked').classList.add('visible');
+        disableAllInputs();
+      } else if (state === 'Finalized') {
+        document.getElementById('bannerYearFinalized').textContent = year;
+        document.getElementById('vintageBannerFinalized').classList.add('visible');
+        disableAllInputs();
+        replaceSubmitWithRequestEdit();
+      } else {
+        enableAllInputs();
+      }
+    }
+
+    function disableAllInputs() {
+      const p = document.querySelector('.left-panel');
+      if (p) p.querySelectorAll('input,select,textarea,.btn-save').forEach(el => el.disabled = true);
+    }
+
+    function enableAllInputs() {
+      const p = document.querySelector('.left-panel');
+      if (p) p.querySelectorAll('input,select,textarea,.btn-save').forEach(el => el.disabled = false);
+      const saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.textContent = 'Save Task';
+    }
+
+    function replaceSubmitWithRequestEdit() {
+      document.querySelectorAll('.btn-save').forEach(btn => {
+        btn.textContent = 'Request Edit';
+        btn.disabled = false;
+        btn.onclick = () => alert('Change-log editing available in Financial Dashboard for finalized vintages.');
+      });
+    }
+
+    function handleLockToggle() {
+      if (!activeVintage || activeVintage.state !== 'Locked') return;
+      const cy = String(new Date().getFullYear());
+      const cv = vintageData.find(v => v.year === cy);
+      document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+      document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${cy}. Continue?`;
+      document.getElementById('unlockModalConfirm').onclick = async () => {
+        await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: activeVintage.id, fields: { [F_VINTAGE_STATUS]: 'Active' } }] }) });
+        if (cv) await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: cv.id, fields: { [F_VINTAGE_STATUS]: 'Locked' } }] }) });
+        activeVintage.state = 'Active';
+        if (cv) cv.state = 'Locked';
+        renderVintagePill(activeVintage);
+        applyVintageState('Active', activeVintage.year);
+        closeUnlockModal();
+      };
+      document.getElementById('vintageUnlockModal').classList.add('open');
+    }
+
+    function closeUnlockModal() {
+      document.getElementById('vintageUnlockModal').classList.remove('open');
+    }
+
+    // ── NAV ─────────────────────────────────────────────────────────────────────
+    function openNav()  { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
+    function closeNav() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
+
+    // ── TASK FORM ────────────────────────────────────────────────────────────────
+    const DEPARTMENTS = ['Vineyard', 'Cellar', 'Tasting Room', 'Events', 'Admin'];
+    let allTasks = [];
+    const taskMap = {};
+
+    function loadFormForEdit(record) {
+      document.getElementById('editingRecordId').value = record.id;
+      document.getElementById('fTaskName').value = record.fields[F_TASK_NAME] || '';
+      document.getElementById('fDepartment').value = record.fields[F_DEPARTMENT]?.name || '';
+      document.getElementById('fActive').checked = record.fields[F_ACTIVE] !== false;
+      document.getElementById('panelTitle').textContent = 'Edit Task';
+      document.getElementById('cancelBtn').style.display = 'block';
+      document.getElementById('fTaskName').focus();
+    }
+
+    function editTask(id) {
+      const record = taskMap[id];
+      if (record) loadFormForEdit(record);
+    }
+
+    function clearForm() {
+      document.getElementById('editingRecordId').value = '';
+      document.getElementById('fTaskName').value = '';
+      document.getElementById('fDepartment').value = '';
+      document.getElementById('fActive').checked = true;
+      document.getElementById('panelTitle').textContent = 'Add Task';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    async function saveTask() {
+      const name = document.getElementById('fTaskName').value.trim();
+      if (!name) { alert('Task name is required.'); return; }
+      const dept = document.getElementById('fDepartment').value;
+      const active = document.getElementById('fActive').checked;
+      const recordId = document.getElementById('editingRecordId').value;
+
+      const fields = { [F_TASK_NAME]: name, [F_ACTIVE]: active };
+      if (dept) fields[F_DEPARTMENT] = dept;
+
+      try {
+        if (recordId) {
+          const res = await fetch(PROXY, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_TASKS, records: [{ id: recordId, fields }] })
+          });
+          if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+        } else {
+          const res = await fetch(PROXY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_TASKS, records: [{ fields }] })
+          });
+          if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+        }
+        clearForm();
+        await loadTasks();
+      } catch (e) {
+        console.error('Failed to save task', e);
+        alert('Failed to save. Please try again.');
+      }
+    }
+
+    // ── LOAD & RENDER TASKS ──────────────────────────────────────────────────────
+    async function loadTasks() {
+      try {
+        const res = await fetch(`${PROXY}?baseId=${BASE_ID}&tableId=${TBL_TASKS}&sort[0][field]=${F_TASK_NAME}&sort[0][direction]=asc`);
+        const data = await res.json();
+        allTasks = data.records || [];
+        renderTasks();
+      } catch (e) {
+        console.error('Failed to load tasks', e);
+        document.getElementById('taskGroups').innerHTML = '<div class="empty-state">Error loading tasks.</div>';
+      }
+    }
+
+    function renderTasks() {
+      const showInactive = document.getElementById('showInactive').checked;
+      const container = document.getElementById('taskGroups');
+
+      // Rebuild taskMap
+      allTasks.forEach(r => { taskMap[r.id] = r; });
+
+      // Group by department
+      const groups = {};
+      DEPARTMENTS.forEach(d => { groups[d] = []; });
+      groups['Uncategorized'] = [];
+      allTasks.forEach(r => {
+        const dept = r.fields[F_DEPARTMENT]?.name || '';
+        if (groups[dept] !== undefined) {
+          groups[dept].push(r);
+        } else {
+          groups['Uncategorized'].push(r);
+        }
+      });
+
+      const deptOrder = [...DEPARTMENTS, 'Uncategorized'];
+      const html = deptOrder.map(dept => {
+        const tasks = groups[dept];
+        if (!tasks.length) return '';
+
+        const visibleTasks = showInactive ? tasks : tasks.filter(r => r.fields[F_ACTIVE] !== false);
+        if (!visibleTasks.length) return '';
+
+        const rows = tasks.map(r => {
+          const active = r.fields[F_ACTIVE] !== false;
+          if (!active && !showInactive) return '';
+          const name = r.fields[F_TASK_NAME] || '—';
+          const style = active ? '' : 'opacity:0.45;text-decoration:line-through;';
+          return `<div class="task-row" style="${style}" onclick="editTask('${r.id}')">
+            <span class="task-name">${name}</span>
+            <span class="task-status-dot" style="background:${active ? '#4ade80' : 'rgba(0,0,0,0.12)'};"></span>
+          </div>`;
+        }).join('');
+
+        return `<div class="task-group">
+          <div class="task-group-header">${dept}</div>
+          <div class="task-group-body">${rows || '<div class="task-empty">No active tasks.</div>'}</div>
+        </div>`;
+      }).join('');
+
+      container.innerHTML = html || '<div class="empty-state">No tasks found. Add one in the panel.</div>';
+    }
+
+    // ── INIT ─────────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initVintage();
+      await loadTasks();
+    });
+  </script>
+</body>
+</html>
