@@ -441,6 +441,22 @@
     .vintage-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
     .vintage-modal-cancel { padding:9px 18px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:rgba(255,255,255,0.55); cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
     .vintage-modal-confirm { padding:9px 18px; border-radius:6px; border:none; background:var(--grenadine); color:#fff; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+
+    /* ── Open Events Switcher ── */
+    .open-events-list { display:none; flex-direction:column; gap:6px; }
+    .oec { display:flex; align-items:center; gap:12px; background:var(--white); border-radius:10px; border:1px solid rgba(120,97,64,0.12); padding:11px 16px; cursor:pointer; transition:all 0.18s; }
+    .oec:hover { border-color:rgba(120,97,64,0.28); box-shadow:0 3px 12px rgba(30,23,16,0.07); }
+    .oec.active-event { border-color:rgba(212,71,32,0.35); background:#fffaf8; cursor:default; }
+    .oec-dot { width:8px; height:8px; border-radius:50%; background:rgba(120,97,64,0.2); flex-shrink:0; }
+    .oec.active-event .oec-dot { background:var(--grenadine); box-shadow:0 0 0 3px rgba(212,71,32,0.15); animation:pulse 2s infinite; }
+    .oec-info { flex:1; min-width:0; overflow:hidden; }
+    .oec-name { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.04em; color:var(--dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .oec-meta { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:rgba(30,23,16,0.4); margin-top:2px; }
+    .oec-stats { display:flex; gap:16px; flex-shrink:0; align-items:center; }
+    .oec-stat { text-align:right; }
+    .oec-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; color:var(--dark); line-height:1; }
+    .oec-stat-label { font-family:'Barlow Condensed',sans-serif; font-size:8.5px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(30,23,16,0.35); margin-top:2px; }
+    .oec-active-badge { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--grenadine); flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -498,42 +514,72 @@
     <button class="nav-close" onclick="closeNav()">✕</button>
   </div>
   <div class="nav-section-label">Field</div>
-  <a class="nav-item" href="Vineyard_1.4.html">
+  <a class="nav-item" href="/vineyard.html">
     <span class="nav-item-icon">🌿</span>
     <span class="nav-item-label">Vineyard</span>
+  </a>
+  <a class="nav-item" href="/vintage-manager.html">
+    <span class="nav-item-icon">🗓</span>
+    <span class="nav-item-label">Vintage Manager</span>
   </a>
   <div class="nav-item active nav-item-parent">
     <span class="nav-item-icon">⚖</span>
     <span class="nav-item-label">Harvest</span>
   </div>
-  <a class="nav-item nav-subitem" href="Harvest_1.4.html" onclick="closeNav()">
+  <a class="nav-item nav-subitem" href="/harvest.html" onclick="closeNav()">
     <span class="nav-item-icon" style="font-size:11px">⚖</span>
     <span class="nav-item-label">Scale House</span>
   </a>
-  <a class="nav-item nav-subitem" href="Harvest_1.4.html?view=overview" onclick="closeNav()">
+  <a class="nav-item nav-subitem" href="/harvest.html?view=overview" onclick="closeNav()">
     <span class="nav-item-icon" style="font-size:11px">📊</span>
     <span class="nav-item-label">Season Overview</span>
   </a>
-  <div class="nav-section-label">Packaging</div>
-  <a class="nav-item" href="SKUs_1.4.html">
-    <span class="nav-item-icon">📦</span>
-    <span class="nav-item-label">SKUs</span>
-  </a>
   <div class="nav-section-label">Cellar</div>
-  <a class="nav-item" href="Cellar_1.6.html">
+  <a class="nav-item" href="/cellar.html">
     <span class="nav-item-icon">🍷</span>
     <span class="nav-item-label">Cellar</span>
   </a>
-  <a class="nav-item" href="BlendingLab_1.3.html">
+  <a class="nav-item" href="/blending-lab.html">
     <span class="nav-item-icon">🧪</span>
     <span class="nav-item-label">Blending Lab</span>
   </a>
+  <div class="nav-section-label">Sales</div>
+  <a class="nav-item" href="/skus.html">
+    <span class="nav-item-icon">📦</span>
+    <span class="nav-item-label">SKUs</span>
+  </a>
+  <div class="nav-section-label">Operations</div>
+  <a class="nav-item" href="/inventory.html">
+    <span class="nav-item-icon">🏭</span>
+    <span class="nav-item-label">Inventory</span>
+  </a>
+  <a class="nav-item" href="/suppliers.html">
+    <span class="nav-item-icon">🤝</span>
+    <span class="nav-item-label">Suppliers</span>
+  </a>
   <div class="nav-section-label">Finance</div>
-  <a class="nav-item" href="/Finance_1.0.html">
+  <a class="nav-item" href="/financial-dashboard.html">
     <span class="nav-item-icon">📊</span>
+    <span class="nav-item-label">Financial Dashboard</span>
+  </a>
+  <a class="nav-item" href="/finance.html">
+    <span class="nav-item-icon">📈</span>
     <span class="nav-item-label">Finance</span>
   </a>
-  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+  <a class="nav-item" href="/overhead-opex.html">
+    <span class="nav-item-icon">💸</span>
+    <span class="nav-item-label">Overhead &amp; OpEx</span>
+  </a>
+  <div class="nav-section-label" style="margin-top:8px;opacity:0.6">Setup</div>
+  <a class="nav-item" href="/labor-rates.html">
+    <span class="nav-item-icon">⏱</span>
+    <span class="nav-item-label">Labor Rates</span>
+  </a>
+  <a class="nav-item" href="/task-library.html">
+    <span class="nav-item-icon">📋</span>
+    <span class="nav-item-label">Task Library</span>
+  </a>
+  <div class="nav-footer">Lifecycle Manager · v1.0</div>
 </div>
 
 
@@ -581,6 +627,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Open events switcher — visible when 2+ events are open -->
+      <div id="open-events-list" class="open-events-list"></div>
 
       <!-- Scale ticket entry -->
       <div class="scale-ticket-entry">
@@ -1073,6 +1122,7 @@
   let activeEventId = null;
   let currentTickets = [];
   let ticketCounter = 0;
+  let ticketsByEvent = {}; // eventId → { tickets: [], counter: N }
   let createLot = false;
   let advancedOpen = false;
   let expandedEvent = null;
@@ -1220,6 +1270,33 @@
     document.getElementById('record-btn').disabled = !(activeEventId && net > 0);
   }
 
+  // ─── Open events switcher ─────────────────────────────────────────────────
+  function renderOpenEvents() {
+    const list = document.getElementById('open-events-list');
+    const ids = Object.keys(ticketsByEvent);
+    if (ids.length <= 1) { list.style.display = 'none'; return; }
+    list.style.display = 'flex';
+    list.innerHTML = ids.map(id => {
+      const ev = events.find(e => e.id === id);
+      if (!ev) return '';
+      const tickets = id === activeEventId ? currentTickets : (ticketsByEvent[id]?.tickets || []);
+      const totNet = tickets.reduce((s, t) => s + t.net, 0);
+      const isActive = id === activeEventId;
+      return `<div class="oec ${isActive ? 'active-event' : ''}" onclick="${isActive ? '' : `activateEvent('${id}')`}">
+        <div class="oec-dot"></div>
+        <div class="oec-info">
+          <div class="oec-name">${ev.name}</div>
+          <div class="oec-meta">${ev.block} · ${fmtDate(ev.date)}</div>
+        </div>
+        <div class="oec-stats">
+          <div class="oec-stat"><div class="oec-stat-val">${tickets.length}</div><div class="oec-stat-label">Tickets</div></div>
+          <div class="oec-stat"><div class="oec-stat-val">${(totNet / 2000).toFixed(2)}</div><div class="oec-stat-label">Tons</div></div>
+        </div>
+        ${isActive ? '<span class="oec-active-badge">● Active</span>' : ''}
+      </div>`;
+    }).join('');
+  }
+
   // ─── Record ticket ────────────────────────────────────────────────────────
   function recordTicket() {
     const gross = parseFloat(document.getElementById('gross-weight').value);
@@ -1235,6 +1312,10 @@
     ticketCounter++;
     const ticket = { id: ticketCounter, time, binType: binName, gross, tare, net, brix, ph, temp };
     currentTickets.push(ticket);
+    if (activeEventId && ticketsByEvent[activeEventId]) {
+      ticketsByEvent[activeEventId].tickets = [...currentTickets];
+      ticketsByEvent[activeEventId].counter = ticketCounter;
+    }
 
     // Flash animation
     renderTickets();
@@ -1374,8 +1455,14 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
       tickets:    []
     };
 
+    // Save current event's tickets before switching
+    if (activeEventId && ticketsByEvent[activeEventId]) {
+      ticketsByEvent[activeEventId].tickets = [...currentTickets];
+      ticketsByEvent[activeEventId].counter = ticketCounter;
+    }
     events.unshift(ev);
     activeEventId = ev.id;
+    ticketsByEvent[ev.id] = { tickets: [], counter: 0 };
     currentTickets = [];
     ticketCounter = 0;
     // Write to Airtable in background
@@ -1390,9 +1477,15 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
       if (ev.cost)     fields[F_EV_COST]     = ev.cost;
       if (blockRec)    fields[F_EV_BLOCK]    = [blockRec._id];
       const created = await airtableCreate(TBL_EVENTS, fields);
+      const oldTempId = ev.id;
       ev._id = created.id || ev._id;
       ev.id  = ev._id;
       activeEventId = ev.id;
+      // Re-key ticketsByEvent from temp ID to real Airtable ID
+      if (ticketsByEvent[oldTempId]) {
+        ticketsByEvent[ev.id] = ticketsByEvent[oldTempId];
+        delete ticketsByEvent[oldTempId];
+      }
     } catch(err) {
       console.error('Airtable event create failed:', err);
     }
@@ -1407,6 +1500,7 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
     updateBanner();
     renderTickets();
 
+    renderOpenEvents();
     showToast(`"${ev.name}" opened — start scanning bins`);
     calcNet(); // re-evaluate record button now that activeEventId is set
     setView('scale');
@@ -1569,17 +1663,31 @@ if (activeEventId && !activeEventId.startsWith('temp-')) {
 
   function activateEvent(id) {
     const ev = events.find(e => e.id === id);
-    if (!ev) return;
+    if (!ev || id === activeEventId) return;
+    // Save current event state
+    if (activeEventId && ticketsByEvent[activeEventId]) {
+      ticketsByEvent[activeEventId].tickets = [...currentTickets];
+      ticketsByEvent[activeEventId].counter = ticketCounter;
+    }
     activeEventId = id;
-    currentTickets = [...ev.tickets];
-    ticketCounter = currentTickets.length;
+    // Load from session cache, or fall back to event's initial tickets
+    if (ticketsByEvent[id]) {
+      currentTickets = [...ticketsByEvent[id].tickets];
+      ticketCounter  = ticketsByEvent[id].counter;
+    } else {
+      currentTickets = [...ev.tickets];
+      ticketCounter  = currentTickets.length;
+    }
     document.getElementById('no-event-banner').style.display = 'none';
     document.getElementById('active-banner').style.display   = 'flex';
+    document.querySelector('.scale-ticket-entry').classList.remove('blocked');
     document.getElementById('banner-name').textContent = ev.name;
     document.getElementById('banner-meta').textContent = ev.block + ' · ' + fmtDate(ev.date);
     updateBanner();
     renderTickets();
-    showToast(`"${ev.name}" activated`);
+    renderOpenEvents();
+    calcNet();
+    showToast(`Switched to "${ev.name}"`);
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────

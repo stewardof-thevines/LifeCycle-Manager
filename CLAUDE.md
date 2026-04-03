@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v10` (deployed with Phase 2)
-Next version (Phase 3): `lifecycle-v11`
+Current version: `lifecycle-v12` (deployed with bug fixes — harvest concurrent events, skus lot resolution + wine cost auto-calc + available gal display, harvest nav links corrected)
+Next version: `lifecycle-v13`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 

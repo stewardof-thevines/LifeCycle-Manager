@@ -918,7 +918,7 @@
         .map(r => {
           const f = r.fields || r.cellValuesByFieldId || {};
           const lotLink  = f[F_SKU_LOT];
-          const lotName  = Array.isArray(lotLink) ? (lotLink[0]?.name || '') : '';
+          const lotName  = Array.isArray(lotLink) ? (LOT_RECORDS.find(l => l.id === lotLink[0])?.name || '') : '';
           const allocPct = f[F_SKU_ALLOC]   || 0;
           const galAlloc = f[F_SKU_GALLOC]  || 0;
           const bottles  = typeof f[F_SKU_BOTTLES] === 'number' ? Math.round(f[F_SKU_BOTTLES]) : null;
@@ -942,7 +942,7 @@
             cases,
             bottle: '750ml', bottleVol: 750, caseCount: 12,
             closure: '', label: '',
-            wineCostPerBottle: 0,
+            wineCostPerBottle: (LOTS[lotName]?.costPerGal || 0) * (750 / 1000 / 3.78541),
             packagingCostPerBottle: 0,
             unitCOGS: ucogs,
             msrp,
@@ -1087,7 +1087,7 @@
           <div class="sku-header">
             <div>
               <div class="sku-name">${s.name}</div>
-              <div class="sku-meta">${s.isBlend ? '' : s.lot+' · '}${s.galAlloc||'—'} gal</div>
+              <div class="sku-meta">${s.isBlend ? '' : s.lot+' · '}${s.galAlloc||'—'} gal${!s.isBlend && LOTS[s.lot]?.remainGal ? ' / '+LOTS[s.lot].remainGal+' avail' : ''}</div>
               ${s.isBlend ? '<div class="blend-pill">⊕ Blend</div>' : ''}
             </div>
             <div class="margin-badge mb-${mc}">${s.margin !== null ? s.margin.toFixed(0)+'%' : '—'}</div>

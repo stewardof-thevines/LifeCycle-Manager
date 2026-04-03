@@ -434,24 +434,24 @@
     </header>
 
     <div class="stats-row" id="stats-row">
-      <div class="stat-cell" id="stat-blocks">
-        <span class="stat-value loading" id="val-blocks">—</span>
-        <span class="stat-label">Blocks</span>
+      <div class="stat-cell" id="stat-acres">
+        <span class="stat-value loading" id="val-acres">—</span>
+        <span class="stat-label">Acres</span>
       </div>
-      <div class="stat-cell" id="stat-lots">
-        <span class="stat-value loading" id="val-lots">—</span>
-        <span class="stat-label">Active Lots</span>
+      <div class="stat-cell" id="stat-esttons">
+        <span class="stat-value loading" id="val-esttons">—</span>
+        <span class="stat-label">Est. Tonnage</span>
       </div>
-      <div class="stat-cell" id="stat-harvest">
-        <span class="stat-value loading" id="val-harvest">—</span>
-        <span class="stat-label">Pick Events</span>
+      <div class="stat-cell" id="stat-acttons">
+        <span class="stat-value loading" id="val-acttons">—</span>
+        <span class="stat-label">Act. Tonnage</span>
       </div>
     </div>
 
     <div class="nav-section-label">Operations</div>
 
     <nav class="nav-grid">
-      <a class="nav-card" href="/Vineyard_1.4.html">
+      <a class="nav-card" href="/vineyard.html">
         <div class="nav-card-accent accent-vine"></div>
         <div class="nav-card-icon">🌿</div>
         <div class="nav-card-body">
@@ -461,7 +461,7 @@
         <div class="nav-card-arrow">›</div>
       </a>
 
-      <a class="nav-card" href="/Cellar_1.6.html">
+      <a class="nav-card" href="/cellar.html">
         <div class="nav-card-accent accent-cellar"></div>
         <div class="nav-card-icon">🍷</div>
         <div class="nav-card-body">
@@ -471,7 +471,7 @@
         <div class="nav-card-arrow">›</div>
       </a>
 
-      <a class="nav-card" href="/Harvest_1.4.html">
+      <a class="nav-card" href="/harvest.html">
         <div class="nav-card-accent accent-harvest"></div>
         <div class="nav-card-icon">⚖️</div>
         <div class="nav-card-body">
@@ -481,7 +481,7 @@
         <div class="nav-card-arrow">›</div>
       </a>
 
-      <a class="nav-card" href="/SKUs_1.4.html">
+      <a class="nav-card" href="/skus.html">
         <div class="nav-card-accent accent-skus"></div>
         <div class="nav-card-icon">🏷️</div>
         <div class="nav-card-body">
@@ -491,7 +491,7 @@
         <div class="nav-card-arrow">›</div>
       </a>
 
-      <a class="nav-card" href="/BlendingLab_1.3.html">
+      <a class="nav-card" href="/blending-lab.html">
         <div class="nav-card-accent accent-blend"></div>
         <div class="nav-card-icon">⚗️</div>
         <div class="nav-card-body">
@@ -501,7 +501,7 @@
         <div class="nav-card-arrow">›</div>
       </a>
 
-      <a class="nav-card" href="/Finance_1.0.html">
+      <a class="nav-card" href="/finance.html">
         <div class="nav-card-accent accent-finance"></div>
         <div class="nav-card-icon">📊</div>
         <div class="nav-card-body">
@@ -519,8 +519,11 @@
   </div>
 
   <script>
-    const BASE_ID  = 'appJNEHG8sqXmdYGe';
-    const TBL_BLOCKS  = 'tblPuFD0fbiLmITXK';
+    const BASE_ID    = 'appJNEHG8sqXmdYGe';
+    const TBL_BLOCKS = 'tblPuFD0fbiLmITXK';
+    const F_BLOCK_ACRES   = 'fldmXtigs8eGYXN5Z';
+    const F_BLOCK_ESTTONS = 'fld5REiPH0brFntsK';
+    const F_BLOCK_ACTTONS = 'fldcBL3ubZuCv9UFE';
 
     /* ── Vintage Topbar Control ── */
     const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
@@ -659,15 +662,10 @@
     function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
 
     document.addEventListener('DOMContentLoaded', initVintage);
-    const TBL_LOTS    = 'tblcBMCwq1ng8ykMb';
-    const TBL_EVENTS  = 'tblTDMmErrAssEEAB';
-
-    // Field IDs
-    const F_LOT_STAGE   = 'fldv75LnMHiMhqwVU';
-
-    async function apiFetch(tableId, extraParams = '') {
-      const url = `/api/airtable?baseId=${BASE_ID}&tableId=${tableId}&maxRecords=200${extraParams}`;
-      const r = await fetch(url);
+    async function apiFetch(tableId, fields) {
+      const params = new URLSearchParams({ baseId: BASE_ID, tableId, maxRecords: '200' });
+      if (fields) params.set('fields', JSON.stringify(fields));
+      const r = await fetch(`/api/airtable?${params}`);
       if (!r.ok) throw new Error(`API error ${r.status}`);
       const d = await r.json();
       return d.records || [];
@@ -682,31 +680,17 @@
 
     async function loadStats() {
       try {
-        // Blocks count
-        const blocks = await apiFetch(TBL_BLOCKS);
-        setStatVal('val-blocks', blocks.length);
+        const blocks = await apiFetch(TBL_BLOCKS, [F_BLOCK_ACRES, F_BLOCK_ESTTONS, F_BLOCK_ACTTONS]);
+        const totalAcres   = blocks.reduce((s, r) => s + (r.fields[F_BLOCK_ACRES]   || 0), 0);
+        const totalEstTons = blocks.reduce((s, r) => s + (r.fields[F_BLOCK_ESTTONS] || 0), 0);
+        const totalActTons = blocks.reduce((s, r) => s + (r.fields[F_BLOCK_ACTTONS] || 0), 0);
+        setStatVal('val-acres',   totalAcres   % 1 === 0 ? totalAcres   : totalAcres.toFixed(1));
+        setStatVal('val-esttons', totalEstTons % 1 === 0 ? totalEstTons : totalEstTons.toFixed(1));
+        setStatVal('val-acttons', totalActTons % 1 === 0 ? totalActTons : totalActTons.toFixed(1));
       } catch(e) {
-        setStatVal('val-blocks', '—');
-      }
-
-      try {
-        // Active lots (not Bottled, not Disposed)
-        const lots = await apiFetch(TBL_LOTS);
-        const active = lots.filter(r => {
-          const stage = r.fields?.[F_LOT_STAGE] || '';
-          return stage !== 'Bottled' && stage !== 'Disposed';
-        });
-        setStatVal('val-lots', active.length);
-      } catch(e) {
-        setStatVal('val-lots', '—');
-      }
-
-      try {
-        // Harvest events this year
-        const events = await apiFetch(TBL_EVENTS);
-        setStatVal('val-harvest', events.length);
-      } catch(e) {
-        setStatVal('val-harvest', '—');
+        setStatVal('val-acres',   '—');
+        setStatVal('val-esttons', '—');
+        setStatVal('val-acttons', '—');
       }
     }
 

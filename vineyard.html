@@ -78,6 +78,12 @@
     .block-card-add-icon { font-size:24px; opacity:0.4; }
     .block-card-add-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(30,23,16,0.35); }
 
+    /* BLOCK CARD EDIT/DELETE */
+    .block-card-header-row { display:flex; align-items:flex-start; justify-content:space-between; }
+    .block-delete-btn { flex-shrink:0; width:22px; height:22px; border-radius:5px; background:transparent; border:1px solid rgba(120,97,64,0.15); cursor:pointer; color:rgba(30,23,16,0.25); font-size:10px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; opacity:0; margin-top:2px; }
+    .block-card:hover .block-delete-btn { opacity:1; }
+    .block-delete-btn:hover { background:rgba(212,71,32,0.1); border-color:var(--grenadine); color:var(--grenadine); }
+
     /* LOG TABLE */
     .log-section { margin-top:8px; }
     .log-table-wrap { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
@@ -655,7 +661,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-eyebrow">Vineyard</div>
-      <div class="modal-title">Add New Block</div>
+      <div class="modal-title" id="modal-title">Add New Block</div>
     </div>
     <div class="modal-body">
       <div class="modal-row two">
@@ -682,10 +688,14 @@
           <input type="number" class="field-input" id="m-rowend" placeholder="e.g. 15" />
         </div>
       </div>
-      <div class="modal-row two">
+      <div class="modal-row three">
         <div class="field-group">
           <label class="field-label" style="color:rgba(255,255,255,0.35)">Est. Tons / Acre</label>
           <input type="number" class="field-input" id="m-tons" placeholder="e.g. 1.5" step="0.1" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" style="color:rgba(255,255,255,0.35)">Actual Tons</label>
+          <input type="number" class="field-input" id="m-acttons" placeholder="e.g. 3.2" step="0.1" />
         </div>
         <div class="field-group">
           <label class="field-label" style="color:rgba(255,255,255,0.35)">Block Color</label>
@@ -699,7 +709,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="submit-btn" style="flex:1" onclick="addBlock()">✦ Add Block</button>
+      <button class="submit-btn" style="flex:1" id="modal-submit-btn" onclick="addBlock()">✦ Add Block</button>
       <button class="clear-btn" style="width:100px" onclick="closeModal()">Cancel</button>
     </div>
   </div>
@@ -884,6 +894,15 @@
     if (!res.ok) throw new Error(`Airtable delete error: ${res.status}`);
     return res.json();
   }
+  async function airtablePatch(tableId, recordId, fields) {
+    const res = await fetch('/api/airtable', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, recordId, fields })
+    });
+    if (!res.ok) throw new Error(`Airtable patch error: ${res.status}`);
+    return res.json();
+  }
 
   // ─── Table & Field IDs ──────────────────────────────────────────────────
   const T_BLOCKS = 'tblPuFD0fbiLmITXK';
@@ -927,6 +946,7 @@
   let RATES     = [];  // { id, name, burdened }
   let TASKS_MAP = {};  // dept label → [{ id, name }]
   const DEPT_MAP = { Vineyard:'Vineyard', Cellar:'Cellar/Productions', Admin:'Admin', Sales:'Sales/Tasting Room', Events:'Venue/Events' };
+  let editingBlockId = null;
 
   function varietyColor(name) {
     if (!name) return 'var(--latte)';
@@ -1104,12 +1124,17 @@
       card.className = 'block-card';
       card.setAttribute('data-block', b.name);
       card.setAttribute('data-variety', b.variety);
-      card.onclick = function() { selectBlock(this, b.name); };
+      card.onclick = function() { openEditModal(b.id); };
       card.innerHTML = `
         <div class="block-card-top" style="background:${b.color}"></div>
         <div class="block-card-body">
-          <div class="block-variety">${b.variety}</div>
-          <div class="block-name">${b.name}</div>
+          <div class="block-card-header-row">
+            <div>
+              <div class="block-variety">${b.variety}</div>
+              <div class="block-name">${b.name}</div>
+            </div>
+            <button class="block-delete-btn" onclick="event.stopPropagation();deleteBlock('${b.id}','${b.name.replace(/'/g,"\\'")}')" title="Delete block">✕</button>
+          </div>
           ${rowLabel ? `<div class="block-rows">${rowLabel}</div>` : ''}
           <div class="block-stats">
             <div class="block-stat"><div class="block-stat-label">Acres</div><div class="block-stat-value">${b.acres||'—'}<span class="block-stat-unit">${b.acres?'ac':''}</span></div></div>
@@ -1480,48 +1505,112 @@
       showToast('Entry removed (no Airtable record to delete).');
     }
   }
-  // ─── Add Block Modal ──────────────────────────────────────────────────────
-  function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
+  // ─── Add / Edit Block Modal ───────────────────────────────────────────────
+  function openModal() {
+    editingBlockId = null;
+    document.getElementById('modal-title').textContent = 'Add New Block';
+    document.getElementById('modal-submit-btn').textContent = '✦ Add Block';
+    ['m-name','m-variety','m-acres','m-rowstart','m-rowend','m-tons','m-acttons'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-color').selectedIndex = 0;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+  function openEditModal(blockId) {
+    const b = BLOCKS.find(b => b.id === blockId);
+    if (!b) return;
+    editingBlockId = blockId;
+    document.getElementById('modal-title').textContent = 'Edit Block';
+    document.getElementById('modal-submit-btn').textContent = '✦ Save Changes';
+    document.getElementById('m-name').value     = b.name;
+    document.getElementById('m-variety').value  = b.variety !== 'Unknown' ? b.variety : '';
+    document.getElementById('m-acres').value    = b.acres || '';
+    document.getElementById('m-rowstart').value = b.rowStart || '';
+    document.getElementById('m-rowend').value   = b.rowEnd   || '';
+    document.getElementById('m-acttons').value  = b.actTons  || '';
+    const tpa = b.acres > 0 && b.estTons > 0 ? parseFloat((b.estTons / b.acres).toFixed(2)) : '';
+    document.getElementById('m-tons').value = tpa;
+    const colorSel = document.getElementById('m-color');
+    for (let o of colorSel.options) { if (o.value === b.color) { o.selected = true; break; } }
+    document.getElementById('modal-overlay').classList.add('open');
+  }
   function closeModal() {
     document.getElementById('modal-overlay').classList.remove('open');
-    ['m-name','m-variety','m-acres','m-rowstart','m-rowend','m-tons'].forEach(id => document.getElementById(id).value = '');
+    editingBlockId = null;
   }
   function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
 
   async function addBlock() {
     const name     = document.getElementById('m-name').value.trim();
-    const variety  = document.getElementById('m-variety').value.trim() || 'Unknown';
+    const variety  = document.getElementById('m-variety').value.trim() || guessVariety(name) || 'Unknown';
     const acres    = parseFloat(document.getElementById('m-acres').value) || 0;
     const rowStart = parseInt(document.getElementById('m-rowstart').value) || null;
     const rowEnd   = parseInt(document.getElementById('m-rowend').value)   || null;
     const tons     = parseFloat(document.getElementById('m-tons').value) || 0;
+    const actTons  = parseFloat(document.getElementById('m-acttons').value) || 0;
     const color    = document.getElementById('m-color').value;
 
     if (!name) { showToast('Block name is required.', true); return; }
 
-    // Optimistically add to local registry and render
+    // ── Edit mode ──
+    if (editingBlockId) {
+      const b = BLOCKS.find(b => b.id === editingBlockId);
+      if (!b) return;
+      b.name = name; b.variety = variety; b.acres = acres;
+      b.rowStart = rowStart; b.rowEnd = rowEnd;
+      b.estTons = parseFloat((acres * tons).toFixed(1));
+      b.actTons = actTons; b.color = color;
+      renderBlockCards(); buildBlockDropdown(); updateBlockSummary();
+      showToast(`Block "${name}" updated`);
+      closeModal();
+      if (!editingBlockId.startsWith('temp-')) {
+        try {
+          const fields = { [F_BLOCK_NAME]: name, [F_BLOCK_ACRES]: acres };
+          if (tons)     fields[F_BLOCK_TPACRE]  = tons;
+          if (rowStart) fields[F_BLOCK_ROWST]   = rowStart;
+          if (rowEnd)   fields[F_BLOCK_ROWEND]  = rowEnd;
+          if (actTons)  fields[F_BLOCK_ACTTONS] = actTons;
+          await airtablePatch(T_BLOCKS, b.id, fields);
+        } catch(e) {
+          showToast(`Updated locally — Airtable sync failed.`, true);
+          console.error(e);
+        }
+      }
+      return;
+    }
+
+    // ── Add mode ──
     const tempId = 'temp-' + Date.now();
-    const newBlock = { id: tempId, name, variety, acres, estTons: parseFloat((acres*tons).toFixed(1)), actTons: 0, farmCost: 0, harvestCost: 0, rowStart, rowEnd, color };
+    const newBlock = { id: tempId, name, variety, acres, estTons: parseFloat((acres*tons).toFixed(1)), actTons, farmCost: 0, harvestCost: 0, rowStart, rowEnd, color };
     BLOCKS.push(newBlock);
-    renderBlockCards();
-    buildBlockDropdown();
-    updateBlockSummary();
+    renderBlockCards(); buildBlockDropdown(); updateBlockSummary();
     showToast(`Block "${name}" added`);
     closeModal();
-
-    // Write to Airtable
     try {
       const fields = { [F_BLOCK_NAME]: name, [F_BLOCK_ACRES]: acres };
-      if (tons) fields[F_BLOCK_TPACRE] = tons;
-      if (rowStart) fields[F_BLOCK_ROWST] = rowStart;
-      if (rowEnd)   fields[F_BLOCK_ROWEND] = rowEnd;
+      if (tons)     fields[F_BLOCK_TPACRE]  = tons;
+      if (rowStart) fields[F_BLOCK_ROWST]   = rowStart;
+      if (rowEnd)   fields[F_BLOCK_ROWEND]  = rowEnd;
+      if (actTons)  fields[F_BLOCK_ACTTONS] = actTons;
       const result = await airtableCreate(T_BLOCKS, fields);
-      // Update tempId with real record id
       const idx = BLOCKS.findIndex(b => b.id === tempId);
       if (idx >= 0 && result.id) BLOCKS[idx].id = result.id;
     } catch(e) {
       showToast(`Block added locally — Airtable write failed.`, true);
       console.error(e);
+    }
+  }
+
+  async function deleteBlock(blockId, blockName) {
+    if (!confirm(`Delete block "${blockName}"? This cannot be undone.`)) return;
+    BLOCKS = BLOCKS.filter(b => b.id !== blockId);
+    renderBlockCards(); buildBlockDropdown(); updateBlockSummary();
+    showToast(`Block "${blockName}" deleted`);
+    if (!blockId.startsWith('temp-')) {
+      try {
+        await airtableDelete(T_BLOCKS, blockId);
+      } catch(e) {
+        showToast(`Deleted locally — Airtable sync failed.`, true);
+        console.error(e);
+      }
     }
   }
 
