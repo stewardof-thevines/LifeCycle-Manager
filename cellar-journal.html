@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Winemaker Journal — Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine:#D44720; --beeswax:#E9A752; --darlington:#ACCAB2;
+      --latte:#786140; --cream:#F5EFE4; --white:#ffffff; --dark:#1e1710;
+      --wine-pinot:#6B2D3E; --wine-chard:#C8922A; --wine-ries:#8FA832; --wine-rose:#D4827A;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;}
+    body{font-family:'Barlow',sans-serif;background:var(--cream);color:var(--dark);display:flex;flex-direction:column;}
+
+    /* ── TOPBAR ── */
+    .topbar{height:58px;background:var(--dark);display:flex;align-items:center;padding:0 32px;gap:20px;position:sticky;top:0;z-index:100;flex-shrink:0;}
+    .topbar-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;color:var(--cream);}
+    .topbar-logo span{color:var(--grenadine);}
+    .topbar-sep{width:1px;height:20px;background:rgba(255,255,255,0.12);}
+    .topbar-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;}
+    .topbar-section{color:rgba(255,255,255,0.35);}
+    .topbar-current{color:var(--beeswax);}
+    .topbar-arrow{color:rgba(255,255,255,0.2);}
+    .topbar-spacer{flex:1;}
+    .topbar-btn{height:32px;padding:0 14px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0.08em;cursor:pointer;border:none;display:flex;align-items:center;gap:6px;transition:all 0.18s;}
+    .topbar-btn.primary{background:var(--grenadine);color:#fff;}
+    .topbar-btn.primary:hover{background:#c03d1a;}
+
+    /* ── NAV DRAWER ── */
+    .nav-toggle{width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all 0.18s;flex-shrink:0;}
+    .nav-toggle:hover{background:rgba(255,255,255,0.13);color:#fff;}
+    .nav-overlay{display:none;position:fixed;inset:0;z-index:490;background:rgba(0,0,0,0.45);}
+    .nav-overlay.visible{display:block;}
+    .nav-drawer{position:fixed;top:0;left:-280px;width:280px;height:100vh;background:var(--dark);z-index:500;display:flex;flex-direction:column;transition:left 0.25s cubic-bezier(0.4,0,0.2,1);box-shadow:4px 0 32px rgba(0,0,0,0.4);}
+    .nav-drawer.open{left:0;}
+    .nav-header{height:58px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+    .nav-header-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;color:var(--cream);flex:1;}
+    .nav-header-logo span{color:var(--grenadine);}
+    .nav-close{width:28px;height:28px;border-radius:5px;background:rgba(255,255,255,0.07);border:none;color:rgba(255,255,255,0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.15s;}
+    .nav-close:hover{background:rgba(255,255,255,0.13);color:#fff;}
+    .nav-section-label{font-family:'Barlow Condensed',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:20px 20px 6px;}
+    .nav-section-label:first-of-type{padding-top:16px;}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;text-decoration:none;border-left:3px solid transparent;transition:all 0.15s;}
+    .nav-item:hover{background:rgba(255,255,255,0.06);border-left-color:rgba(255,255,255,0.15);}
+    .nav-item.active{background:rgba(233,167,82,0.1);border-left-color:var(--beeswax);}
+    .nav-item-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;opacity:0.75;}
+    .nav-item.active .nav-item-icon{opacity:1;}
+    .nav-item-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);transition:color 0.15s;}
+    .nav-item:hover .nav-item-label{color:rgba(255,255,255,0.85);}
+    .nav-item.active .nav-item-label{color:var(--beeswax);}
+    .nav-footer{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.18);}
+
+    /* ── VINTAGE CONTROL ── */
+    .vintage-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 10px;cursor:pointer;transition:background 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--cream);position:relative;}
+    .vintage-pill:hover{background:rgba(255,255,255,0.12);}
+    .vintage-pill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .vintage-pill-dot.active{background:#4ade80;}
+    .vintage-pill-dot.locked{background:var(--beeswax);}
+    .vintage-pill-dot.finalized{background:var(--grenadine);}
+    .vintage-pill-arrow{opacity:0.5;font-size:10px;}
+    .vintage-lock-btn{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.55);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+    .vintage-lock-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+    .vintage-offline{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--beeswax);display:flex;align-items:center;gap:5px;}
+    .vintage-offline-dot{width:6px;height:6px;border-radius:50%;background:var(--beeswax);}
+    .vintage-dropdown{position:absolute;top:calc(100% + 8px);left:0;background:#2a2018;border:1px solid rgba(255,255,255,0.12);border-radius:8px;min-width:200px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);overflow:hidden;display:none;}
+    .vintage-dropdown.open{display:block;}
+    .vintage-dropdown-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;transition:background 0.12s;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.75);}
+    .vintage-dropdown-item:hover{background:rgba(255,255,255,0.07);}
+    .vintage-dropdown-item.selected{color:var(--beeswax);}
+    .vintage-badge{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;}
+    .vintage-badge.active{background:rgba(74,222,128,0.15);color:#4ade80;}
+    .vintage-badge.locked{background:rgba(233,167,82,0.15);color:var(--beeswax);}
+    .vintage-badge.finalized{background:rgba(212,71,32,0.15);color:var(--grenadine);}
+    .vintage-banner{display:none;padding:8px 32px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;align-items:center;gap:10px;flex-shrink:0;}
+    .vintage-banner.locked{background:rgba(233,167,82,0.15);color:var(--beeswax);border-bottom:1px solid rgba(233,167,82,0.2);}
+    .vintage-banner.finalized{background:rgba(212,71,32,0.1);color:var(--grenadine);border-bottom:1px solid rgba(212,71,32,0.2);}
+    .vintage-banner.visible{display:flex;}
+    .vintage-modal-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;}
+    .vintage-modal-overlay.open{display:flex;}
+    .vintage-modal{background:#2a2018;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:28px;max-width:380px;width:calc(100% - 40px);}
+    .vintage-modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--white);margin-bottom:12px;}
+    .vintage-modal-body{font-family:'Barlow',sans-serif;font-size:14px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:24px;}
+    .vintage-modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+    .vintage-modal-cancel{padding:9px 18px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.55);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+    .vintage-modal-confirm{padding:9px 18px;border-radius:6px;border:none;background:var(--grenadine);color:#fff;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+
+    /* ── CELLAR TAB BAR ── */
+    .cellar-tabs{background:var(--dark);border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 20px;gap:4px;height:44px;flex-shrink:0;}
+    .cellar-tab{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,0.35);text-decoration:none;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all 0.15s;}
+    .cellar-tab:hover{color:rgba(255,255,255,0.65);}
+    .cellar-tab.active{background:rgba(255,255,255,0.1);color:var(--cream);}
+    .cellar-tab-new{background:var(--grenadine);color:#fff;font-size:8px;font-weight:700;letter-spacing:0.08em;padding:1px 5px;border-radius:3px;margin-left:4px;}
+
+    /* ── JOURNAL LAYOUT ── */
+    .journal-layout{display:grid;grid-template-columns:280px 1fr;flex:1;min-height:0;}
+
+    /* ── LEFT PANEL ── */
+    .lots-panel{background:var(--dark);border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;overflow:hidden;}
+    .lp-header{padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
+    .lp-title{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:2px;}
+    .lp-sub{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(255,255,255,0.16);letter-spacing:0.04em;}
+    .lots-list{flex:1;overflow-y:auto;padding:10px;}
+    .lots-list::-webkit-scrollbar{width:4px;}
+    .lots-list::-webkit-scrollbar-track{background:transparent;}
+    .lots-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+    .lc{padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);margin-bottom:7px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+    .lc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+    .lc.pinot::before{background:var(--wine-pinot);}
+    .lc.chard::before{background:var(--wine-chard);}
+    .lc.rose::before{background:var(--wine-rose);}
+    .lc.other::before{background:var(--latte);}
+    .lc:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14);}
+    .lc.sel{background:rgba(233,167,82,0.08);border-color:rgba(233,167,82,0.28);}
+    .lc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;}
+    .lc-id{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.04em;color:var(--cream);padding-left:8px;}
+    .lc.sel .lc-id{color:var(--beeswax);}
+    .lc-badge{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+    .lc-badge.ferm{background:rgba(212,71,32,0.15);color:#ff8060;border:1px solid rgba(212,71,32,0.25);}
+    .lc-badge.aging{background:rgba(120,97,64,0.12);color:var(--beeswax);border:1px solid rgba(120,97,64,0.2);}
+    .lc-badge.mlf{background:rgba(90,138,170,0.12);color:#7ab8d8;border:1px solid rgba(90,138,170,0.2);}
+    .lc-badge.done{background:rgba(172,202,178,0.12);color:var(--darlington);border:1px solid rgba(172,202,178,0.25);}
+    .lc-last{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding-left:8px;margin-bottom:4px;}
+    .lc-readings{display:flex;gap:10px;padding-left:8px;margin-bottom:5px;}
+    .lr-val{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;line-height:1;}
+    .lr-lbl{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-top:1px;}
+    .lc-count{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding-left:8px;}
+    .lc.sel .lc-count{color:rgba(233,167,82,0.5);}
+    .lp-loading{padding:20px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);}
+
+    /* ── RIGHT PANEL ── */
+    .entry-main{overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:18px;}
+    .entry-main::-webkit-scrollbar{width:5px;}
+    .entry-main::-webkit-scrollbar-track{background:transparent;}
+    .entry-main::-webkit-scrollbar-thumb{background:rgba(120,97,64,0.2);border-radius:3px;}
+
+    /* Lot header */
+    .lot-header{background:var(--dark);border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:18px;}
+    .lh-accent{width:6px;height:60px;border-radius:3px;flex-shrink:0;background:var(--latte);}
+    .lh-body{flex:1;}
+    .lh-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:4px;}
+    .lh-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--cream);line-height:1;margin-bottom:3px;}
+    .lh-meta{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;color:rgba(255,255,255,0.3);}
+    .lh-stats{display:flex;gap:24px;}
+    .lhs{text-align:right;}
+    .lhs-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--cream);line-height:1;}
+    .lhs-label{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-top:2px;}
+    .lot-header.empty .lh-name{color:rgba(255,255,255,0.25);font-size:16px;}
+
+    /* Stage progress */
+    .stage-progress{background:var(--white);border-radius:10px;border:1px solid rgba(120,97,64,0.1);padding:12px 18px;}
+    .sp-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(30,23,16,0.35);margin-bottom:8px;}
+    .sp-stages{display:flex;}
+    .sp-stage{flex:1;text-align:center;position:relative;}
+    .sp-stage-dot{width:12px;height:12px;border-radius:50%;border:2px solid rgba(120,97,64,0.2);background:rgba(120,97,64,0.08);margin:0 auto 5px;position:relative;z-index:2;}
+    .sp-stage.done .sp-stage-dot{background:var(--darlington);border-color:var(--darlington);}
+    .sp-stage.current .sp-stage-dot{background:var(--grenadine);border-color:var(--grenadine);box-shadow:0 0 0 3px rgba(212,71,32,0.2);}
+    .sp-stage-line{position:absolute;top:5px;left:50%;right:-50%;height:2px;background:rgba(120,97,64,0.1);z-index:1;}
+    .sp-stage.done .sp-stage-line{background:var(--darlington);}
+    .sp-stage:last-child .sp-stage-line{display:none;}
+    .sp-stage-name{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(30,23,16,0.35);}
+    .sp-stage.done .sp-stage-name,.sp-stage.current .sp-stage-name{color:var(--dark);font-weight:700;}
+    .sp-stage.current .sp-stage-name{color:var(--grenadine);}
+    .sp-day{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:rgba(30,23,16,0.35);margin-top:1px;}
+
+    /* Entry station */
+    .entry-station{background:var(--dark);border-radius:16px;padding:20px 22px;}
+    .es-title{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:14px;}
+    .ampm-toggle{display:flex;gap:8px;margin-bottom:16px;}
+    .ampm-btn{flex:1;height:46px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all 0.18s;}
+    .ampm-btn.on{background:rgba(233,167,82,0.15);border-color:var(--beeswax);color:var(--beeswax);}
+    .readings-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+    .reading-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:12px 14px;}
+    .reading-box:focus-within{border-color:var(--beeswax);background:rgba(255,255,255,0.08);}
+    .rb-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:5px;}
+    .rb-input{width:100%;background:transparent;border:none;outline:none;font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;color:var(--cream);line-height:1;}
+    .rb-input::placeholder{color:rgba(255,255,255,0.12);font-size:26px;}
+    .rb-unit{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;color:rgba(255,255,255,0.22);margin-top:3px;}
+    .rb-input.brix{color:var(--grenadine);}
+    .rb-input.ph{color:#7ab8d8;}
+    .rb-input.temp{color:var(--beeswax);}
+    .nutrient-row{display:grid;grid-template-columns:1fr auto 80px;gap:8px;margin-bottom:14px;align-items:end;}
+    .nr-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.28);margin-bottom:5px;}
+    .nr-input,.nr-select{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:var(--cream);font-family:'Barlow',sans-serif;font-size:13px;padding:0 11px;height:40px;outline:none;width:100%;}
+    .nr-select{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(255,255,255,0.3)' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:22px;}
+    .nr-select option{background:#2a1f14;}
+    .nr-input::placeholder{color:rgba(255,255,255,0.18);}
+    .stage-row{display:flex;gap:6px;margin-bottom:14px;}
+    .stage-btn{flex:1;height:34px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+    .stage-btn.on.primary{background:rgba(212,71,32,0.15);border-color:rgba(212,71,32,0.4);color:#ff8060;}
+    .stage-btn.on.mlf{background:rgba(90,138,170,0.12);border-color:rgba(90,138,170,0.3);color:#7ab8d8;}
+    .stage-btn.on.aging{background:rgba(120,97,64,0.12);border-color:rgba(120,97,64,0.3);color:var(--beeswax);}
+    .es-notes{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--cream);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 11px;height:52px;resize:none;outline:none;margin-bottom:14px;line-height:1.5;}
+    .es-notes::placeholder{color:rgba(255,255,255,0.16);}
+    .iot-note{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.06em;color:rgba(255,255,255,0.2);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .iot-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.15);}
+    .log-entry-btn{width:100%;height:50px;background:var(--grenadine);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .log-entry-btn:hover:not(:disabled){background:#c03d1a;transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,71,32,0.3);}
+    .log-entry-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+    /* Log table */
+    .ferm-log{background:var(--white);border-radius:14px;border:1px solid rgba(120,97,64,0.1);overflow:hidden;}
+    .fl-log-header{padding:12px 16px 0;display:flex;align-items:baseline;gap:10px;}
+    .fl-log-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--dark);}
+    .fl-log-count{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:rgba(30,23,16,0.35);font-weight:600;}
+    .fl-header-row,.fl-row{display:grid;grid-template-columns:36px 72px 52px 58px 68px 58px 66px 1fr 40px;padding:9px 16px;align-items:center;}
+    .fl-header-row{padding-top:10px;padding-bottom:10px;background:rgba(120,97,64,0.04);border-bottom:1px solid rgba(120,97,64,0.1);margin-top:10px;}
+    .fl-th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(30,23,16,0.38);}
+    .fl-row{border-bottom:1px solid rgba(120,97,64,0.06);transition:background 0.15s;}
+    .fl-row:last-child{border-bottom:none;}
+    .fl-row:hover{background:rgba(120,97,64,0.03);}
+    .fl-row.flash{animation:rowFlash 0.6s ease;}
+    @keyframes rowFlash{0%{background:rgba(212,71,32,0.08);}100%{background:transparent;}}
+    .fl-td{font-size:12px;color:var(--dark);}
+    .fl-td.num{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:rgba(30,23,16,0.3);}
+    .fl-td.dv{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;color:rgba(30,23,16,0.55);}
+    .fl-td.tv{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:rgba(30,23,16,0.45);}
+    .fl-td.bx{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--grenadine);}
+    .fl-td.ph{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#5a8aaa;}
+    .fl-td.tp{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--latte);}
+    .fl-td.nv{font-size:11px;color:rgba(30,23,16,0.5);}
+    .ampp{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:2px 7px;border-radius:4px;}
+    .ampp.am{background:rgba(172,202,178,0.15);color:#3a7a50;border:1px solid rgba(172,202,178,0.3);}
+    .ampp.pm{background:rgba(212,71,32,0.1);color:var(--grenadine);border:1px solid rgba(212,71,32,0.2);}
+    .del-btn{width:26px;height:26px;border-radius:6px;background:transparent;border:1px solid rgba(120,97,64,0.14);color:rgba(30,23,16,0.28);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+    .del-btn:hover{background:rgba(212,71,32,0.07);border-color:var(--grenadine);color:var(--grenadine);}
+    .fl-totals{display:grid;grid-template-columns:repeat(5,1fr);border-top:2px solid rgba(120,97,64,0.1);}
+    .flt{padding:10px 16px;}
+    .flt-label{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(30,23,16,0.32);margin-bottom:3px;}
+    .flt-val{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--dark);}
+    .flt-val.brix{color:var(--grenadine);}
+    .flt-val.ph{color:#5a8aaa;}
+    .flt-val.green{color:#3a7a50;}
+    .fl-empty{padding:32px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(30,23,16,0.3);}
+
+    /* Toast */
+    .toast{position:fixed;bottom:24px;right:24px;color:#fff;padding:13px 18px;border-radius:9px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.06em;box-shadow:0 6px 24px rgba(0,0,0,0.25);transform:translateY(70px);opacity:0;transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);z-index:999;}
+    .toast.show{transform:translateY(0);opacity:1;}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="nav-toggle" id="navToggleBtn" onclick="openNav()">&#9776;</button>
+  <a href="/index.html" style="text-decoration:none;color:inherit;">
+    <div class="topbar-logo">Lifecycle<span>.</span></div>
+  </a>
+  <div class="topbar-sep"></div>
+  <span class="topbar-label topbar-section">Cellar</span>
+  <span class="topbar-arrow">›</span>
+  <span class="topbar-label topbar-current">Winemaker Journal</span>
+  <div class="topbar-spacer"></div>
+  <div id="vintageControl" style="display:flex;align-items:center;gap:6px;">
+    <div class="vintage-offline" id="vintageOffline" style="display:none;">
+      <span class="vintage-offline-dot"></span>Offline
+    </div>
+    <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+      <span class="vintage-pill-dot active" id="vintageDot"></span>
+      <span id="vintageYear">—</span>
+      <span class="vintage-pill-arrow">▾</span>
+      <div class="vintage-dropdown" id="vintageDropdown"></div>
+    </div>
+    <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;" title="Lock/unlock vintage">🔓</button>
+  </div>
+  <button class="topbar-btn primary" onclick="window.location.href='/cellar.html'">+ New Lot</button>
+</div>
+
+<!-- Vintage banners -->
+<div class="vintage-banner locked" id="vintageBannerLocked">
+  🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. Logging is read-only.
+</div>
+<div class="vintage-banner finalized" id="vintageBannerFinalized">
+  🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized. No new entries allowed.
+</div>
+
+<!-- Vintage unlock modal -->
+<div class="vintage-modal-overlay" id="vintageUnlockModal">
+  <div class="vintage-modal">
+    <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+    <div class="vintage-modal-body" id="unlockModalBody"></div>
+    <div class="vintage-modal-actions">
+      <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+      <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nav overlay + drawer -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item" href="/vineyard.html"><span class="nav-item-icon">🌿</span><span class="nav-item-label">Vineyard</span></a>
+  <a class="nav-item" href="/harvest.html"><span class="nav-item-icon">⚖️</span><span class="nav-item-label">Harvest</span></a>
+  <a class="nav-item" href="/vintage-manager.html"><span class="nav-item-icon">🗓</span><span class="nav-item-label">Vintage Manager</span></a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item" href="/cellar.html"><span class="nav-item-icon">🍷</span><span class="nav-item-label">Cellar</span></a>
+  <a class="nav-item active" href="/cellar-journal.html"><span class="nav-item-icon">📔</span><span class="nav-item-label">Winemaker Journal</span></a>
+  <a class="nav-item" href="/blending-lab.html"><span class="nav-item-icon">🧪</span><span class="nav-item-label">Blending Lab</span></a>
+  <div class="nav-section-label">Sales</div>
+  <a class="nav-item" href="/skus.html"><span class="nav-item-icon">📦</span><span class="nav-item-label">SKUs</span></a>
+  <div class="nav-section-label">Operations</div>
+  <a class="nav-item" href="/inventory.html"><span class="nav-item-icon">🏭</span><span class="nav-item-label">Inventory</span></a>
+  <a class="nav-item" href="/suppliers.html"><span class="nav-item-icon">🤝</span><span class="nav-item-label">Suppliers</span></a>
+  <div class="nav-section-label">Finance</div>
+  <a class="nav-item" href="/financial-dashboard.html"><span class="nav-item-icon">📊</span><span class="nav-item-label">Financial Dashboard</span></a>
+  <a class="nav-item" href="/finance.html"><span class="nav-item-icon">📈</span><span class="nav-item-label">Finance</span></a>
+  <a class="nav-item" href="/overhead-opex.html"><span class="nav-item-icon">💸</span><span class="nav-item-label">Overhead &amp; OpEx</span></a>
+  <div class="nav-section-label">Setup</div>
+  <a class="nav-item" href="/labor-rates.html"><span class="nav-item-icon">⏱</span><span class="nav-item-label">Labor Rates</span></a>
+  <a class="nav-item" href="/task-library.html"><span class="nav-item-icon">📋</span><span class="nav-item-label">Task Library</span></a>
+  <div class="nav-footer">Lifecycle Manager · v1.0</div>
+</div>
+
+<!-- Cellar tab bar -->
+<div class="cellar-tabs">
+  <a class="cellar-tab" href="/cellar.html">🍷 Wine Lots</a>
+  <a class="cellar-tab" href="/cellar.html">⊞ Vessel Map</a>
+  <a class="cellar-tab active" href="/cellar-journal.html">📔 Winemaker Journal <span class="cellar-tab-new">NEW</span></a>
+</div>
+
+<!-- Journal layout -->
+<div class="journal-layout">
+
+  <!-- LEFT: Lots -->
+  <div class="lots-panel">
+    <div class="lp-header">
+      <div class="lp-title" id="lp-title">— Lots</div>
+      <div class="lp-sub">Auto-populated from harvest events</div>
+    </div>
+    <div class="lots-list" id="lots-list">
+      <div class="lp-loading">Loading lots…</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Entry + Log -->
+  <div class="entry-main" id="entry-main">
+
+    <div class="lot-header empty" id="lot-header">
+      <div class="lh-accent" id="lh-accent"></div>
+      <div class="lh-body">
+        <div class="lh-eyebrow">Active Lot — Winemaker Journal</div>
+        <div class="lh-name" id="lh-name">Select a lot →</div>
+        <div class="lh-meta" id="lh-meta"></div>
+      </div>
+      <div class="lh-stats">
+        <div class="lhs"><div class="lhs-val" style="color:var(--grenadine)" id="lh-brix">—</div><div class="lhs-label">Latest Brix</div></div>
+        <div class="lhs"><div class="lhs-val" style="color:#7ab8d8" id="lh-ph">—</div><div class="lhs-label">pH</div></div>
+        <div class="lhs"><div class="lhs-val" style="color:var(--beeswax)" id="lh-temp">—</div><div class="lhs-label">Temp</div></div>
+        <div class="lhs"><div class="lhs-val" id="lh-entries" style="font-size:18px">0</div><div class="lhs-label">Entries</div></div>
+      </div>
+    </div>
+
+    <div class="stage-progress">
+      <div class="sp-label">Fermentation Stage</div>
+      <div class="sp-stages" id="sp-stages">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="entry-station">
+      <div class="es-title" id="es-title">📔 Fermentation Entry</div>
+      <div class="ampm-toggle">
+        <button class="ampm-btn" id="btn-am" onclick="setAmPm('AM')">AM</button>
+        <button class="ampm-btn on" id="btn-pm" onclick="setAmPm('PM')">PM</button>
+      </div>
+      <div class="readings-grid">
+        <div class="reading-box">
+          <div class="rb-label">Brix</div>
+          <input type="number" class="rb-input brix" id="in-brix" placeholder="—" step="0.1"/>
+          <div class="rb-unit">°Bx</div>
+        </div>
+        <div class="reading-box">
+          <div class="rb-label">pH</div>
+          <input type="number" class="rb-input ph" id="in-ph" placeholder="—" step="0.01"/>
+          <div class="rb-unit">pH</div>
+        </div>
+        <div class="reading-box">
+          <div class="rb-label">Temperature</div>
+          <input type="number" class="rb-input temp" id="in-temp" placeholder="—" step="0.5"/>
+          <div class="rb-unit">°F</div>
+        </div>
+      </div>
+      <div class="nutrient-row">
+        <div>
+          <div class="nr-label">Nutrient / Addition (optional)</div>
+          <input type="text" class="nr-input" id="in-nutrient" placeholder="e.g. Fermaid-O, Go-Ferm…"/>
+        </div>
+        <div>
+          <div class="nr-label">Amount</div>
+          <input type="number" class="nr-input" id="in-amount" placeholder="0" style="width:70px"/>
+        </div>
+        <div>
+          <div class="nr-label">Unit</div>
+          <select class="nr-select" id="in-unit">
+            <option>g/hL</option><option>g/L</option><option>mL/hL</option><option>oz</option>
+          </select>
+        </div>
+      </div>
+      <div class="nr-label" style="margin-bottom:6px">Stage</div>
+      <div class="stage-row" style="margin-bottom:14px">
+        <button class="stage-btn on primary" id="sb-primary" onclick="setStage(this,'primary','Primary')">Primary</button>
+        <button class="stage-btn mlf" id="sb-mlf" onclick="setStage(this,'mlf','MLF')">MLF</button>
+        <button class="stage-btn aging" id="sb-aging" onclick="setStage(this,'aging','Aging')">Aging</button>
+      </div>
+      <textarea class="es-notes" id="in-notes" placeholder="Cap management, color, aroma, punch-downs, pump-overs, observations…"></textarea>
+      <div class="iot-note"><div class="iot-dot"></div>Brix, pH &amp; Temp are IoT-ready — auto-populate when sensors are connected</div>
+      <button class="log-entry-btn" id="log-btn" onclick="logEntry()">📔 Log Entry</button>
+    </div>
+
+    <div class="ferm-log">
+      <div class="fl-log-header">
+        <span class="fl-log-title" id="fl-log-title">Fermentation Log</span>
+        <span class="fl-log-count" id="fl-log-count"></span>
+      </div>
+      <div class="fl-header-row">
+        <div class="fl-th">#</div>
+        <div class="fl-th">Date</div>
+        <div class="fl-th">Time</div>
+        <div class="fl-th">AM/PM</div>
+        <div class="fl-th">Brix</div>
+        <div class="fl-th">pH</div>
+        <div class="fl-th">Temp</div>
+        <div class="fl-th">Nutrient / Notes</div>
+        <div class="fl-th"></div>
+      </div>
+      <div id="fl-rows">
+        <div class="fl-empty">Select a lot to view its fermentation log</div>
+      </div>
+      <div class="fl-totals" id="fl-totals"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Airtable constants ────────────────────────────────────────────────────
+  const BASE_ID = 'appJNEHG8sqXmdYGe';
+  const PROXY   = '/api/airtable';
+
+  // Vintages
+  const TBL_VINTAGES    = 'tblJ8NBvXinvXpGPq';
+  const F_VIN_YEAR      = 'fldgc54uvUaT7GwQX';
+  const F_VIN_STATUS    = 'fldho6518UjJmfRqX';
+
+  // Lots
+  const TBL_LOTS        = 'tblcBMCwq1ng8ykMb';
+  const F_LOT_NAME      = 'fldRib6w2mJcyYnji';
+  const F_LOT_TYPE      = 'fldDtMoBcZWh6m6Z8';
+  const F_LOT_STAGE     = 'fldv75LnMHiMhqwVU';
+  const F_LOT_YEAR      = 'flddMBBo3WnnatiGR';
+
+  // Fermentation Log
+  const TBL_LOG         = 'tbln052ArbrJuom4e';
+  const F_LOG_NAME      = 'fldpEt3BHfXCTMVjc';
+  const F_LOG_LOT       = 'fldFK8BDqKd0xqRKT';
+  const F_LOG_ENTRY_NUM = 'fldW3hqcg7GGsqgYs';
+  const F_LOG_DATE      = 'fldz4v7VfjM3b3Dmd';
+  const F_LOG_AMPM      = 'fldrgunFzov2JkFMs';
+  const F_LOG_TIME      = 'fldVCMOUoPPhSlzOf';
+  const F_LOG_BRIX      = 'fld84NgCkm7aCkCSM';
+  const F_LOG_PH        = 'fldR4ae77lxWuXsNy';
+  const F_LOG_TEMP      = 'fldck7xHfYAtW6eDM';
+  const F_LOG_STAGE     = 'fldfWEM6ldybSMaXS';
+  const F_LOG_NUTRIENT  = 'fldJYoH6Prs2Cp9aY';
+  const F_LOG_AMOUNT    = 'fldLQ6TpupJbDgd6f';
+  const F_LOG_UNIT      = 'fldeNmnhxomSMufsp';
+  const F_LOG_NOTES     = 'fld70YbXfi8nmpcgM';
+  const F_LOG_VINTAGE   = 'fldj4s1TDcacM6l5s';
+
+  // ─── App state ─────────────────────────────────────────────────────────────
+  let lots        = [];      // [{_id, id, type, stage, year}]
+  let logByLot    = {};      // { lotRecordId: [entryObj...] }  newest-first
+  let activeLotId = null;    // Airtable record ID of selected lot
+  let selectedAmPm  = 'PM';
+  let selectedStage = 'primary';
+  let selectedStageLabel = 'Primary';
+  let vintageData = [];
+  let activeVintage = null;
+  let vintageYear = String(new Date().getFullYear());
+
+  // ─── Proxy helpers ─────────────────────────────────────────────────────────
+  async function airtableGet(tableId, opts = {}) {
+    const q = new URLSearchParams({ baseId: BASE_ID, tableId });
+    if (opts.filterByFormula) q.set('filterByFormula', opts.filterByFormula);
+    if (opts.sort) q.set('sort', JSON.stringify(opts.sort));
+    if (opts.maxRecords) q.set('maxRecords', String(opts.maxRecords));
+    const res = await fetch(`${PROXY}?${q}`);
+    if (!res.ok) throw new Error(`GET ${res.status}`);
+    return (await res.json()).records || [];
+  }
+
+  async function airtablePost(tableId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+    });
+    if (!res.ok) throw new Error(`POST ${res.status}`);
+    return await res.json();
+  }
+
+  async function airtableDelete(tableId, recordId) {
+    const q = new URLSearchParams({ baseId: BASE_ID, tableId, recordId });
+    const res = await fetch(`${PROXY}?${q}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE ${res.status}`);
+  }
+
+  // ─── Vintage Topbar Control ─────────────────────────────────────────────────
+  async function initVintage() {
+    if (!navigator.onLine) {
+      document.getElementById('vintageOffline').style.display = 'flex';
+      const cached = localStorage.getItem('lm_active_vintage') || vintageYear;
+      vintageYear = cached;
+      renderVintagePill({ year: cached, state: 'Active' });
+      initApp();
+      return;
+    }
+    try {
+      const recs = await airtableGet(TBL_VINTAGES, { sort: [{ field: F_VIN_YEAR, direction: 'desc' }] });
+      vintageData = recs.map(r => ({
+        id:    r.id,
+        year:  r.fields[F_VIN_YEAR] || '',
+        state: r.fields[F_VIN_STATUS]?.name || 'Active'
+      }));
+      const currentYear = String(new Date().getFullYear());
+      const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+      if (!hasActive) {
+        const ea = vintageData.find(v => v.state === 'Active');
+        if (ea) {
+          await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: ea.id, fields: { [F_VIN_STATUS]: 'Locked' } }] }) });
+          ea.state = 'Locked';
+        }
+        const pr = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ fields: { [F_VIN_YEAR]: currentYear, [F_VIN_STATUS]: 'Active' } }] }) });
+        const pd = await pr.json();
+        if (pd.records?.[0]) vintageData.unshift({ id: pd.records[0].id, year: currentYear, state: 'Active' });
+      }
+      const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+      activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+      if (activeVintage) { localStorage.setItem('lm_active_vintage', activeVintage.year); vintageYear = activeVintage.year; }
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+    } catch (e) { console.warn('Vintage init failed', e); }
+    initApp();
+  }
+
+  function renderVintagePill(v) {
+    if (!v) return;
+    document.getElementById('vintageYear').textContent = v.year;
+    const dot = document.getElementById('vintageDot');
+    dot.className = 'vintage-pill-dot';
+    const sl = (v.state || 'Active').toLowerCase();
+    dot.classList.add(sl);
+    const lb = document.getElementById('vintageLockBtn');
+    if (sl === 'locked') { lb.style.display = 'flex'; lb.textContent = '🔓'; } else { lb.style.display = 'none'; }
+    document.getElementById('vintageDropdown').innerHTML = vintageData.map(vd =>
+      `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected' : ''}" onclick="selectVintage('${vd.year}',event)">
+        ${vd.year}<span class="vintage-badge ${(vd.state||'Active').toLowerCase()}">${vd.state||'Active'}</span></div>`
+    ).join('');
+  }
+
+  function toggleVintageDropdown(e) { e.stopPropagation(); document.getElementById('vintageDropdown').classList.toggle('open'); }
+  document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+  function selectVintage(year, e) {
+    e.stopPropagation();
+    document.getElementById('vintageDropdown').classList.remove('open');
+    const sel = vintageData.find(v => v.year === year);
+    if (!sel || sel.year === activeVintage?.year) return;
+    activeVintage = sel; vintageYear = year;
+    localStorage.setItem('lm_active_vintage', year);
+    renderVintagePill(activeVintage);
+    applyVintageState(activeVintage.state, activeVintage.year);
+    initApp();
+  }
+
+  function applyVintageState(state, year) {
+    document.getElementById('vintageBannerLocked').classList.remove('visible');
+    document.getElementById('vintageBannerFinalized').classList.remove('visible');
+    if (state === 'Locked') {
+      document.getElementById('bannerYearLocked').textContent = year;
+      document.getElementById('vintageBannerLocked').classList.add('visible');
+      disableEntryStation();
+    } else if (state === 'Finalized') {
+      document.getElementById('bannerYearFinalized').textContent = year;
+      document.getElementById('vintageBannerFinalized').classList.add('visible');
+      disableEntryStation();
+    } else {
+      enableEntryStation();
+    }
+  }
+
+  function disableEntryStation() {
+    document.querySelectorAll('.entry-station input,.entry-station select,.entry-station textarea,.stage-btn,.ampm-btn').forEach(el => el.disabled = true);
+    document.getElementById('log-btn').disabled = true;
+  }
+  function enableEntryStation() {
+    document.querySelectorAll('.entry-station input,.entry-station select,.entry-station textarea,.stage-btn,.ampm-btn').forEach(el => el.disabled = false);
+    document.getElementById('log-btn').disabled = false;
+  }
+
+  function handleLockToggle() {
+    if (!activeVintage || activeVintage.state !== 'Locked') return;
+    const currentYear = String(new Date().getFullYear());
+    const cv = vintageData.find(v => v.year === currentYear);
+    document.getElementById('unlockModalTitle').textContent = 'Unlock Vintage';
+    document.getElementById('unlockModalBody').textContent = `Unlocking ${activeVintage.year} will lock ${currentYear}. Continue?`;
+    document.getElementById('unlockModalConfirm').onclick = async () => {
+      await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: activeVintage.id, fields: { [F_VIN_STATUS]: 'Active' } }] }) });
+      if (cv) await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: cv.id, fields: { [F_VIN_STATUS]: 'Locked' } }] }) });
+      activeVintage.state = 'Active';
+      if (cv) cv.state = 'Locked';
+      renderVintagePill(activeVintage);
+      applyVintageState('Active', activeVintage.year);
+      closeUnlockModal();
+    };
+    document.getElementById('vintageUnlockModal').classList.add('open');
+  }
+  function closeUnlockModal() { document.getElementById('vintageUnlockModal').classList.remove('open'); }
+
+  // ─── Nav drawer ─────────────────────────────────────────────────────────────
+  function openNav()  { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('visible'); document.getElementById('navToggleBtn').classList.add('open'); }
+  function closeNav() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('visible'); document.getElementById('navToggleBtn').classList.remove('open'); }
+
+  // ─── App init ───────────────────────────────────────────────────────────────
+  async function initApp() {
+    document.getElementById('lots-list').innerHTML = '<div class="lp-loading">Loading lots…</div>';
+    activeLotId = null;
+    lots = [];
+    logByLot = {};
+    try {
+      const [lotRecs, logRecs] = await Promise.all([
+        airtableGet(TBL_LOTS, { filterByFormula: `{${F_LOT_YEAR}}=${vintageYear}`, maxRecords: 100 }),
+        airtableGet(TBL_LOG, {
+          filterByFormula: `{${F_LOG_VINTAGE}}=${vintageYear}`,
+          sort: [{ field: F_LOG_ENTRY_NUM, direction: 'desc' }],
+          maxRecords: 500
+        })
+      ]);
+
+      lots = lotRecs.map(r => ({
+        _id:   r.id,
+        id:    r.fields[F_LOT_NAME] || r.id,
+        type:  r.fields[F_LOT_TYPE]?.name || '',
+        stage: r.fields[F_LOT_STAGE]?.name || 'Fermentation',
+        year:  r.fields[F_LOT_YEAR] || vintageYear
+      }));
+
+      // Index log entries by lot record ID (newest first — sorted by entry num desc)
+      logByLot = {};
+      lots.forEach(l => { logByLot[l._id] = []; });
+      logRecs.forEach(r => {
+        const f = r.fields;
+        const lotIds = f[F_LOG_LOT] || [];
+        const lotId = lotIds[0];
+        if (!lotId) return;
+        if (!logByLot[lotId]) logByLot[lotId] = [];
+        logByLot[lotId].push({
+          _id:    r.id,
+          n:      f[F_LOG_ENTRY_NUM] || 0,
+          date:   f[F_LOG_DATE]      || '',
+          ampm:   f[F_LOG_AMPM]?.name || '',
+          time:   f[F_LOG_TIME]      || '',
+          brix:   f[F_LOG_BRIX]      != null ? f[F_LOG_BRIX]  : null,
+          ph:     f[F_LOG_PH]        != null ? f[F_LOG_PH]    : null,
+          temp:   f[F_LOG_TEMP]      != null ? f[F_LOG_TEMP]  : null,
+          stage:  f[F_LOG_STAGE]?.name || '',
+          nutrient: f[F_LOG_NUTRIENT] || '',
+          amount: f[F_LOG_AMOUNT]    || '',
+          unit:   f[F_LOG_UNIT]?.name || '',
+          notes:  f[F_LOG_NOTES]     || ''
+        });
+      });
+
+      document.getElementById('lp-title').textContent = `${vintageYear} Lots`;
+      renderLotCards();
+
+      if (lots.length > 0) loadLot(lots[0]._id);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('lots-list').innerHTML = '<div class="lp-loading">Error loading data</div>';
+    }
+  }
+
+  // ─── Render lot cards ───────────────────────────────────────────────────────
+  function renderLotCards() {
+    if (lots.length === 0) {
+      document.getElementById('lots-list').innerHTML = '<div class="lp-loading">No lots for this vintage</div>';
+      return;
+    }
+    document.getElementById('lots-list').innerHTML = lots.map(lot => {
+      const entries = logByLot[lot._id] || [];
+      const latest  = entries[0];
+      const count   = entries.length;
+      const isActive = lot._id === activeLotId;
+      const vc = varietyClass(lot.type);
+      const badge = lotBadge(lot.stage, entries);
+      const lastLabel = latest ? `Last: ${fmtDate(latest.date)} · ${latest.ampm}` : 'No entries yet';
+      const brix = latest?.brix != null ? latest.brix + '°' : '—';
+      const ph   = latest?.ph   != null ? String(latest.ph) : '—';
+      const temp = latest?.temp != null ? latest.temp + '°F' : '—';
+      return `<div class="lc ${vc}${isActive ? ' sel' : ''}" id="lc-${lot._id}" onclick="loadLot('${lot._id}')">
+        <div class="lc-top">
+          <div class="lc-id">${lot.id}</div>
+          <span class="lc-badge ${badge.cls}">${badge.text}</span>
+        </div>
+        <div class="lc-last">${lastLabel}</div>
+        <div class="lc-readings">
+          <div><div class="lr-val" style="color:var(--grenadine)">${brix}</div><div class="lr-lbl">Brix</div></div>
+          <div><div class="lr-val" style="color:#7ab8d8">${ph}</div><div class="lr-lbl">pH</div></div>
+          <div><div class="lr-val" style="color:var(--beeswax)">${temp}</div><div class="lr-lbl">Temp</div></div>
+        </div>
+        <div class="lc-count">${count} ${count === 1 ? 'entry' : 'entries'} · ${lot.stage}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── Load lot into right panel ──────────────────────────────────────────────
+  function loadLot(id) {
+    activeLotId = id;
+    const lot     = lots.find(l => l._id === id);
+    const entries = logByLot[id] || [];
+    const latest  = entries[0];
+
+    // Highlight card
+    document.querySelectorAll('.lc').forEach(c => c.classList.remove('sel'));
+    document.getElementById('lc-' + id)?.classList.add('sel');
+
+    // Header
+    document.getElementById('lot-header').classList.remove('empty');
+    document.getElementById('lh-accent').style.background = accentForType(lot.type);
+    document.getElementById('lh-name').textContent  = lot.id;
+    document.getElementById('lh-meta').textContent  = `${lot.type || '—'} · ${vintageYear}`;
+    document.getElementById('lh-brix').textContent  = latest?.brix != null ? latest.brix + '°' : '—';
+    document.getElementById('lh-ph').textContent    = latest?.ph   != null ? String(latest.ph)  : '—';
+    document.getElementById('lh-temp').textContent  = latest?.temp != null ? latest.temp + '°F' : '—';
+    document.getElementById('lh-entries').textContent = entries.length;
+
+    // Stage progress
+    renderStageBar(entries, lot);
+
+    // Entry station
+    document.getElementById('es-title').textContent = '📔 Fermentation Entry — ' + lot.id;
+    const latestStage = latest?.stage;
+    if (latestStage === 'MLF') setStage(document.getElementById('sb-mlf'), 'mlf', 'MLF');
+    else if (latestStage === 'Aging') setStage(document.getElementById('sb-aging'), 'aging', 'Aging');
+    else setStage(document.getElementById('sb-primary'), 'primary', 'Primary');
+
+    // Log table
+    renderLog(id, lot);
+  }
+
+  // ─── Stage progress bar ─────────────────────────────────────────────────────
+  function renderStageBar(entries, lot) {
+    const stages = ['Crush', 'Primary', 'Press', 'MLF', 'Aging', 'Bottling'];
+    const latest = entries[0];
+    const oldest = entries[entries.length - 1];
+
+    let currentIdx;
+    const latestStage = latest?.stage || '';
+    if (latestStage === 'MLF')   currentIdx = 3;
+    else if (latestStage === 'Aging') currentIdx = 4;
+    else if (entries.length > 0) currentIdx = 1;
+    else currentIdx = 0;
+
+    const crushDate = oldest ? fmtDate(oldest.date) : '—';
+
+    document.getElementById('sp-stages').innerHTML = stages.map((name, i) => {
+      const isDone    = i < currentIdx;
+      const isCurrent = i === currentIdx;
+      const cls = isDone ? 'done' : isCurrent ? 'current' : '';
+      let dayText = '—';
+      if (i === 0 && oldest) dayText = crushDate;
+      return `<div class="sp-stage ${cls}">
+        ${i < stages.length - 1 ? '<div class="sp-stage-line"></div>' : ''}
+        <div class="sp-stage-dot"></div>
+        <div class="sp-stage-name">${name}</div>
+        <div class="sp-day">${dayText}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── Render log table ────────────────────────────────────────────────────────
+  function renderLog(lotId, lot) {
+    const entries = logByLot[lotId] || [];
+    const oldest  = entries[entries.length - 1];
+    const latest  = entries[0];
+
+    document.getElementById('fl-log-title').textContent  = 'Fermentation Log — ' + (lot?.id || '');
+    document.getElementById('fl-log-count').textContent  = entries.length > 0
+      ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} · ${fmtDate(oldest.date)} – ${fmtDate(latest.date)}`
+      : '0 entries';
+
+    if (entries.length === 0) {
+      document.getElementById('fl-rows').innerHTML = '<div class="fl-empty">No entries yet — log the first reading above</div>';
+      document.getElementById('fl-totals').innerHTML = '';
+      return;
+    }
+
+    document.getElementById('fl-rows').innerHTML = entries.map(e => {
+      const brix = e.brix != null ? e.brix + '°' : '—';
+      const ph   = e.ph   != null ? String(e.ph)  : '—';
+      const temp = e.temp != null ? e.temp + '°F' : '—';
+      const nutrientStr = e.nutrient ? `${e.nutrient}${e.amount ? ' ' + e.amount + ' ' + e.unit : ''} · ` : '';
+      const noteStr = (nutrientStr + (e.notes || '')).trim() || '—';
+      return `<div class="fl-row" id="row-${e._id}">
+        <div class="fl-td num">${e.n}</div>
+        <div class="fl-td dv">${fmtDate(e.date)}</div>
+        <div class="fl-td tv">${e.time || '—'}</div>
+        <div class="fl-td"><span class="ampp ${(e.ampm||'').toLowerCase()}">${e.ampm||'—'}</span></div>
+        <div class="fl-td bx">${brix}</div>
+        <div class="fl-td ph">${ph}</div>
+        <div class="fl-td tp">${temp}</div>
+        <div class="fl-td nv">${noteStr}</div>
+        <div class="fl-td"><button class="del-btn" onclick="deleteEntry('${e._id}','${lotId}')">✕</button></div>
+      </div>`;
+    }).join('');
+
+    // Totals
+    const startBrix = oldest.brix != null ? oldest.brix : null;
+    const endBrix   = latest.brix != null ? latest.brix : null;
+    const drop = startBrix != null && endBrix != null ? (endBrix - startBrix).toFixed(1) + '°' : '—';
+    document.getElementById('fl-totals').innerHTML = `
+      <div class="flt"><div class="flt-label">Total Entries</div><div class="flt-val">${entries.length}</div></div>
+      <div class="flt"><div class="flt-label">Brix Start</div><div class="flt-val brix">${startBrix != null ? startBrix + '°' : '—'}</div></div>
+      <div class="flt"><div class="flt-label">Brix Now</div><div class="flt-val green">${endBrix != null ? endBrix + '°' : '—'}</div></div>
+      <div class="flt"><div class="flt-label">Brix Drop</div><div class="flt-val" style="color:var(--darlington)">${drop}</div></div>
+      <div class="flt"><div class="flt-label">Latest pH</div><div class="flt-val ph">${latest.ph != null ? latest.ph : '—'}</div></div>`;
+  }
+
+  // ─── Log new entry ───────────────────────────────────────────────────────────
+  async function logEntry() {
+    if (!activeLotId) { showToast('Select a lot first.', true); return; }
+    const brix     = document.getElementById('in-brix').value;
+    const ph       = document.getElementById('in-ph').value;
+    const temp     = document.getElementById('in-temp').value;
+    const nutrient = document.getElementById('in-nutrient').value.trim();
+    const amount   = document.getElementById('in-amount').value;
+    const unit     = document.getElementById('in-unit').value;
+    const notes    = document.getElementById('in-notes').value.trim();
+    if (!brix && !ph && !temp) { showToast('Enter at least one reading.', true); return; }
+
+    const lot     = lots.find(l => l._id === activeLotId);
+    const entries = logByLot[activeLotId] || [];
+    const newN    = entries.length > 0 ? entries[0].n + 1 : 1;
+    const today   = new Date();
+    const isoDate = today.toISOString().split('T')[0];
+    const timeStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const entryName = `${lot.id} #${newN} ${selectedAmPm}`;
+
+    const fields = {
+      [F_LOG_NAME]:      entryName,
+      [F_LOG_LOT]:       [activeLotId],
+      [F_LOG_ENTRY_NUM]: newN,
+      [F_LOG_DATE]:      isoDate,
+      [F_LOG_AMPM]:      selectedAmPm,
+      [F_LOG_TIME]:      timeStr,
+      [F_LOG_STAGE]:     selectedStageLabel,
+      [F_LOG_VINTAGE]:   Number(vintageYear)
+    };
+    if (brix)     fields[F_LOG_BRIX]     = parseFloat(brix);
+    if (ph)       fields[F_LOG_PH]       = parseFloat(ph);
+    if (temp)     fields[F_LOG_TEMP]     = parseFloat(temp);
+    if (nutrient) fields[F_LOG_NUTRIENT] = nutrient;
+    if (amount)   fields[F_LOG_AMOUNT]   = parseFloat(amount);
+    if (unit)     fields[F_LOG_UNIT]     = unit;
+    if (notes)    fields[F_LOG_NOTES]    = notes;
+
+    document.getElementById('log-btn').disabled = true;
+    try {
+      const created = await airtablePost(TBL_LOG, fields);
+      const newEntry = {
+        _id:      created.id,
+        n:        newN,
+        date:     isoDate,
+        ampm:     selectedAmPm,
+        time:     timeStr,
+        brix:     brix     ? parseFloat(brix)  : null,
+        ph:       ph       ? parseFloat(ph)    : null,
+        temp:     temp     ? parseFloat(temp)  : null,
+        stage:    selectedStageLabel,
+        nutrient, amount, unit, notes
+      };
+
+      logByLot[activeLotId].unshift(newEntry);
+      renderLog(activeLotId, lot);
+      renderLotCards();
+
+      document.getElementById('lh-brix').textContent    = newEntry.brix != null ? newEntry.brix + '°' : document.getElementById('lh-brix').textContent;
+      document.getElementById('lh-ph').textContent      = newEntry.ph   != null ? String(newEntry.ph) : document.getElementById('lh-ph').textContent;
+      document.getElementById('lh-temp').textContent    = newEntry.temp != null ? newEntry.temp + '°F' : document.getElementById('lh-temp').textContent;
+      document.getElementById('lh-entries').textContent = logByLot[activeLotId].length;
+
+      const firstRow = document.querySelector('#fl-rows .fl-row');
+      if (firstRow) firstRow.classList.add('flash');
+
+      ['in-brix','in-ph','in-temp','in-nutrient','in-amount','in-notes'].forEach(id => document.getElementById(id).value = '');
+      showToast(`Entry #${newN} logged — ${selectedAmPm}${brix ? ' · ' + brix + '° Brix' : ''}`);
+      document.getElementById('in-brix').focus();
+    } catch (e) {
+      console.error(e);
+      showToast('Error saving entry. Try again.', true);
+    } finally {
+      document.getElementById('log-btn').disabled = false;
+    }
+  }
+
+  // ─── Delete entry ────────────────────────────────────────────────────────────
+  async function deleteEntry(entryAirtableId, lotId) {
+    if (!confirm('Delete this entry?')) return;
+    try {
+      await airtableDelete(TBL_LOG, entryAirtableId);
+      logByLot[lotId] = logByLot[lotId].filter(e => e._id !== entryAirtableId);
+      const lot = lots.find(l => l._id === lotId);
+      renderLog(lotId, lot);
+      renderLotCards();
+      document.getElementById('lh-entries').textContent = logByLot[lotId].length;
+      showToast('Entry deleted.');
+    } catch (e) { showToast('Error deleting entry.', true); }
+  }
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  function setAmPm(v) {
+    selectedAmPm = v;
+    document.getElementById('btn-am').classList.toggle('on', v === 'AM');
+    document.getElementById('btn-pm').classList.toggle('on', v === 'PM');
+  }
+
+  function setStage(btn, cssKey, label) {
+    document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('on', 'primary', 'mlf', 'aging'));
+    btn.classList.add('on', cssKey);
+    selectedStage = cssKey;
+    selectedStageLabel = label;
+  }
+
+  function varietyClass(type) {
+    const t = (type || '').toLowerCase();
+    if (t.includes('red'))  return 'pinot';
+    if (t.includes('white')) return 'chard';
+    if (t.includes('ros'))  return 'rose';
+    return 'other';
+  }
+
+  function accentForType(type) {
+    const t = (type || '').toLowerCase();
+    if (t.includes('red'))   return '#6B2D3E';
+    if (t.includes('white')) return '#C8922A';
+    if (t.includes('ros'))   return '#D4827A';
+    return '#786140';
+  }
+
+  function lotBadge(stage, entries) {
+    const latestStage = entries[0]?.stage || stage || '';
+    if (latestStage === 'MLF') return { cls: 'mlf', text: 'MLF' };
+    if (latestStage === 'Aging' || stage === 'Aging') return { cls: 'aging', text: 'Aging' };
+    if (stage === 'Finished') return { cls: 'done', text: 'Finished ✓' };
+    return { cls: 'ferm', text: 'Primary' };
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function showToast(msg, err = false) {
+    const t = document.getElementById('toast');
+    t.textContent = (err ? '⚠️ ' : '✅ ') + msg;
+    t.style.background = err ? '#7a2d1a' : '#2d5a3d';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ─── Boot ───────────────────────────────────────────────────────────────────
+  (function boot() {
+    const h = new Date().getHours();
+    if (h < 12) setAmPm('AM');
+    initVintage();
+  })();
+</script>
+</body>
+</html>

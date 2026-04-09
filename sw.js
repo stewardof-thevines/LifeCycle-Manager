@@ -1,6 +1,6 @@
 // Lifecycle Manager — Service Worker v2
 // Cache version — bump this number any time you deploy new files
-const CACHE = 'lifecycle-v12';
+const CACHE = 'lifecycle-v13';
 
 const SHELL = [
   '/',
@@ -8,6 +8,7 @@ const SHELL = [
   '/vineyard.html',
   '/harvest.html',
   '/cellar.html',
+  '/cellar-journal.html',
   '/blending-lab.html',
   '/skus.html',
   '/finance.html',
