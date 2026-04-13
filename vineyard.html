@@ -342,6 +342,11 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.18);
   }
+  /* VINEYARD TAB BAR */
+  .vineyard-tabs{background:var(--dark);border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 20px;gap:4px;height:44px;}
+  .vineyard-tab{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,0.35);text-decoration:none;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all 0.15s;}
+  .vineyard-tab:hover{color:rgba(255,255,255,0.65);}
+  .vineyard-tab.active{background:rgba(255,255,255,0.1);color:var(--cream);}
       @media (max-width: 768px) 
   {
     body { overflow-x: hidden; }
@@ -442,6 +447,13 @@
   </div>
 </div>
 
+<!-- Vineyard tab bar -->
+<div class="vineyard-tabs">
+  <a class="vineyard-tab active" href="/vineyard.html">🌿 Blocks</a>
+  <a class="vineyard-tab" href="/vineyard.html">📋 Labor Log</a>
+  <a class="vineyard-tab" href="/vineyard-journal.html">📓 Vineyard Journal</a>
+</div>
+
 <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
 <div class="nav-drawer" id="navDrawer">
   <div class="nav-header">
@@ -449,34 +461,27 @@
     <button class="nav-close" onclick="closeNav()">✕</button>
   </div>
   <div class="nav-section-label">Field</div>
-  <a class="nav-item active" href="Vineyard_1.4.html">
-    <span class="nav-item-icon">🌿</span>
-    <span class="nav-item-label">Vineyard</span>
-  </a>
-  <a class="nav-item" href="Harvest_1.4.html">
-    <span class="nav-item-icon">⚖</span>
-    <span class="nav-item-label">Harvest</span>
-  </a>
-  <div class="nav-section-label">Packaging</div>
-  <a class="nav-item" href="SKUs_1.4.html">
-    <span class="nav-item-icon">📦</span>
-    <span class="nav-item-label">SKUs</span>
-  </a>
+  <a class="nav-item active" href="/vineyard.html"><span class="nav-item-icon">🌿</span><span class="nav-item-label">Vineyard</span></a>
+  <a class="nav-item" href="/vineyard-journal.html"><span class="nav-item-icon">📓</span><span class="nav-item-label">Vineyard Journal</span></a>
+  <a class="nav-item" href="/harvest.html"><span class="nav-item-icon">⚖️</span><span class="nav-item-label">Harvest</span></a>
+  <a class="nav-item" href="/vintage-manager.html"><span class="nav-item-icon">🗓</span><span class="nav-item-label">Vintage Manager</span></a>
   <div class="nav-section-label">Cellar</div>
-  <a class="nav-item" href="Cellar_1.6.html">
-    <span class="nav-item-icon">🍷</span>
-    <span class="nav-item-label">Cellar</span>
-  </a>
-  <a class="nav-item" href="BlendingLab_1.3.html">
-    <span class="nav-item-icon">🧪</span>
-    <span class="nav-item-label">Blending Lab</span>
-  </a>
+  <a class="nav-item" href="/cellar.html"><span class="nav-item-icon">🍷</span><span class="nav-item-label">Cellar</span></a>
+  <a class="nav-item" href="/cellar-journal.html"><span class="nav-item-icon">📔</span><span class="nav-item-label">Winemaker Journal</span></a>
+  <a class="nav-item" href="/blending-lab.html"><span class="nav-item-icon">🧪</span><span class="nav-item-label">Blending Lab</span></a>
+  <div class="nav-section-label">Sales</div>
+  <a class="nav-item" href="/skus.html"><span class="nav-item-icon">📦</span><span class="nav-item-label">SKUs</span></a>
+  <div class="nav-section-label">Operations</div>
+  <a class="nav-item" href="/inventory.html"><span class="nav-item-icon">🏭</span><span class="nav-item-label">Inventory</span></a>
+  <a class="nav-item" href="/suppliers.html"><span class="nav-item-icon">🤝</span><span class="nav-item-label">Suppliers</span></a>
   <div class="nav-section-label">Finance</div>
-  <a class="nav-item" href="/Finance_1.0.html">
-    <span class="nav-item-icon">📊</span>
-    <span class="nav-item-label">Finance</span>
-  </a>
-  <div class="nav-footer">Lifecycle Manager · v0.5</div>
+  <a class="nav-item" href="/financial-dashboard.html"><span class="nav-item-icon">📊</span><span class="nav-item-label">Financial Dashboard</span></a>
+  <a class="nav-item" href="/finance.html"><span class="nav-item-icon">📈</span><span class="nav-item-label">Finance</span></a>
+  <a class="nav-item" href="/overhead-opex.html"><span class="nav-item-icon">💸</span><span class="nav-item-label">Overhead & OpEx</span></a>
+  <div class="nav-section-label">Setup</div>
+  <a class="nav-item" href="/labor-rates.html"><span class="nav-item-icon">⏱</span><span class="nav-item-label">Labor Rates</span></a>
+  <a class="nav-item" href="/task-library.html"><span class="nav-item-icon">📋</span><span class="nav-item-label">Task Library</span></a>
+  <div class="nav-footer">Lifecycle Manager · v1.0</div>
 </div>
 
 

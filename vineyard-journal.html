@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vineyard Journal — Lifecycle Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --grenadine:#D44720; --beeswax:#E9A752; --darlington:#ACCAB2;
+      --latte:#786140; --cream:#F5EFE4; --white:#ffffff; --dark:#1e1710;
+      --pm-low:#3a7a50; --pm-low-bg:rgba(58,122,80,0.12); --pm-low-border:rgba(58,122,80,0.28);
+      --pm-med:#8a6010; --pm-med-bg:rgba(233,167,82,0.14); --pm-med-border:rgba(233,167,82,0.35);
+      --pm-high:#b02a14; --pm-high-bg:rgba(176,42,20,0.1); --pm-high-border:rgba(176,42,20,0.3);
+      --spray:#6a3fa0; --spray-bg:rgba(106,63,160,0.1); --spray-border:rgba(106,63,160,0.28);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;}
+    body{font-family:'Barlow',sans-serif;background:var(--cream);color:var(--dark);display:flex;flex-direction:column;}
+
+    /* TOPBAR */
+    .topbar{height:58px;background:var(--dark);display:flex;align-items:center;padding:0 32px;gap:20px;position:sticky;top:0;z-index:100;flex-shrink:0;}
+    .topbar-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;color:var(--cream);}
+    .topbar-logo span{color:var(--grenadine);}
+    .topbar-sep{width:1px;height:20px;background:rgba(255,255,255,0.12);}
+    .topbar-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;}
+    .topbar-section{color:rgba(255,255,255,0.35);}
+    .topbar-current{color:var(--beeswax);}
+    .topbar-arrow{color:rgba(255,255,255,0.2);}
+
+    /* NAV DRAWER */
+    .nav-toggle{width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all 0.18s;flex-shrink:0;}
+    .nav-toggle:hover{background:rgba(255,255,255,0.13);color:#fff;}
+    .nav-overlay{display:none;position:fixed;inset:0;z-index:490;background:rgba(0,0,0,0.45);}
+    .nav-overlay.visible{display:block;}
+    .nav-drawer{position:fixed;top:0;left:-280px;width:280px;height:100vh;background:var(--dark);z-index:500;display:flex;flex-direction:column;transition:left 0.25s cubic-bezier(0.4,0,0.2,1);box-shadow:4px 0 32px rgba(0,0,0,0.4);}
+    .nav-drawer.open{left:0;}
+    .nav-header{height:58px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+    .nav-header-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;color:var(--cream);flex:1;}
+    .nav-header-logo span{color:var(--grenadine);}
+    .nav-close{width:28px;height:28px;border-radius:5px;background:rgba(255,255,255,0.07);border:none;color:rgba(255,255,255,0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.15s;}
+    .nav-close:hover{background:rgba(255,255,255,0.13);color:#fff;}
+    .nav-section-label{font-family:'Barlow Condensed',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:20px 20px 6px;}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;text-decoration:none;border-left:3px solid transparent;transition:all 0.15s;}
+    .nav-item:hover{background:rgba(255,255,255,0.06);border-left-color:rgba(255,255,255,0.15);}
+    .nav-item.active{background:rgba(233,167,82,0.1);border-left-color:var(--beeswax);}
+    .nav-item-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;opacity:0.75;}
+    .nav-item.active .nav-item-icon{opacity:1;}
+    .nav-item-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);transition:color 0.15s;}
+    .nav-item:hover .nav-item-label{color:rgba(255,255,255,0.85);}
+    .nav-item.active .nav-item-label{color:var(--beeswax);}
+    .nav-footer{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.18);}
+
+    /* VINTAGE CONTROL */
+    .vintage-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 10px;cursor:pointer;transition:background 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--cream);position:relative;}
+    .vintage-pill:hover{background:rgba(255,255,255,0.12);}
+    .vintage-pill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .vintage-pill-dot.active{background:#4ade80;}
+    .vintage-pill-dot.locked{background:var(--beeswax);}
+    .vintage-pill-dot.finalized{background:var(--grenadine);}
+    .vintage-pill-arrow{opacity:0.5;font-size:10px;}
+    .vintage-lock-btn{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.55);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+    .vintage-lock-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+    .vintage-offline{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--beeswax);display:flex;align-items:center;gap:5px;}
+    .vintage-offline-dot{width:6px;height:6px;border-radius:50%;background:var(--beeswax);}
+    .vintage-dropdown{position:absolute;top:calc(100% + 8px);left:0;background:#2a2018;border:1px solid rgba(255,255,255,0.12);border-radius:8px;min-width:200px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);overflow:hidden;display:none;}
+    .vintage-dropdown.open{display:block;}
+    .vintage-dropdown-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;transition:background 0.12s;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.75);}
+    .vintage-dropdown-item:hover{background:rgba(255,255,255,0.07);}
+    .vintage-dropdown-item.selected{color:var(--beeswax);}
+    .vintage-badge{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;}
+    .vintage-badge.active{background:rgba(74,222,128,0.15);color:#4ade80;}
+    .vintage-badge.locked{background:rgba(233,167,82,0.15);color:var(--beeswax);}
+    .vintage-badge.finalized{background:rgba(212,71,32,0.15);color:var(--grenadine);}
+    .vintage-banner{display:none;padding:8px 32px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;align-items:center;gap:10px;flex-shrink:0;}
+    .vintage-banner.locked{background:rgba(233,167,82,0.15);color:var(--beeswax);border-bottom:1px solid rgba(233,167,82,0.2);}
+    .vintage-banner.finalized{background:rgba(212,71,32,0.1);color:var(--grenadine);border-bottom:1px solid rgba(212,71,32,0.2);}
+    .vintage-banner.visible{display:flex;}
+    .vintage-modal-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;}
+    .vintage-modal-overlay.open{display:flex;}
+    .vintage-modal{background:#2a2018;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:28px;max-width:380px;width:calc(100% - 40px);}
+    .vintage-modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--white);margin-bottom:12px;}
+    .vintage-modal-body{font-family:'Barlow',sans-serif;font-size:14px;color:rgba(255,255,255,0.65);line-height:1.5;margin-bottom:24px;}
+    .vintage-modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+    .vintage-modal-cancel{padding:9px 18px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.55);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+    .vintage-modal-confirm{padding:9px 18px;border-radius:6px;border:none;background:var(--grenadine);color:#fff;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+
+    /* VINEYARD TAB BAR */
+    .vineyard-tabs{background:var(--dark);border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 20px;gap:4px;height:44px;flex-shrink:0;}
+    .vineyard-tab{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:6px;border:none;background:transparent;color:rgba(255,255,255,0.35);text-decoration:none;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all 0.15s;}
+    .vineyard-tab:hover{color:rgba(255,255,255,0.65);}
+    .vineyard-tab.active{background:rgba(255,255,255,0.1);color:var(--cream);}
+
+    /* JOURNAL LAYOUT */
+    .journal-layout{display:grid;grid-template-columns:300px 1fr;flex:1;min-height:0;}
+
+    /* LEFT PANEL */
+    .left-panel{background:var(--dark);border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;overflow-y:auto;padding:18px;}
+    .left-panel::-webkit-scrollbar{width:4px;}
+    .left-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+    .lp-section{margin-bottom:20px;}
+    .lp-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.2);padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px;}
+
+    /* Auto weather notice */
+    .auto-notice{background:rgba(172,202,178,0.07);border:1px solid rgba(172,202,178,0.18);border-radius:9px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px;margin-bottom:18px;}
+    .auto-notice-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+    .auto-notice-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--darlington);margin-bottom:2px;}
+    .auto-notice-sub{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:rgba(255,255,255,0.25);line-height:1.4;}
+
+    /* PM summary */
+    .pm-summary{border-radius:9px;padding:10px 12px;border:1px solid;display:flex;align-items:center;gap:10px;}
+    .pm-summary.low{border-color:var(--pm-low-border);background:var(--pm-low-bg);}
+    .pm-summary.medium{border-color:var(--pm-med-border);background:var(--pm-med-bg);}
+    .pm-summary.high{border-color:var(--pm-high-border);background:var(--pm-high-bg);}
+    .pms-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .pm-summary.low .pms-dot{background:#4ade80;}
+    .pm-summary.medium .pms-dot{background:var(--beeswax);}
+    .pm-summary.high .pms-dot{background:#ff5533;}
+    .pms-body{flex:1;}
+    .pms-rating{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.06em;}
+    .pm-summary.low .pms-rating{color:#4ade80;}
+    .pm-summary.medium .pms-rating{color:var(--beeswax);}
+    .pm-summary.high .pms-rating{color:#ff5533;}
+    .pms-sub{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(255,255,255,0.3);margin-top:1px;}
+    .pm-dots-mini{display:flex;gap:2px;flex-wrap:wrap;max-width:80px;}
+    .pdm{width:10px;height:10px;border-radius:2px;}
+    .pdm.low{background:#4ade80;}.pdm.medium{background:var(--beeswax);}.pdm.high{background:#ff5533;}
+
+    /* Milestones */
+    .milestone-list{display:flex;flex-direction:column;gap:5px;}
+    .ms-item{border-radius:8px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);overflow:hidden;}
+    .ms-item.done{background:rgba(172,202,178,0.07);border-color:rgba(172,202,178,0.2);}
+    .ms-item.next{background:rgba(233,167,82,0.08);border-color:rgba(233,167,82,0.25);}
+    .ms-main{display:flex;align-items:center;gap:10px;padding:7px 10px;}
+    .ms-circle{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:transparent;}
+    .ms-item.done .ms-circle{background:var(--darlington);border-color:var(--darlington);color:#fff;}
+    .ms-body{flex:1;}
+    .ms-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);}
+    .ms-item.done .ms-name{color:var(--darlington);}
+    .ms-item.next .ms-name{color:var(--beeswax);}
+    .ms-date{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(255,255,255,0.25);margin-top:1px;}
+    .ms-btn{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(233,167,82,0.12);border:1px solid rgba(233,167,82,0.3);color:var(--beeswax);padding:3px 7px;border-radius:4px;cursor:pointer;flex-shrink:0;}
+    .ms-form{display:none;padding:0 10px 10px;flex-direction:column;gap:7px;border-top:1px solid rgba(255,255,255,0.06);}
+    .ms-form.open{display:flex;}
+
+    /* Harvest estimate */
+    .harvest-est{background:rgba(212,71,32,0.1);border:1px solid rgba(212,71,32,0.22);border-radius:9px;padding:10px 14px;}
+    .he-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:4px;}
+    .he-date{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--cream);}
+    .he-auto{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(212,71,32,0.7);margin-top:3px;}
+
+    /* Action buttons (spray / obs) */
+    .lp-action-btn{width:100%;height:38px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.18s;margin-bottom:8px;}
+    .lp-action-btn.spray{background:var(--spray-bg);color:#c09de0;border:1px solid var(--spray-border);}
+    .lp-action-btn.spray:hover{background:rgba(106,63,160,0.18);}
+    .lp-action-btn.obs{background:rgba(233,167,82,0.12);color:var(--beeswax);border:1px solid rgba(233,167,82,0.25);}
+    .lp-action-btn.obs:hover{background:rgba(233,167,82,0.2);}
+
+    /* Inline forms */
+    .lp-form{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:12px;display:none;flex-direction:column;gap:9px;margin-bottom:8px;}
+    .lp-form.open{display:flex;}
+    .lp-form.spray-form{background:rgba(106,63,160,0.06);border-color:rgba(106,63,160,0.18);}
+    .lf-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:3px;}
+    .lf-input,.lf-select,.lf-textarea{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--cream);font-family:'Barlow',sans-serif;font-size:12px;padding:6px 9px;outline:none;}
+    .lf-input{height:32px;}
+    .lf-select{height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(255,255,255,0.3)' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:22px;}
+    .lf-select option{background:#2a1f14;}
+    .lf-textarea{height:52px;resize:none;line-height:1.4;}
+    .lf-textarea::placeholder,.lf-input::placeholder{color:rgba(255,255,255,0.2);}
+    .lf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .block-checks{display:flex;flex-wrap:wrap;gap:5px;}
+    .block-check{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.06em;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);background:transparent;cursor:pointer;transition:all 0.15s;user-select:none;}
+    .block-check.on{background:rgba(106,63,160,0.2);border-color:rgba(106,63,160,0.5);color:#c09de0;}
+    .lf-save{width:100%;height:34px;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;}
+    .lf-save.spray{background:var(--spray);color:#fff;}
+    .lf-save.obs{background:var(--grenadine);color:#fff;}
+    .lf-save.ms{background:var(--darlington);color:var(--dark);}
+
+    /* RIGHT PANEL */
+    .right-panel{overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:18px;}
+    .right-panel::-webkit-scrollbar{width:5px;}
+    .right-panel::-webkit-scrollbar-thumb{background:rgba(120,97,64,0.2);border-radius:3px;}
+
+    /* Today weather card */
+    .weather-card{background:var(--white);border-radius:14px;border:1px solid rgba(120,97,64,0.1);}
+    .wc-top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
+    .wc-left{display:flex;align-items:center;gap:12px;}
+    .wc-icon{font-size:28px;line-height:1;}
+    .wc-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(30,23,16,0.35);margin-bottom:2px;}
+    .wc-cond{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--dark);}
+    .wc-badges{display:flex;align-items:center;gap:6px;}
+    .wc-auto-badge{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;background:rgba(172,202,178,0.18);color:#3a7a50;border:1px solid rgba(172,202,178,0.35);padding:3px 8px;border-radius:4px;}
+    .pm-badge{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;border:1px solid;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;}
+    .pm-badge.low{background:var(--pm-low-bg);border-color:var(--pm-low-border);color:var(--pm-low);}
+    .pm-badge.medium{background:var(--pm-med-bg);border-color:var(--pm-med-border);color:var(--pm-med);}
+    .pm-badge.high{background:var(--pm-high-bg);border-color:var(--pm-high-border);color:var(--pm-high);}
+    .pm-badge-dot{width:5px;height:5px;border-radius:50%;}
+    .pm-badge.low .pm-badge-dot{background:var(--pm-low);}
+    .pm-badge.medium .pm-badge-dot{background:var(--pm-med);}
+    .pm-badge.high .pm-badge-dot{background:var(--pm-high);}
+    .wc-stats{display:flex;border-top:1px solid rgba(120,97,64,0.08);padding:10px 18px;}
+    .wcs{flex:1;text-align:center;padding:0 4px;border-right:1px solid rgba(120,97,64,0.08);}
+    .wcs:last-child{border-right:none;}
+    .wcs-val{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--dark);line-height:1;}
+    .wcs-val.hi{color:var(--grenadine);}.wcs-val.lo{color:#5a8aaa;}
+    .wcs-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(30,23,16,0.35);margin-top:3px;}
+    .wc-pm-row{display:flex;align-items:center;gap:8px;padding:7px 18px 10px;border-top:1px solid rgba(120,97,64,0.06);}
+    .pm-score-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(30,23,16,0.4);white-space:nowrap;}
+    .pm-score-bar-wrap{flex:1;height:5px;background:rgba(120,97,64,0.1);border-radius:3px;overflow:hidden;}
+    .pm-score-bar{height:100%;border-radius:3px;background:var(--grenadine);}
+    .pm-score-val{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:rgba(30,23,16,0.45);white-space:nowrap;}
+
+    /* 7-Day Forecast card */
+    .forecast-card{background:var(--white);border-radius:14px;border:2px solid rgba(106,63,160,0.2);overflow:hidden;}
+    .fc-header{padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(120,97,64,0.08);}
+    .fc-title-wrap{display:flex;align-items:center;gap:10px;}
+    .fc-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dark);}
+    .fc-subtitle{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(30,23,16,0.35);margin-top:1px;}
+    .fc-updated{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:rgba(30,23,16,0.3);}
+    .spray-window-banner{margin:14px 18px 0;background:var(--spray-bg);border:1px solid var(--spray-border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:14px;}
+    .swb-icon{font-size:22px;flex-shrink:0;}
+    .swb-body{flex:1;}
+    .swb-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(106,63,160,0.7);margin-bottom:3px;}
+    .swb-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--dark);line-height:1.1;}
+    .swb-sub{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:rgba(30,23,16,0.45);margin-top:4px;line-height:1.4;}
+    .swb-btn{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:var(--spray);color:#fff;border:none;border-radius:7px;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+    .forecast-strip{display:grid;grid-template-columns:repeat(7,1fr);padding:14px 18px 16px;}
+    .fd{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 3px;border-radius:9px;position:relative;}
+    .fd.today{background:rgba(120,97,64,0.06);border:1px solid rgba(120,97,64,0.12);}
+    .fd.spray-target{background:var(--spray-bg);border:1px dashed rgba(106,63,160,0.4);}
+    .fd-dow{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(30,23,16,0.35);}
+    .fd-date{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--dark);}
+    .fd-icon{font-size:16px;}
+    .fd-temps{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;color:rgba(30,23,16,0.45);}
+    .fd-temps .hi{color:var(--grenadine);}.fd-temps .lo{color:#5a8aaa;}
+    .fd-rain{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#5a8aaa;}
+    .fd-pm{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid;}
+    .fd-pm.low{background:var(--pm-low-bg);border-color:var(--pm-low-border);color:var(--pm-low);}
+    .fd-pm.medium{background:var(--pm-med-bg);border-color:var(--pm-med-border);color:var(--pm-med);}
+    .fd-pm.high{background:var(--pm-high-bg);border-color:var(--pm-high-border);color:var(--pm-high);}
+    .spray-arrow{position:absolute;top:-8px;font-size:11px;}
+    .fc-legend{display:flex;align-items:center;gap:12px;padding:0 18px 12px;border-top:1px solid rgba(120,97,64,0.06);flex-wrap:wrap;}
+    .fcl-item{display:flex;align-items:center;gap:4px;font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(30,23,16,0.35);}
+    .fcl-dot{width:8px;height:8px;border-radius:2px;}
+    .fcl-dot.low{background:#4ade80;}.fcl-dot.medium{background:var(--beeswax);}.fcl-dot.high{background:#ff5533;}
+    .fcl-dot.spray{background:var(--spray);}
+    .fc-model-note{margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:8px;color:rgba(30,23,16,0.25);font-style:italic;}
+
+    /* Journal feed */
+    .feed-bar{display:flex;align-items:center;justify-content:space-between;}
+    .feed-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(30,23,16,0.4);}
+    .filter-chips{display:flex;gap:4px;}
+    .chip{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.06em;padding:4px 10px;border-radius:5px;border:1px solid rgba(120,97,64,0.14);color:rgba(30,23,16,0.4);background:transparent;cursor:pointer;transition:all 0.15s;}
+    .chip.on{background:rgba(120,97,64,0.07);border-color:rgba(120,97,64,0.22);color:var(--dark);}
+    .chip.spray-chip.on{background:var(--spray-bg);border-color:var(--spray-border);color:var(--spray);}
+    .feed{display:flex;flex-direction:column;gap:9px;}
+    .jentry{background:var(--white);border-radius:12px;border:1px solid rgba(120,97,64,0.1);padding:13px 16px;display:flex;gap:13px;}
+    .jentry.spray-card{border-color:var(--spray-border);background:var(--spray-bg);}
+    .jdate{width:42px;flex-shrink:0;text-align:center;}
+    .jdate-day{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--dark);line-height:1;}
+    .jdate-mon{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(30,23,16,0.4);margin-top:1px;}
+    .jdiv{width:1px;background:rgba(120,97,64,0.1);flex-shrink:0;}
+    .jentry.spray-card .jdiv{background:rgba(106,63,160,0.2);}
+    .jbody{flex:1;}
+    .badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-bottom:5px;margin-right:3px;}
+    .b-wx{background:rgba(90,138,170,0.1);color:#3a6a8a;border:1px solid rgba(90,138,170,0.22);}
+    .b-auto{background:rgba(172,202,178,0.15);color:#3a7a50;border:1px solid rgba(172,202,178,0.3);}
+    .b-spray{background:var(--spray-bg);color:var(--spray);border:1px solid var(--spray-border);}
+    .b-obs{background:rgba(120,97,64,0.08);color:var(--latte);border:1px solid rgba(120,97,64,0.18);}
+    .b-ms{background:rgba(172,202,178,0.18);color:#3a7a50;border:1px solid rgba(172,202,178,0.32);}
+    .b-pm{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;margin-bottom:5px;margin-left:2px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border:1px solid;}
+    .b-pm.low{background:var(--pm-low-bg);border-color:var(--pm-low-border);color:var(--pm-low);}
+    .b-pm.medium{background:var(--pm-med-bg);border-color:var(--pm-med-border);color:var(--pm-med);}
+    .b-pm.high{background:var(--pm-high-bg);border-color:var(--pm-high-border);color:var(--pm-high);}
+    .jtitle{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--dark);margin-bottom:3px;letter-spacing:0.02em;}
+    .jnotes{font-size:12px;color:rgba(30,23,16,0.55);line-height:1.5;}
+    .jwx{display:flex;gap:12px;margin-top:5px;flex-wrap:wrap;}
+    .jwx-item{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;color:rgba(30,23,16,0.45);}
+    .jwx-item span{font-weight:700;color:var(--dark);}
+    .spray-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;}
+    .sg{background:rgba(106,63,160,0.08);border-radius:7px;padding:7px 10px;}
+    .sg-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(30,23,16,0.4);margin-bottom:2px;}
+    .sg-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--dark);}
+    .jentry-del{width:22px;height:22px;border-radius:4px;border:1px solid rgba(120,97,64,0.15);background:transparent;color:rgba(30,23,16,0.25);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.15s;flex-shrink:0;align-self:flex-start;}
+    .jentry-del:hover{background:rgba(212,71,32,0.08);border-color:rgba(212,71,32,0.25);color:var(--grenadine);}
+    .feed-empty{text-align:center;padding:32px 16px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(30,23,16,0.25);}
+
+    /* Toast */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:9px 18px;border-radius:8px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:999;}
+    .toast.show{opacity:1;}
+
+    /* Disabled state (locked/finalized vintage) */
+    .entry-disabled .lp-action-btn{opacity:0.35;pointer-events:none;}
+    .entry-disabled .lp-form{display:none!important;}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="nav-toggle" onclick="openNav()">☰</button>
+  <a href="/index.html" style="text-decoration:none;color:inherit;">
+    <div class="topbar-logo">Lifecycle<span>.</span></div>
+  </a>
+  <div class="topbar-sep"></div>
+  <span class="topbar-label topbar-section">Field</span>
+  <span class="topbar-label topbar-arrow">›</span>
+  <span class="topbar-label topbar-current">Vineyard Journal</span>
+  <div id="vintageControl" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+    <div class="vintage-offline" id="vintageOffline" style="display:none;">
+      <span class="vintage-offline-dot"></span>Offline
+    </div>
+    <div class="vintage-pill" id="vintagePill" onclick="toggleVintageDropdown(event)">
+      <span class="vintage-pill-dot active" id="vintageDot"></span>
+      <span id="vintageYear">—</span>
+      <span class="vintage-pill-arrow">▾</span>
+      <div class="vintage-dropdown" id="vintageDropdown"></div>
+    </div>
+    <button class="vintage-lock-btn" id="vintageLockBtn" onclick="handleLockToggle()" style="display:none;">🔓</button>
+  </div>
+</div>
+
+<!-- Vintage banners -->
+<div class="vintage-banner locked" id="vintageBannerLocked">
+  🔒 Viewing <span id="bannerYearLocked"></span> Vintage — Locked. All inputs are read-only.
+</div>
+<div class="vintage-banner finalized" id="vintageBannerFinalized">
+  🔐 Viewing <span id="bannerYearFinalized"></span> Vintage — Finalized.
+</div>
+
+<!-- Vineyard tab bar -->
+<div class="vineyard-tabs">
+  <a class="vineyard-tab" href="/vineyard.html">🌿 Blocks</a>
+  <a class="vineyard-tab" href="/vineyard.html">📋 Labor Log</a>
+  <a class="vineyard-tab active" href="/vineyard-journal.html">📓 Vineyard Journal</a>
+</div>
+
+<!-- Nav drawer -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-header">
+    <div class="nav-header-logo">Lifecycle<span>.</span></div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-label">Field</div>
+  <a class="nav-item" href="/vineyard.html"><span class="nav-item-icon">🌿</span><span class="nav-item-label">Vineyard</span></a>
+  <a class="nav-item active" href="/vineyard-journal.html"><span class="nav-item-icon">📓</span><span class="nav-item-label">Vineyard Journal</span></a>
+  <a class="nav-item" href="/harvest.html"><span class="nav-item-icon">⚖️</span><span class="nav-item-label">Harvest</span></a>
+  <a class="nav-item" href="/vintage-manager.html"><span class="nav-item-icon">🗓</span><span class="nav-item-label">Vintage Manager</span></a>
+  <div class="nav-section-label">Cellar</div>
+  <a class="nav-item" href="/cellar.html"><span class="nav-item-icon">🍷</span><span class="nav-item-label">Cellar</span></a>
+  <a class="nav-item" href="/cellar-journal.html"><span class="nav-item-icon">📔</span><span class="nav-item-label">Winemaker Journal</span></a>
+  <a class="nav-item" href="/blending-lab.html"><span class="nav-item-icon">🧪</span><span class="nav-item-label">Blending Lab</span></a>
+  <div class="nav-section-label">Sales</div>
+  <a class="nav-item" href="/skus.html"><span class="nav-item-icon">📦</span><span class="nav-item-label">SKUs</span></a>
+  <div class="nav-section-label">Operations</div>
+  <a class="nav-item" href="/inventory.html"><span class="nav-item-icon">🏭</span><span class="nav-item-label">Inventory</span></a>
+  <a class="nav-item" href="/suppliers.html"><span class="nav-item-icon">🤝</span><span class="nav-item-label">Suppliers</span></a>
+  <div class="nav-section-label">Finance</div>
+  <a class="nav-item" href="/financial-dashboard.html"><span class="nav-item-icon">📊</span><span class="nav-item-label">Financial Dashboard</span></a>
+  <a class="nav-item" href="/finance.html"><span class="nav-item-icon">📈</span><span class="nav-item-label">Finance</span></a>
+  <a class="nav-item" href="/overhead-opex.html"><span class="nav-item-icon">💸</span><span class="nav-item-label">Overhead & OpEx</span></a>
+  <div class="nav-section-label">Setup</div>
+  <a class="nav-item" href="/labor-rates.html"><span class="nav-item-icon">⏱</span><span class="nav-item-label">Labor Rates</span></a>
+  <a class="nav-item" href="/task-library.html"><span class="nav-item-icon">📋</span><span class="nav-item-label">Task Library</span></a>
+  <div class="nav-footer">Lifecycle Manager · v1.0</div>
+</div>
+
+<!-- Vintage unlock modal -->
+<div class="vintage-modal-overlay" id="vintageUnlockModal">
+  <div class="vintage-modal">
+    <div class="vintage-modal-title" id="unlockModalTitle">Unlock Vintage</div>
+    <div class="vintage-modal-body" id="unlockModalBody"></div>
+    <div class="vintage-modal-actions">
+      <button class="vintage-modal-cancel" onclick="closeUnlockModal()">Cancel</button>
+      <button class="vintage-modal-confirm" id="unlockModalConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="journal-layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel" id="left-panel">
+
+    <!-- Auto weather notice -->
+    <div class="auto-notice">
+      <div class="auto-notice-icon">⚡</div>
+      <div>
+        <div class="auto-notice-title">Auto Weather Logging On</div>
+        <div class="auto-notice-sub" id="auto-notice-sub">Fetching from Open-Meteo…</div>
+      </div>
+    </div>
+
+    <!-- PM Summary -->
+    <div class="lp-section">
+      <div class="lp-label"><span id="vintage-year-label">—</span> Disease Pressure</div>
+      <div class="pm-summary medium" id="pm-summary">
+        <div class="pms-dot"></div>
+        <div class="pms-body">
+          <div class="pms-rating" id="pms-rating">Loading…</div>
+          <div class="pms-sub" id="pms-sub"></div>
+        </div>
+        <div class="pm-dots-mini" id="pm-dots-mini"></div>
+      </div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="lp-section">
+      <div class="lp-label">Season Milestones</div>
+      <div class="milestone-list" id="milestone-list"></div>
+    </div>
+
+    <!-- Harvest estimate -->
+    <div class="lp-section">
+      <div class="harvest-est">
+        <div class="he-label">Est. Harvest Window</div>
+        <div class="he-date" id="harvest-est-date">—</div>
+        <div class="he-auto" id="harvest-est-sub"></div>
+      </div>
+    </div>
+
+    <!-- Log Spray -->
+    <div class="lp-section" id="spray-section">
+      <div class="lp-label">Log Spray Event</div>
+      <button class="lp-action-btn spray" onclick="toggleForm('spray-form')">🌿 Log Spray Event</button>
+      <div class="lp-form spray-form" id="spray-form">
+        <div class="lf-row">
+          <div><div class="lf-label">Date</div><input type="date" class="lf-input" id="sf-date"/></div>
+          <div><div class="lf-label">Method</div>
+            <select class="lf-select" id="sf-method">
+              <option>Tractor Sprayer</option><option>Backpack</option><option>ATV Sprayer</option><option>Drone</option>
+            </select>
+          </div>
+        </div>
+        <div><div class="lf-label">Product Name</div><input type="text" class="lf-input" id="sf-product" placeholder="e.g. Regalia, Sulfur 80WP…"/></div>
+        <div class="lf-row">
+          <div><div class="lf-label">Target</div>
+            <select class="lf-select" id="sf-target">
+              <option>Powdery Mildew</option><option>Botrytis</option><option>Downy Mildew</option><option>Insects</option><option>Nutrition</option><option>Other</option>
+            </select>
+          </div>
+          <div><div class="lf-label">Rate</div><input type="text" class="lf-input" id="sf-rate" placeholder="e.g. 6 oz/acre"/></div>
+        </div>
+        <div><div class="lf-label">Blocks Sprayed</div><div class="block-checks" id="sf-blocks"></div></div>
+        <div><div class="lf-label">Notes (optional)</div><textarea class="lf-textarea" id="sf-notes" placeholder="Conditions, observations…"></textarea></div>
+        <button class="lf-save spray" onclick="submitSpray()">🌿 Save Spray Log</button>
+      </div>
+    </div>
+
+    <!-- Log Observation -->
+    <div class="lp-section" id="obs-section">
+      <div class="lp-label">Log Observation</div>
+      <button class="lp-action-btn obs" onclick="toggleForm('obs-form')">📝 Log Observation</button>
+      <div class="lp-form" id="obs-form">
+        <div><div class="lf-label">Date</div><input type="date" class="lf-input" id="of-date"/></div>
+        <div><div class="lf-label">Category</div>
+          <select class="lf-select" id="of-category">
+            <option>Observation</option><option>Decision</option>
+          </select>
+        </div>
+        <div><div class="lf-label">Notes</div><textarea class="lf-textarea" id="of-notes" placeholder="What did you observe or decide?"></textarea></div>
+        <button class="lf-save obs" onclick="submitObs()">✓ Save Observation</button>
+      </div>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="right-panel">
+    <div id="today-card"></div>
+    <div id="forecast-card"></div>
+    <div class="feed-bar">
+      <div class="feed-title">Journal Feed</div>
+      <div class="filter-chips">
+        <button class="chip on" onclick="setFilter('all',this)">All</button>
+        <button class="chip" onclick="setFilter('weather',this)">Weather</button>
+        <button class="chip spray-chip" onclick="setFilter('spray',this)">Spray</button>
+        <button class="chip" onclick="setFilter('obs',this)">Obs</button>
+      </div>
+    </div>
+    <div class="feed" id="feed">
+      <div class="feed-empty">Loading journal…</div>
+    </div>
+  </div>
+
+</div><!-- /journal-layout -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Airtable constants ────────────────────────────────────────────────────
+  const BASE_ID = 'appJNEHG8sqXmdYGe';
+  const PROXY   = '/api/airtable';
+
+  const TBL_VINTAGES = 'tblJ8NBvXinvXpGPq';
+  const F_VIN_YEAR   = 'fldgc54uvUaT7GwQX';
+  const F_VIN_STATUS = 'fldho6518UjJmfRqX';
+
+  const TBL_BLOCKS = 'tblPuFD0fbiLmITXK';
+  const F_BLK_NAME = 'fld3BU2ADl8oypAWe';
+
+  const TBL_VL            = 'tblhJhDKNMxUCncnn';
+  const F_VL_NAME         = 'fldyhuXGuI85HrxXu';
+  const F_VL_DATE         = 'fldFEM0tArQrVMYdY';
+  const F_VL_TYPE         = 'fldSJcOx7PuhWJhLG';
+  const F_VL_AUTO         = 'fldD14IEkkiqlMADw';
+  const F_VL_YEAR         = 'fld2SgTTxQtZDhZ7X';
+  const F_VL_TEMP_HIGH    = 'fldlQgZs8elf5IQwj';
+  const F_VL_TEMP_LOW     = 'fldbRftOfaA4zkJ0p';
+  const F_VL_RAIN         = 'fldYHMFHZAyXbmbkU';
+  const F_VL_WIND         = 'fldtRMZpER6xopwjM';
+  const F_VL_WX_CODE      = 'fldX8yEdVOYBKADQx';
+  const F_VL_PM_PRESSURE  = 'fld4Nr8hweATFKTpY';
+  const F_VL_PM_SCORE     = 'fldwf333SigLBOo2g';
+  const F_VL_NOTES        = 'fldbOgab0p9MoTPdf';
+  const F_VL_SPRAY_PROD   = 'fldju2v7bksAMMEYZ';
+  const F_VL_SPRAY_RATE   = 'fldjMrvThrXpfulQi';
+  const F_VL_SPRAY_METHOD = 'fldfstj45GCCfySuM';
+  const F_VL_SPRAY_TARGET = 'fldOFvz67G6IHRh2W';
+  const F_VL_BLOCKS       = 'fld8J6sNcOrKyLEDX';
+  const F_VL_CATEGORY     = 'fldZijaghrcnf0bXF';
+  const F_VL_MILESTONE    = 'fldoQ7tKQ0kufgXIF';
+
+  // ─── App state ─────────────────────────────────────────────────────────────
+  let logEntries  = [];
+  let blocks      = [];
+  let wxData      = null;
+  let vintageData = [];
+  let activeVintage = null;
+  let vintageYear = String(new Date().getFullYear());
+  let activeFilter = 'all';
+
+  // ─── Proxy helpers ─────────────────────────────────────────────────────────
+  async function airtableGet(tableId, opts = {}) {
+    const q = new URLSearchParams({ baseId: BASE_ID, tableId });
+    if (opts.filterByFormula) q.set('filterByFormula', opts.filterByFormula);
+    if (opts.sort)            q.set('sort', JSON.stringify(opts.sort));
+    if (opts.maxRecords)      q.set('maxRecords', String(opts.maxRecords));
+    const res = await fetch(`${PROXY}?${q}`);
+    if (!res.ok) throw new Error(`GET ${tableId} ${res.status}`);
+    return (await res.json()).records || [];
+  }
+
+  async function airtablePost(tableId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
+    });
+    if (!res.ok) throw new Error(`POST ${tableId} ${res.status}`);
+    return await res.json();
+  }
+
+  async function airtableDelete(tableId, recordId) {
+    const q = new URLSearchParams({ baseId: BASE_ID, tableId, recordId });
+    const res = await fetch(`${PROXY}?${q}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE ${tableId} ${res.status}`);
+  }
+
+  // ─── Nav drawer ────────────────────────────────────────────────────────────
+  function openNav()  { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('visible'); }
+  function closeNav() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('visible'); }
+
+  // ─── Toast ─────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ─── Date helpers ──────────────────────────────────────────────────────────
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtDate(iso) {
+    const [,m,d] = iso.split('-');
+    return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]} ${+d}`;
+  }
+  function dayName(iso) {
+    return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(iso+'T12:00:00').getDay()];
+  }
+  function cToF(c) { return Math.round(c * 9/5 + 32); }
+
+  // ─── Open-Meteo ────────────────────────────────────────────────────────────
+  async function fetchWeather() {
+    const url = 'https://api.open-meteo.com/v1/forecast'
+      + '?latitude=45.2397&longitude=-122.8006'
+      + '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode'
+      + '&timezone=America%2FLos_Angeles'
+      + '&forecast_days=7&past_days=7';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Open-Meteo fetch failed');
+    const json = await res.json();
+    const d = json.daily;
+    return {
+      dates: d.time,
+      high:  d.temperature_2m_max.map(cToF),
+      low:   d.temperature_2m_min.map(cToF),
+      rain:  d.precipitation_sum.map(mm => +(mm * 0.0394).toFixed(2)),
+      wind:  d.windspeed_10m_max.map(kph => Math.round(kph * 0.621)),
+      code:  d.weathercode
+    };
+  }
+
+  // ─── PM score algorithm (Gubler-Thomas simplified) ─────────────────────────
+  function calcPMScore(hi, lo, rain) {
+    let score = 0;
+    if (hi >= 70)   score += 50;
+    if (lo >= 50)   score += 30;
+    if (rain < 0.1) score += 20;
+    else if (rain < 0.25) score -= 20;
+    else            score -= 50;
+    if (hi > 95)    score -= 30;
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function pmLevel(score) {
+    if (score >= 70) return 'High';
+    if (score >= 40) return 'Medium';
+    return 'Low';
+  }
+
+  function pmClass(score) { return pmLevel(score).toLowerCase(); }
+
+  function wxIcon(code) {
+    if (code === 0)   return '☀️';
+    if (code <= 3)    return '⛅';
+    if (code <= 48)   return '🌫️';
+    if (code <= 67)   return '🌧️';
+    if (code <= 77)   return '🌨️';
+    if (code <= 82)   return '🌦️';
+    return '⛈️';
+  }
+
+  function wxCondition(code) {
+    if (code === 0)  return 'Clear Sky';
+    if (code <= 3)   return 'Partly Cloudy';
+    if (code <= 48)  return 'Foggy';
+    if (code <= 55)  return 'Drizzle';
+    if (code <= 67)  return 'Rainy';
+    if (code <= 77)  return 'Snowy';
+    if (code <= 82)  return 'Showers';
+    return 'Thunderstorm';
+  }
+
+  // ─── Vintage topbar control ─────────────────────────────────────────────────
+  async function initVintage() {
+    if (!navigator.onLine) {
+      document.getElementById('vintageOffline').style.display = 'flex';
+      const cached = localStorage.getItem('lm_active_vintage') || vintageYear;
+      vintageYear = cached;
+      renderVintagePill({ year: cached, state: 'Active' });
+      initApp();
+      return;
+    }
+    try {
+      const recs = await airtableGet(TBL_VINTAGES, { sort: [{ field: F_VIN_YEAR, direction: 'desc' }] });
+      vintageData = recs.map(r => ({
+        id:    r.id,
+        year:  r.fields[F_VIN_YEAR] || '',
+        state: r.fields[F_VIN_STATUS]?.name || 'Active'
+      }));
+      const currentYear = String(new Date().getFullYear());
+      const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
+      if (!hasActive) {
+        const ea = vintageData.find(v => v.state === 'Active');
+        if (ea) {
+          await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: ea.id, fields: { [F_VIN_STATUS]: 'Locked' } }] }) });
+          ea.state = 'Locked';
+        }
+        const pr = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ fields: { [F_VIN_YEAR]: currentYear, [F_VIN_STATUS]: 'Active' } }] }) });
+        const pd = await pr.json();
+        if (pd.records?.[0]) vintageData.unshift({ id: pd.records[0].id, year: currentYear, state: 'Active' });
+      }
+      const cached = localStorage.getItem('lm_active_vintage') || currentYear;
+      activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
+      if (activeVintage) { localStorage.setItem('lm_active_vintage', activeVintage.year); vintageYear = activeVintage.year; }
+      renderVintagePill(activeVintage);
+      applyVintageState(activeVintage?.state || 'Active', activeVintage?.year || currentYear);
+    } catch (e) { console.warn('Vintage init failed', e); }
+    initApp();
+  }
+
+  function renderVintagePill(v) {
+    if (!v) return;
+    document.getElementById('vintageYear').textContent = v.year;
+    const dot = document.getElementById('vintageDot');
+    dot.className = 'vintage-pill-dot';
+    dot.classList.add((v.state || 'Active').toLowerCase());
+    const lb = document.getElementById('vintageLockBtn');
+    lb.style.display = v.state === 'Active' ? 'none' : 'flex';
+    lb.textContent = v.state === 'Locked' ? '🔒' : '🔐';
+    const dd = document.getElementById('vintageDropdown');
+    dd.innerHTML = vintageData.map(vd =>
+      `<div class="vintage-dropdown-item ${vd.year === v.year ? 'selected' : ''}" onclick="selectVintage('${vd.year}')">
+        ${vd.year} <span class="vintage-badge ${vd.state.toLowerCase()}">${vd.state}</span>
+      </div>`
+    ).join('');
+  }
+
+  function toggleVintageDropdown(e) {
+    e.stopPropagation();
+    document.getElementById('vintageDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', () => document.getElementById('vintageDropdown')?.classList.remove('open'));
+
+  async function selectVintage(year) {
+    document.getElementById('vintageDropdown').classList.remove('open');
+    const v = vintageData.find(vd => vd.year === year);
+    if (!v) return;
+    activeVintage = v;
+    vintageYear = v.year;
+    localStorage.setItem('lm_active_vintage', year);
+    renderVintagePill(v);
+    applyVintageState(v.state, v.year);
+    await initApp();
+  }
+
+  function applyVintageState(state, year) {
+    const lb = document.getElementById('vintageBannerLocked');
+    const fb = document.getElementById('vintageBannerFinalized');
+    const lp = document.getElementById('left-panel');
+    document.getElementById('bannerYearLocked').textContent    = year;
+    document.getElementById('bannerYearFinalized').textContent = year;
+    lb.classList.toggle('visible', state === 'Locked');
+    fb.classList.toggle('visible', state === 'Finalized');
+    lp.classList.toggle('entry-disabled', state === 'Locked' || state === 'Finalized');
+  }
+
+  async function handleLockToggle() {
+    if (!activeVintage || activeVintage.state === 'Active') return;
+    const activeV = vintageData.find(v => v.state === 'Active');
+    document.getElementById('unlockModalTitle').textContent = `Unlock ${activeVintage.year} Vintage`;
+    document.getElementById('unlockModalBody').textContent  =
+      activeV ? `Unlocking ${activeVintage.year} will lock the ${activeV.year} vintage. Continue?`
+               : `This will unlock the ${activeVintage.year} vintage for editing. Continue?`;
+    document.getElementById('vintageUnlockModal').classList.add('open');
+    document.getElementById('unlockModalConfirm').onclick = async () => {
+      closeUnlockModal();
+      if (activeV) {
+        await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: activeV.id, fields: { [F_VIN_STATUS]: 'Locked' } }] }) });
+        activeV.state = 'Locked';
+      }
+      await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: activeVintage.id, fields: { [F_VIN_STATUS]: 'Active' } }] }) });
+      activeVintage.state = 'Active';
+      vintageYear = activeVintage.year;
+      localStorage.setItem('lm_active_vintage', activeVintage.year);
+      renderVintagePill(activeVintage);
+      applyVintageState('Active', activeVintage.year);
+      await initApp();
+    };
+  }
+
+  function closeUnlockModal() {
+    document.getElementById('vintageUnlockModal').classList.remove('open');
+  }
+
+  // ─── Page init ─────────────────────────────────────────────────────────────
+  async function initApp() {
+    document.getElementById('vintage-year-label').textContent = vintageYear;
+    const today = todayISO();
+    document.getElementById('sf-date').value = today;
+    document.getElementById('of-date').value = today;
+
+    try {
+      const [logRecs, wx, blockRecs] = await Promise.all([
+        airtableGet(TBL_VL, {
+          filterByFormula: `{${F_VL_YEAR}}=${vintageYear}`,
+          sort: [{ field: F_VL_DATE, direction: 'desc' }],
+          maxRecords: 500
+        }),
+        fetchWeather(),
+        airtableGet(TBL_BLOCKS, { maxRecords: 100 })
+      ]);
+
+      wxData = wx;
+      logEntries = logRecs.map(r => ({
+        _id:     r.id,
+        date:    r.fields[F_VL_DATE] || '',
+        type:    r.fields[F_VL_TYPE]?.name || '',
+        auto:    r.fields[F_VL_AUTO] || false,
+        year:    r.fields[F_VL_YEAR] || 0,
+        hi:      r.fields[F_VL_TEMP_HIGH] ?? null,
+        lo:      r.fields[F_VL_TEMP_LOW]  ?? null,
+        rain:    r.fields[F_VL_RAIN]      ?? null,
+        wind:    r.fields[F_VL_WIND]      ?? null,
+        wxCode:  r.fields[F_VL_WX_CODE]   || 0,
+        pmLevel: r.fields[F_VL_PM_PRESSURE]?.name || '',
+        pmScore: r.fields[F_VL_PM_SCORE]  || 0,
+        notes:   r.fields[F_VL_NOTES]     || '',
+        sprayProd:   r.fields[F_VL_SPRAY_PROD]   || '',
+        sprayRate:   r.fields[F_VL_SPRAY_RATE]   || '',
+        sprayMethod: r.fields[F_VL_SPRAY_METHOD]?.name || '',
+        sprayTarget: r.fields[F_VL_SPRAY_TARGET]?.name || '',
+        blockIds:    r.fields[F_VL_BLOCKS]        || [],
+        category:    r.fields[F_VL_CATEGORY]?.name || '',
+        milestone:   r.fields[F_VL_MILESTONE]?.name || ''
+      }));
+
+      blocks = blockRecs.map(r => ({ id: r.id, name: r.fields[F_BLK_NAME] || r.id }));
+
+      const bc = document.getElementById('sf-blocks');
+      bc.innerHTML = blocks.map(b =>
+        `<div class="block-check" onclick="this.classList.toggle('on')" data-id="${b.id}">${b.name}</div>`
+      ).join('');
+
+      await autoLogWeather();
+
+      renderLeftPanel();
+      renderTodayCard();
+      renderForecast();
+      renderFeed();
+
+    } catch (e) {
+      console.error('initApp failed', e);
+      document.getElementById('feed').innerHTML = '<div class="feed-empty">Failed to load — check connection</div>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initVintage);
+
+  // ─── Auto weather logging ──────────────────────────────────────────────────
+  async function autoLogWeather() {
+    if (!wxData) return;
+    const existingDates = new Set(
+      logEntries.filter(e => e.type === 'Weather').map(e => e.date)
+    );
+    const syncTime = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    const newEntries = [];
+
+    for (let i = 0; i <= 7; i++) {
+      const date = wxData.dates[i];
+      if (!date || existingDates.has(date)) continue;
+      const hi    = wxData.high[i];
+      const lo    = wxData.low[i];
+      const rain  = wxData.rain[i];
+      const wind  = wxData.wind[i];
+      const code  = wxData.code[i];
+      const score = calcPMScore(hi, lo, rain);
+      const level = pmLevel(score);
+      const name  = `${vintageYear}-${date.slice(5)} ${wxCondition(code)}`;
+
+      try {
+        const rec = await airtablePost(TBL_VL, {
+          [F_VL_NAME]:        name,
+          [F_VL_DATE]:        date,
+          [F_VL_TYPE]:        'Weather',
+          [F_VL_AUTO]:        true,
+          [F_VL_YEAR]:        Number(vintageYear),
+          [F_VL_TEMP_HIGH]:   hi,
+          [F_VL_TEMP_LOW]:    lo,
+          [F_VL_RAIN]:        rain,
+          [F_VL_WIND]:        wind,
+          [F_VL_WX_CODE]:     code,
+          [F_VL_PM_PRESSURE]: level,
+          [F_VL_PM_SCORE]:    score
+        });
+        newEntries.push({
+          _id: rec.id, date, type: 'Weather', auto: true, year: Number(vintageYear),
+          hi, lo, rain, wind, wxCode: code, pmLevel: level, pmScore: score,
+          notes: '', sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
+          blockIds: [], category: '', milestone: ''
+        });
+      } catch (e) {
+        console.warn('Auto-log failed for', date, e);
+      }
+    }
+
+    if (newEntries.length > 0) {
+      logEntries = [...newEntries, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+    }
+
+    document.getElementById('auto-notice-sub').textContent = `Last sync: ${syncTime} · Champoeg, OR`;
+  }
+
+  // ─── Today's weather card ──────────────────────────────────────────────────
+  function renderTodayCard() {
+    const today = todayISO();
+    const entry = logEntries.find(e => e.date === today && e.type === 'Weather');
+    const hi   = entry?.hi   ?? wxData?.high[7]  ?? '—';
+    const lo   = entry?.lo   ?? wxData?.low[7]   ?? '—';
+    const rain = entry?.rain ?? wxData?.rain[7]  ?? '—';
+    const wind = entry?.wind ?? wxData?.wind[7]  ?? '—';
+    const code = entry?.wxCode ?? wxData?.code[7] ?? 0;
+    const score = entry?.pmScore ?? calcPMScore(hi, lo, rain);
+    const level = entry?.pmLevel || pmLevel(score);
+    const cls   = level.toLowerCase();
+
+    document.getElementById('today-card').innerHTML = `
+      <div class="weather-card">
+        <div class="wc-top">
+          <div class="wc-left">
+            <div class="wc-icon">${wxIcon(code)}</div>
+            <div>
+              <div class="wc-eyebrow">Today · ${fmtDate(today)}, ${new Date().getFullYear()}</div>
+              <div class="wc-cond">${wxCondition(code)}</div>
+            </div>
+          </div>
+          <div class="wc-badges">
+            ${entry?.auto ? '<div class="wc-auto-badge">⚡ Auto-logged</div>' : ''}
+            <div class="pm-badge ${cls}"><div class="pm-badge-dot"></div>${level} PM</div>
+          </div>
+        </div>
+        <div class="wc-stats">
+          <div class="wcs"><div class="wcs-val hi">${hi}°</div><div class="wcs-label">High</div></div>
+          <div class="wcs"><div class="wcs-val lo">${lo}°</div><div class="wcs-label">Low</div></div>
+          <div class="wcs"><div class="wcs-val">${rain}"</div><div class="wcs-label">Rain</div></div>
+          <div class="wcs"><div class="wcs-val">${wind} mph</div><div class="wcs-label">Wind</div></div>
+        </div>
+        <div class="wc-pm-row">
+          <div class="pm-score-label">PM Risk Score</div>
+          <div class="pm-score-bar-wrap"><div class="pm-score-bar" style="width:${score}%"></div></div>
+          <div class="pm-score-val">${score} / 100 · ${level}</div>
+        </div>
+      </div>`;
+  }
+
+  // ─── Spray recommendation ──────────────────────────────────────────────────
+  function calcSprayRec(forecastDays) {
+    const highIdx = forecastDays.findIndex(d => d.level === 'High');
+    if (highIdx === -1) {
+      return { type: 'low', title: 'Low Risk Week', sub: 'No high-pressure days in the next 7 days. No spray needed.' };
+    }
+    if (highIdx === 0) {
+      const run = forecastDays.filter(d => d.level === 'High').length;
+      return { type: 'asap', title: 'Spray Today — High Pressure Active', sub: `Currently in a high-pressure period (${run} day${run>1?'s':''}). Spray as soon as conditions allow.`, targetIdx: 0 };
+    }
+    const targetIdx = highIdx - 1;
+    const target = forecastDays[targetIdx];
+    const highRun = forecastDays.slice(highIdx).filter(d => d.level === 'High').length;
+    const badConditions = target.rain >= 0.1 || target.wind > 15;
+    const sub = badConditions
+      ? `${target.date === todayISO() ? 'Today' : dayName(target.date)} has ${target.rain >= 0.1 ? 'rain' : 'high wind'} — consider spraying ${targetIdx > 1 ? dayName(forecastDays[targetIdx-1].date) : 'earlier'} instead. High PM begins ${dayName(forecastDays[highIdx].date)} (${highRun} day${highRun>1?'s':''}).`
+      : `Last good window before ${highRun} high-pressure day${highRun>1?'s':''} starting ${dayName(forecastDays[highIdx].date)} ${fmtDate(forecastDays[highIdx].date)}.`;
+    return { type: 'window', title: `${targetIdx === 0 ? 'Today' : dayName(target.date)} — ${fmtDate(target.date)}`, sub, targetIdx };
+  }
+
+  // ─── 7-Day forecast strip ──────────────────────────────────────────────────
+  function renderForecast() {
+    if (!wxData) { document.getElementById('forecast-card').innerHTML = ''; return; }
+    const today = todayISO();
+    const syncTime = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+    const forecastDays = [];
+    for (let i = 7; i < 14; i++) {
+      const date  = wxData.dates[i];
+      const hi    = wxData.high[i];
+      const lo    = wxData.low[i];
+      const rain  = wxData.rain[i];
+      const wind  = wxData.wind[i];
+      const code  = wxData.code[i];
+      const score = calcPMScore(hi, lo, rain);
+      const level = pmLevel(score);
+      forecastDays.push({ date, hi, lo, rain, wind, code, score, level });
+    }
+
+    const rec = calcSprayRec(forecastDays);
+
+    const stripHTML = forecastDays.map((d, i) => {
+      const isToday  = d.date === today;
+      const isTarget = rec.targetIdx === i;
+      const cls = (isToday ? ' today' : '') + (isTarget ? ' spray-target' : '');
+      return `
+        <div class="fd${cls}">
+          ${isTarget ? '<div class="spray-arrow">🌿</div>' : ''}
+          <div class="fd-dow">${isToday ? 'Today' : dayName(d.date)}</div>
+          <div class="fd-date">${fmtDate(d.date)}</div>
+          <div class="fd-icon">${wxIcon(d.code)}</div>
+          <div class="fd-temps"><span class="hi">${d.hi}°</span> / <span class="lo">${d.lo}°</span></div>
+          <div class="fd-rain">${d.rain}"</div>
+          <div class="fd-pm ${d.level.toLowerCase()}">${d.level === 'Medium' ? 'Med' : d.level}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('forecast-card').innerHTML = `
+      <div class="forecast-card">
+        <div class="fc-header">
+          <div class="fc-title-wrap">
+            <div style="font-size:18px">🌿</div>
+            <div>
+              <div class="fc-title">7-Day Spray Forecast</div>
+              <div class="fc-subtitle">Powdery mildew pressure · Gubler-Thomas · Open-Meteo</div>
+            </div>
+          </div>
+          <div class="fc-updated">Updated ${syncTime}</div>
+        </div>
+        <div class="spray-window-banner">
+          <div class="swb-icon">🎯</div>
+          <div class="swb-body">
+            <div class="swb-eyebrow">Recommended Spray Window</div>
+            <div class="swb-title">${rec.title}</div>
+            <div class="swb-sub">${rec.sub}</div>
+          </div>
+          ${rec.type !== 'low' ? `<button class="swb-btn" onclick="toggleForm('spray-form');document.getElementById('left-panel').scrollTop=0">Log Spray →</button>` : ''}
+        </div>
+        <div class="forecast-strip">${stripHTML}</div>
+        <div class="fc-legend">
+          <div class="fcl-item"><div class="fcl-dot low"></div>Low PM</div>
+          <div class="fcl-item"><div class="fcl-dot medium"></div>Medium PM</div>
+          <div class="fcl-item"><div class="fcl-dot high"></div>High PM</div>
+          <div class="fcl-item"><div class="fcl-dot spray"></div>🌿 Spray target</div>
+          <div class="fc-model-note">Gubler-Thomas · ≥70°F high + ≥50°F low + no rain = High</div>
+        </div>
+      </div>`;
+  }
+
+  // ─── Left panel ────────────────────────────────────────────────────────────
+  const MILESTONE_ORDER = ['Bud Break','Cane Selection','Bloom','Fruit Set','Veraison','Harvest'];
+
+  function renderLeftPanel() {
+    renderPMSummary();
+    renderMilestones();
+    renderHarvestEst();
+  }
+
+  function renderPMSummary() {
+    const weatherEntries = logEntries.filter(e => e.type === 'Weather');
+    if (weatherEntries.length === 0) {
+      document.getElementById('pms-rating').textContent = 'No data yet';
+      document.getElementById('pms-sub').textContent = '';
+      return;
+    }
+    const counts = { Low: 0, Medium: 0, High: 0 };
+    weatherEntries.forEach(e => { if (counts[e.pmLevel] !== undefined) counts[e.pmLevel]++; });
+    const total = weatherEntries.length;
+    const highPct = counts.High / total;
+    const overall = highPct >= 0.4 ? 'High' : highPct >= 0.2 ? 'Medium' : 'Low';
+    const cls = overall.toLowerCase();
+
+    const recent = weatherEntries.slice(0, 14);
+    const dots = recent.map(e => `<div class="pdm ${e.pmLevel.toLowerCase()}"></div>`).join('');
+
+    const el = document.getElementById('pm-summary');
+    el.className = `pm-summary ${cls}`;
+    document.getElementById('pms-rating').textContent = `${overall} Season Pressure`;
+    document.getElementById('pms-sub').textContent =
+      `${counts.High} high · ${counts.Medium} med · ${counts.Low} low days`;
+    document.getElementById('pm-dots-mini').innerHTML = dots;
+  }
+
+  function renderMilestones() {
+    const msEntries = logEntries.filter(e => e.type === 'Milestone');
+    const loggedMap = {};
+    msEntries.forEach(e => { if (!loggedMap[e.milestone]) loggedMap[e.milestone] = e.date; });
+
+    const firstUnlogged = MILESTONE_ORDER.find(m => !loggedMap[m]);
+
+    const html = MILESTONE_ORDER.map(name => {
+      const logged = !!loggedMap[name];
+      const isNext = name === firstUnlogged;
+      const date   = loggedMap[name] ? fmtDate(loggedMap[name]) : '';
+      const key    = name.replace(/ /g,'-');
+      return `
+        <div class="ms-item ${logged ? 'done' : isNext ? 'next' : ''}" id="ms-${key}">
+          <div class="ms-main">
+            <div class="ms-circle">${logged ? '✓' : ''}</div>
+            <div class="ms-body">
+              <div class="ms-name">${name}</div>
+              <div class="ms-date">${logged ? `✓ ${date}` : isNext ? 'Next up — log when observed' : 'Not yet logged'}</div>
+            </div>
+            ${!logged ? `<button class="ms-btn" onclick="toggleMsForm('${name}')">Log</button>` : ''}
+          </div>
+          <div class="ms-form" id="msf-${key}">
+            <div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:2px;">Date</div>
+              <input type="date" class="lf-input" id="msf-date-${key}" value="${todayISO()}"/></div>
+            <div><textarea class="lf-textarea" id="msf-notes-${key}" placeholder="Observations…"></textarea></div>
+            <button class="lf-save ms" onclick="submitMilestone('${name}')">✓ Mark ${name}</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('milestone-list').innerHTML = html;
+  }
+
+  function toggleMsForm(name) {
+    document.getElementById(`msf-${name.replace(/ /g,'-')}`).classList.toggle('open');
+  }
+
+  function renderHarvestEst() {
+    const budBreak = logEntries.find(e => e.milestone === 'Bud Break');
+    if (!budBreak) {
+      document.getElementById('harvest-est-date').textContent = '—';
+      document.getElementById('harvest-est-sub').textContent = 'Log Bud Break to estimate';
+      return;
+    }
+    const base = new Date(budBreak.date + 'T12:00:00');
+    const early = new Date(base); early.setDate(base.getDate() + 150);
+    const late  = new Date(base); late.setDate(base.getDate() + 170);
+    const fmt = d => `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getDate()}`;
+    document.getElementById('harvest-est-date').textContent = `${fmt(early)} – ${fmt(late)}, ${vintageYear}`;
+    document.getElementById('harvest-est-sub').textContent = `⚡ ${fmtDate(budBreak.date)} + 150–170 days`;
+  }
+
+  // ─── Journal feed ──────────────────────────────────────────────────────────
+  function setFilter(filter, btn) {
+    activeFilter = filter;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    btn.classList.add('on');
+    renderFeed();
+  }
+
+  function renderFeed() {
+    const filtered = activeFilter === 'all' ? logEntries
+      : activeFilter === 'weather' ? logEntries.filter(e => e.type === 'Weather')
+      : activeFilter === 'spray'   ? logEntries.filter(e => e.type === 'Spray')
+      : logEntries.filter(e => e.type === 'Observation' || e.type === 'Milestone');
+
+    if (filtered.length === 0) {
+      document.getElementById('feed').innerHTML =
+        `<div class="feed-empty">${activeFilter === 'all' ? 'No entries yet — weather will auto-log on next page load' : 'No ' + activeFilter + ' entries yet'}</div>`;
+      return;
+    }
+    document.getElementById('feed').innerHTML = filtered.map(e => entryHTML(e)).join('');
+  }
+
+  function entryHTML(e) {
+    const [,m,d] = e.date.split('-');
+    const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1];
+    const isSpray = e.type === 'Spray';
+
+    let badges = '';
+    let body   = '';
+
+    if (e.type === 'Weather') {
+      const cls = e.pmLevel.toLowerCase();
+      badges = `<span class="badge b-wx">Weather</span>${e.auto ? '<span class="badge b-auto">⚡ Auto</span>' : ''}`;
+      body   = `
+        <div class="jtitle">${wxCondition(e.wxCode)} — ${e.hi}° / ${e.lo}° <span class="b-pm ${cls}">${e.pmLevel} PM</span></div>
+        <div class="jwx">
+          <div class="jwx-item">High <span>${e.hi}°F</span></div>
+          <div class="jwx-item">Low <span>${e.lo}°F</span></div>
+          <div class="jwx-item">Rain <span>${e.rain}"</span></div>
+          <div class="jwx-item">Wind <span>${e.wind} mph</span></div>
+        </div>`;
+    } else if (e.type === 'Spray') {
+      badges = `<span class="badge b-spray">Spray</span>`;
+      body   = `
+        <div class="jtitle">${e.sprayProd || 'Spray Event'} — ${e.sprayTarget}</div>
+        <div class="spray-grid">
+          <div class="sg"><div class="sg-label">Product</div><div class="sg-val">${e.sprayProd || '—'}</div></div>
+          <div class="sg"><div class="sg-label">Rate</div><div class="sg-val">${e.sprayRate || '—'}</div></div>
+          <div class="sg"><div class="sg-label">Blocks</div><div class="sg-val">${resolveBlocks(e.blockIds)}</div></div>
+          <div class="sg"><div class="sg-label">Method</div><div class="sg-val">${e.sprayMethod || '—'}</div></div>
+        </div>
+        ${e.notes ? `<div class="jnotes" style="margin-top:6px">${e.notes}</div>` : ''}`;
+    } else if (e.type === 'Milestone') {
+      badges = `<span class="badge b-ms">Milestone</span>`;
+      body   = `<div class="jtitle">${e.milestone}</div>${e.notes ? `<div class="jnotes">${e.notes}</div>` : ''}`;
+    } else {
+      badges = `<span class="badge b-obs">${e.category || 'Observation'}</span>`;
+      body   = `<div class="jnotes">${e.notes}</div>`;
+    }
+
+    return `
+      <div class="jentry${isSpray ? ' spray-card' : ''}">
+        <div class="jdate">
+          <div class="jdate-day">${+d}</div>
+          <div class="jdate-mon">${mon}</div>
+        </div>
+        <div class="jdiv"></div>
+        <div class="jbody">${badges}${body}</div>
+        <button class="jentry-del" onclick="deleteEntry('${e._id}',this)" title="Delete">✕</button>
+      </div>`;
+  }
+
+  function resolveBlocks(ids) {
+    if (!ids || ids.length === 0) return '—';
+    return ids.map(id => blocks.find(b => b.id === id)?.name || id).join(', ');
+  }
+
+  // ─── Form helpers ──────────────────────────────────────────────────────────
+  function toggleForm(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // ─── Spray submit ──────────────────────────────────────────────────────────
+  async function submitSpray() {
+    const date    = document.getElementById('sf-date').value;
+    const product = document.getElementById('sf-product').value.trim();
+    const rate    = document.getElementById('sf-rate').value.trim();
+    const method  = document.getElementById('sf-method').value;
+    const target  = document.getElementById('sf-target').value;
+    const notes   = document.getElementById('sf-notes').value.trim();
+    const blockEls = document.querySelectorAll('#sf-blocks .block-check.on');
+    const blockIds = Array.from(blockEls).map(el => el.dataset.id);
+
+    if (!date || !product) { showToast('Date and product are required'); return; }
+
+    const fields = {
+      [F_VL_NAME]:         `${vintageYear}-${date.slice(5)} Spray`,
+      [F_VL_DATE]:         date,
+      [F_VL_TYPE]:         'Spray',
+      [F_VL_YEAR]:         Number(vintageYear),
+      [F_VL_SPRAY_PROD]:   product,
+      [F_VL_SPRAY_RATE]:   rate,
+      [F_VL_SPRAY_METHOD]: method,
+      [F_VL_SPRAY_TARGET]: target,
+      [F_VL_NOTES]:        notes
+    };
+    if (blockIds.length > 0) fields[F_VL_BLOCKS] = blockIds;
+
+    try {
+      const rec = await airtablePost(TBL_VL, fields);
+      const entry = {
+        _id: rec.id, date, type: 'Spray', auto: false, year: Number(vintageYear),
+        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+        notes, sprayProd: product, sprayRate: rate, sprayMethod: method, sprayTarget: target,
+        blockIds, category: '', milestone: ''
+      };
+      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+      toggleForm('spray-form');
+      document.getElementById('sf-product').value = '';
+      document.getElementById('sf-rate').value = '';
+      document.getElementById('sf-notes').value = '';
+      document.querySelectorAll('#sf-blocks .block-check').forEach(el => el.classList.remove('on'));
+      renderFeed();
+      showToast('Spray event logged');
+    } catch (e) {
+      console.error(e);
+      showToast('Error saving spray log');
+    }
+  }
+
+  // ─── Observation submit ────────────────────────────────────────────────────
+  async function submitObs() {
+    const date     = document.getElementById('of-date').value;
+    const category = document.getElementById('of-category').value;
+    const notes    = document.getElementById('of-notes').value.trim();
+
+    if (!date || !notes) { showToast('Date and notes are required'); return; }
+
+    const fields = {
+      [F_VL_NAME]:     `${vintageYear}-${date.slice(5)} ${category}`,
+      [F_VL_DATE]:     date,
+      [F_VL_TYPE]:     'Observation',
+      [F_VL_YEAR]:     Number(vintageYear),
+      [F_VL_CATEGORY]: category,
+      [F_VL_NOTES]:    notes
+    };
+
+    try {
+      const rec = await airtablePost(TBL_VL, fields);
+      const entry = {
+        _id: rec.id, date, type: 'Observation', auto: false, year: Number(vintageYear),
+        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+        notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
+        blockIds: [], category, milestone: ''
+      };
+      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+      toggleForm('obs-form');
+      document.getElementById('of-notes').value = '';
+      renderFeed();
+      showToast('Observation saved');
+    } catch (e) {
+      console.error(e);
+      showToast('Error saving observation');
+    }
+  }
+
+  // ─── Milestone submit ──────────────────────────────────────────────────────
+  async function submitMilestone(name) {
+    const key   = name.replace(/ /g,'-');
+    const date  = document.getElementById(`msf-date-${key}`).value;
+    const notes = document.getElementById(`msf-notes-${key}`).value.trim();
+
+    if (!date) { showToast('Date is required'); return; }
+
+    const fields = {
+      [F_VL_NAME]:      `${vintageYear}-${date.slice(5)} ${name}`,
+      [F_VL_DATE]:      date,
+      [F_VL_TYPE]:      'Milestone',
+      [F_VL_YEAR]:      Number(vintageYear),
+      [F_VL_MILESTONE]: name,
+      [F_VL_CATEGORY]:  'Milestone',
+      [F_VL_NOTES]:     notes
+    };
+
+    try {
+      const rec = await airtablePost(TBL_VL, fields);
+      const entry = {
+        _id: rec.id, date, type: 'Milestone', auto: false, year: Number(vintageYear),
+        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+        notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
+        blockIds: [], category: 'Milestone', milestone: name
+      };
+      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+      renderLeftPanel();
+      renderFeed();
+      showToast(`${name} logged`);
+    } catch (e) {
+      console.error(e);
+      showToast('Error saving milestone');
+    }
+  }
+
+  // ─── Delete entry ──────────────────────────────────────────────────────────
+  async function deleteEntry(recordId, btn) {
+    const card = btn.closest('.jentry');
+    card.style.opacity = '0.4';
+    try {
+      await airtableDelete(TBL_VL, recordId);
+      logEntries = logEntries.filter(e => e._id !== recordId);
+      card.remove();
+      renderLeftPanel();
+      showToast('Entry deleted');
+    } catch (e) {
+      console.error(e);
+      card.style.opacity = '1';
+      showToast('Error deleting entry');
+    }
+  }
+</script>
+</body>
+</html>
