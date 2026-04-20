@@ -2,7 +2,7 @@
   "name": "Lifecycle Manager",
   "short_name": "Lifecycle",
   "description": "Winery Operations Manager",
-  "start_url": "/Vineyard_1.3.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1e1710",
   "theme_color": "#1e1710",

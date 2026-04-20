@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v12` (deployed with bug fixes — harvest concurrent events, skus lot resolution + wine cost auto-calc + available gal display, harvest nav links corrected)
-Next version: `lifecycle-v13`
+Current version: `lifecycle-v15` (deployed with nav fixes — cellar-journal link added to 8 screens, manifest start_url fixed, stray script tag removed from vineyard.html)
+Next version: `lifecycle-v16`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 
@@ -37,8 +37,10 @@ All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html`
 |------|---------|
 | `index.html` | Landing page / macro dashboard |
 | `vineyard.html` | Block management, labor logs, cost-per-acre |
+| `vineyard-journal.html` | Vineyard journal — auto weather logging, PM pressure scoring, 7-day spray forecast |
 | `harvest.html` | Scale house, harvest events, season overview |
 | `cellar.html` | Wine lots, vessel tracking, stage management |
+| `cellar-journal.html` | Cellar journal — tasting notes, treatment log, lab work |
 | `blending-lab.html` | Blend recipes, bench trials, commit to cellar |
 | `skus.html` | Product SKUs, COGS, margin analysis |
 | `finance.html` | Finance / P&L |
@@ -51,7 +53,7 @@ All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html`
 | `task-library.html` | Master task list by department, edit-in-panel |
 | `winery-app.html` | UI reference shell (not a nav destination) |
 | `api/airtable.js` | Vercel proxy — GET/POST/PATCH/DELETE |
-| `sw.js` | Service worker — cache `lifecycle-v10` |
+| `sw.js` | Service worker — cache `lifecycle-v14` |
 | `manifest.json` | PWA manifest |
 
 All 14 module screens include the **vintage topbar control** (pill + lock/unlock + state banners).
@@ -67,11 +69,13 @@ Lifecycle.                          ✕
 
 ─ FIELD ──────────────────────────
 🌿  Vineyard          /vineyard.html
+📓  Vineyard Journal  /vineyard-journal.html
 ⚖️   Harvest           /harvest.html
 🗓  Vintage Manager   /vintage-manager.html
 
 ─ CELLAR ─────────────────────────
 🍷  Cellar            /cellar.html
+📒  Cellar Journal    /cellar-journal.html
 🧪  Blending Lab      /blending-lab.html
 
 ─ SALES ──────────────────────────
@@ -161,6 +165,30 @@ All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldI
 | `TBL_BLEND_COSTS` | `tbl4wU6E4Unu2XZdH` | Blend direct costs |
 | `TBL_DRY_GOODS` | `tbld7eYPAspQny1Ii` | Dry goods inventory (existing, rich schema) |
 | `TBL_SHIPMENTS` | `tblibVNV2aJrPJgEv` | Shipments received |
+
+### Key Field IDs — TBL_VL / Vineyard Log (`tblhJhDKNMxUCncnn`)
+| Constant | Field ID | Type | Notes |
+|---|---|---|---|
+| `F_VL_NAME` | `fldyhuXGuI85HrxXu` | singleLineText | Entry name / date string |
+| `F_VL_DATE` | `fldFEM0tArQrVMYdY` | date | Log date |
+| `F_VL_TYPE` | `fldSJcOx7PuhWJhLG` | singleSelect | Weather / Observation / Spray / Milestone / General |
+| `F_VL_AUTO` | `fldD14IEkkiqlMADw` | checkbox | Auto-logged by system |
+| `F_VL_YEAR` | `fld2SgTTxQtZDhZ7X` | singleLineText | Vintage year |
+| `F_VL_TEMP_HIGH` | `fldlQgZs8elf5IQwj` | number | °F |
+| `F_VL_TEMP_LOW` | `fldbRftOfaA4zkJ0p` | number | °F |
+| `F_VL_RAIN` | `fldYHMFHZAyXbmbkU` | number | inches |
+| `F_VL_WIND` | `fldtRMZpER6xopwjM` | number | mph |
+| `F_VL_WX_CODE` | `fldX8yEdVOYBKADQx` | number | Open-Meteo WMO code |
+| `F_VL_PM_PRESSURE` | `fld4Nr8hweATFKTpY` | singleSelect | Low / Medium / High |
+| `F_VL_PM_SCORE` | `fldwf333SigLBOo2g` | number | 0–100 Gubler-Thomas score |
+| `F_VL_NOTES` | `fldbOgab0p9MoTPdf` | multilineText | Observer notes |
+| `F_VL_SPRAY_PROD` | `fldju2v7bksAMMEYZ` | singleLineText | Spray product name |
+| `F_VL_SPRAY_RATE` | `fldjMrvThrXpfulQi` | singleLineText | Application rate |
+| `F_VL_SPRAY_METHOD` | `fldfstj45GCCfySuM` | singleSelect | Ground / Air / Hand |
+| `F_VL_SPRAY_TARGET` | `fldOFvz67G6IHRh2W` | singleSelect | PM / Botrytis / Leafhopper / Other |
+| `F_VL_BLOCKS` | `fld8J6sNcOrKyLEDX` | multipleRecordLinks | Links to TBL_BLOCKS |
+| `F_VL_CATEGORY` | `fldZijaghrcnf0bXF` | singleSelect | Entry category |
+| `F_VL_MILESTONE` | `fldoQ7tKQ0kufgXIF` | singleSelect | Bud Break / Cane Selection / Bloom / Fruit Set / Veraison / Harvest |
 
 ### Phase 2 Tables
 | Constant | Table ID | Notes |
@@ -292,7 +320,6 @@ The proxy appends `returnFieldsByFieldId=true` to all GET requests — responses
 
 ## Known Issues
 
-- `manifest.json` `start_url` still points to `Vineyard_1.4.html` — update to `/index.html`
 - `index.html` dashboard stat blocks may show `—` if Airtable table IDs mismatch — needs live data wiring
 - Clerk auth scaffold exists in `login.disabled.html` — do not activate until custom domain is purchased
 
@@ -322,6 +349,20 @@ Completed:
 6. ✅ Built `task-library.html` — tasks by department, edit-in-panel, Show Inactive toggle
 7. ✅ Added change-log toggle to `financial-dashboard.html` — Finalized/All Changes/Select Changes panel
 8. ✅ Bumped `sw.js` to `lifecycle-v10`, all 14 screens in SHELL array
+
+### Vineyard Journal — Complete (deployed as lifecycle-v14, 2026-04-08)
+- ✅ Built `vineyard-journal.html` — full vineyard logging screen
+- ✅ Auto weather logging: fetches Open-Meteo on every load, idempotently logs past 7 days + today to Airtable (`TBL_VL = tblhJhDKNMxUCncnn`)
+- ✅ Powdery mildew pressure scoring (Gubler-Thomas simplified daily algorithm, clamped 0–100, Low/Medium/High)
+- ✅ 7-day forecast strip with PM pressure pills per day
+- ✅ Spray recommendation banner (find first HIGH pressure day, recommend spraying day before)
+- ✅ Vineyard tab bar added to `vineyard.html` and `vineyard-journal.html` (Blocks / Labor Log / Vineyard Journal)
+- ✅ Airtable VL table field IDs documented below
+
+### Nav Drawer Standardization — Complete (deployed as lifecycle-v14, 2026-04-08)
+- ✅ Replaced broken PascalCase nav drawers in `blending-lab.html`, `skus.html`, `finance.html`
+- ✅ Added Vineyard Journal link to all 13 screens that had existing correct nav structure
+- ✅ All 16 screens now have current, correct nav drawer with Vineyard Journal included
 
 ### Phase 3 — Not started
 Candidate work:
