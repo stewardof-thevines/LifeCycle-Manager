@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v15` (deployed with nav fixes — cellar-journal link added to 8 screens, manifest start_url fixed, stray script tag removed from vineyard.html)
-Next version: `lifecycle-v16`
+Current version: `lifecycle-v17` (milestone persistence fix — filter formula changed from `={year}` to `="${year}"` to match singleLineText field; year writes changed from Number to String for consistency)
+Next version: `lifecycle-v18`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 

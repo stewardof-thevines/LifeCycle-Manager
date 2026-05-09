@@ -771,7 +771,7 @@
     try {
       const [logRecs, wx, blockRecs] = await Promise.all([
         airtableGet(TBL_VL, {
-          filterByFormula: `{${F_VL_YEAR}}=${vintageYear}`,
+          filterByFormula: `{${F_VL_YEAR}}="${vintageYear}"`,
           sort: [{ field: F_VL_DATE, direction: 'desc' }],
           maxRecords: 500
         }),
@@ -852,7 +852,7 @@
           [F_VL_DATE]:        date,
           [F_VL_TYPE]:        'Weather',
           [F_VL_AUTO]:        true,
-          [F_VL_YEAR]:        Number(vintageYear),
+          [F_VL_YEAR]:        vintageYear,
           [F_VL_TEMP_HIGH]:   hi,
           [F_VL_TEMP_LOW]:    lo,
           [F_VL_RAIN]:        rain,
@@ -1275,7 +1275,7 @@
       [F_VL_NAME]:      `${vintageYear}-${date.slice(5)} ${name}`,
       [F_VL_DATE]:      date,
       [F_VL_TYPE]:      'Milestone',
-      [F_VL_YEAR]:      Number(vintageYear),
+      [F_VL_YEAR]:      vintageYear,
       [F_VL_MILESTONE]: name,
       [F_VL_CATEGORY]:  'Milestone',
       [F_VL_NOTES]:     notes
