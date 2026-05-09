@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v18` (fix write error — reverted F_VL_YEAR writes back to Number() since Airtable field is numeric; kept filter formula as ="year" which works via Airtable type coercion)
-Next version: `lifecycle-v19`
+Current version: `lifecycle-v19` (fix milestone write — removed invalid F_VL_CATEGORY="Milestone" from submitMilestone; category singleSelect only accepts "Observation"/"Decision"; improved airtablePost error messages)
+Next version: `lifecycle-v20`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 

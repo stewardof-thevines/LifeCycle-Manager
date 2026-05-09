@@ -548,7 +548,10 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseId: BASE_ID, tableId, fields })
     });
-    if (!res.ok) throw new Error(`POST ${tableId} ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error?.message || body?.message || `POST ${tableId} ${res.status}`);
+    }
     return await res.json();
   }
 
@@ -1277,7 +1280,6 @@
       [F_VL_TYPE]:      'Milestone',
       [F_VL_YEAR]:      Number(vintageYear),
       [F_VL_MILESTONE]: name,
-      [F_VL_CATEGORY]:  'Milestone',
       [F_VL_NOTES]:     notes
     };
 
