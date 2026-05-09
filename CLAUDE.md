@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v17` (milestone persistence fix — filter formula changed from `={year}` to `="${year}"` to match singleLineText field; year writes changed from Number to String for consistency)
-Next version: `lifecycle-v18`
+Current version: `lifecycle-v18` (fix write error — reverted F_VL_YEAR writes back to Number() since Airtable field is numeric; kept filter formula as ="year" which works via Airtable type coercion)
+Next version: `lifecycle-v19`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 
