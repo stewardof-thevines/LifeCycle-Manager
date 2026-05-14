@@ -755,7 +755,7 @@
       vintageData = (data.records || []).map(r => ({
         id: r.id,
         year: r.fields[F_VINTAGE_YEAR] || '',
-        state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        state: r.fields[F_VINTAGE_STATUS] || 'Active'
       }));
       const currentYear = String(new Date().getFullYear());
       const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
@@ -947,8 +947,8 @@
         const obj = {
           _id:    r.id,
           id:     f[F_LOT_NAME] || r.id,
-          stage:  f[F_LOT_STAGE]?.name || 'Unknown',
-          style:  f[F_LOT_TYPE]?.name  || '—',
+          stage:  f[F_LOT_STAGE] || 'Unknown',
+          style:  f[F_LOT_TYPE]  || '—',
           vintage: f[F_LOT_YEAR] || null,
           vol:    f[F_LOT_VOL]  || 0,
           alloc:  f[F_LOT_OUT]  || 0,
@@ -964,8 +964,8 @@
       // Map vessel records → app model
       vessels = vesselRecs.map(r => {
         const f = r.fields || r.cellValuesByFieldId || {};
-        const woodType = f[F_VES_WOODTYPE]?.name || '';
-        const statusRaw = f[F_VES_STATUS]?.name || '';
+        const woodType = f[F_VES_WOODTYPE] || '';
+        const statusRaw = f[F_VES_STATUS] || '';
 
         // Normalise status to short form
         let status = 'Empty';
@@ -1005,8 +1005,8 @@
           fills:   f[F_VES_FILLS] || 0,
           lot:     lotName,
           fillPct,
-          wineType: f[F_VES_WINETYPE]?.name || '',
-          oakAge:   f[F_VES_OAKAGE]?.name   || ''
+          wineType: f[F_VES_WINETYPE] || '',
+          oakAge:   f[F_VES_OAKAGE]   || ''
         };
       });
 

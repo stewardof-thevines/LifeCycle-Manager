@@ -269,7 +269,7 @@
         vintageData = (data.records || []).map(r => ({
           id: r.id,
           year: r.fields[F_VINTAGE_YEAR] || '',
-          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+          state: r.fields[F_VINTAGE_STATUS] || 'Active'
         }));
         const cy = String(new Date().getFullYear());
         if (!vintageData.some(v => v.state === 'Active' && v.year === cy)) {

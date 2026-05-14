@@ -386,7 +386,7 @@
         vintageData = (data.records || []).map(r => ({
           id: r.id,
           year: r.fields[F_VINTAGE_YEAR] || '',
-          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+          state: r.fields[F_VINTAGE_STATUS] || 'Active'
         }));
         const cy = String(new Date().getFullYear());
         if (!vintageData.some(v => v.state === 'Active' && v.year === cy)) {
@@ -513,7 +513,7 @@
         const thresh = r.fields[F_REORDER_THRESH];
         return (stock != null && thresh != null) && stock <= thresh;
       }).length;
-      const cats = new Set(allInventory.map(r => r.fields[F_CATEGORY]?.name).filter(Boolean)).size;
+      const cats = new Set(allInventory.map(r => r.fields[F_CATEGORY]).filter(Boolean)).size;
       const value = allInventory.reduce((sum, r) => {
         const stock = r.fields[F_CURRENT_STOCK] || 0;
         const cost  = r.fields[F_UNIT_COST_LAST] || 0;
@@ -534,7 +534,7 @@
 
     function renderInventory() {
       const filtered = activeFilter === 'All' ? allInventory
-        : allInventory.filter(r => r.fields[F_CATEGORY]?.name === activeFilter);
+        : allInventory.filter(r => r.fields[F_CATEGORY] === activeFilter);
       const tbody = document.getElementById('inventoryBody');
       if (!filtered.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No items${activeFilter !== 'All' ? ' in ' + activeFilter : ''}.</td></tr>`;
@@ -542,9 +542,9 @@
       }
       tbody.innerHTML = filtered.map(r => {
         const name  = r.fields[F_ITEM_NAME] || '—';
-        const cat   = r.fields[F_CATEGORY]?.name || '—';
+        const cat   = r.fields[F_CATEGORY] || '—';
         const stock = r.fields[F_CURRENT_STOCK] ?? '—';
-        const unit  = r.fields[F_UNIT]?.name || '—';
+        const unit  = r.fields[F_UNIT] || '—';
         const cost  = r.fields[F_UNIT_COST_LAST] != null ? `$${Number(r.fields[F_UNIT_COST_LAST]).toFixed(2)}` : '—';
         const thresh = r.fields[F_REORDER_THRESH] ?? '—';
         const isLow = (r.fields[F_CURRENT_STOCK] != null && r.fields[F_REORDER_THRESH] != null)

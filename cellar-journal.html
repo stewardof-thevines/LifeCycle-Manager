@@ -529,7 +529,7 @@
       vintageData = recs.map(r => ({
         id:    r.id,
         year:  r.fields[F_VIN_YEAR] || '',
-        state: r.fields[F_VIN_STATUS]?.name || 'Active'
+        state: r.fields[F_VIN_STATUS] || 'Active'
       }));
       const currentYear = String(new Date().getFullYear());
       const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
@@ -653,8 +653,8 @@
       lots = lotRecs.map(r => ({
         _id:   r.id,
         id:    r.fields[F_LOT_NAME] || r.id,
-        type:  r.fields[F_LOT_TYPE]?.name || '',
-        stage: r.fields[F_LOT_STAGE]?.name || 'Fermentation',
+        type:  r.fields[F_LOT_TYPE] || '',
+        stage: r.fields[F_LOT_STAGE] || 'Fermentation',
         year:  r.fields[F_LOT_YEAR] || vintageYear
       }));
 
@@ -671,15 +671,15 @@
           _id:    r.id,
           n:      f[F_LOG_ENTRY_NUM] || 0,
           date:   f[F_LOG_DATE]      || '',
-          ampm:   f[F_LOG_AMPM]?.name || '',
+          ampm:   f[F_LOG_AMPM] || '',
           time:   f[F_LOG_TIME]      || '',
           brix:   f[F_LOG_BRIX]      != null ? f[F_LOG_BRIX]  : null,
           ph:     f[F_LOG_PH]        != null ? f[F_LOG_PH]    : null,
           temp:   f[F_LOG_TEMP]      != null ? f[F_LOG_TEMP]  : null,
-          stage:  f[F_LOG_STAGE]?.name || '',
+          stage:  f[F_LOG_STAGE] || '',
           nutrient: f[F_LOG_NUTRIENT] || '',
           amount: f[F_LOG_AMOUNT]    || '',
-          unit:   f[F_LOG_UNIT]?.name || '',
+          unit:   f[F_LOG_UNIT] || '',
           notes:  f[F_LOG_NOTES]     || ''
         });
       });

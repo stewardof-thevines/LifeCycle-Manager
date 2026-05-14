@@ -268,7 +268,7 @@
         vintageData = (data.records || []).map(r => ({
           id: r.id,
           year: r.fields[F_VINTAGE_YEAR] || '',
-          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+          state: r.fields[F_VINTAGE_STATUS] || 'Active'
         }));
         const cy = String(new Date().getFullYear());
         if (!vintageData.some(v => v.state === 'Active' && v.year === cy)) {
@@ -400,7 +400,7 @@
     function loadFormForEdit(record) {
       document.getElementById('editingRecordId').value = record.id;
       document.getElementById('fTaskName').value = record.fields[F_TASK_NAME] || '';
-      document.getElementById('fDepartment').value = record.fields[F_DEPARTMENT]?.name || '';
+      document.getElementById('fDepartment').value = record.fields[F_DEPARTMENT] || '';
       document.getElementById('fActive').checked = record.fields[F_ACTIVE] !== false;
       document.getElementById('panelTitle').textContent = 'Edit Task';
       document.getElementById('cancelBtn').style.display = 'block';
@@ -480,7 +480,7 @@
       DEPARTMENTS.forEach(d => { groups[d] = []; });
       groups['Uncategorized'] = [];
       allTasks.forEach(r => {
-        const dept = r.fields[F_DEPARTMENT]?.name || '';
+        const dept = r.fields[F_DEPARTMENT] || '';
         if (groups[dept] !== undefined) {
           groups[dept].push(r);
         } else {

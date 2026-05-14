@@ -302,7 +302,7 @@
         vintageData = (data.records || []).map(r => ({
           id: r.id,
           year: r.fields[F_VINTAGE_YEAR] || '',
-          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+          state: r.fields[F_VINTAGE_STATUS] || 'Active'
         }));
         const currentYear = String(new Date().getFullYear());
         const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
@@ -482,7 +482,7 @@
       // Group by module then by field name
       const groups = {};
       changeLogRecords.forEach(r => {
-        const module = r.fields[F_CL_MODULE]?.name || 'Other';
+        const module = r.fields[F_CL_MODULE] || 'Other';
         if (!groups[module]) groups[module] = {};
         const fieldName = r.fields[F_CL_FIELD_NAME] || 'Unknown Field';
         if (!groups[module][fieldName]) groups[module][fieldName] = [];
@@ -545,7 +545,7 @@
 
     function selectRadioChange(module, fieldName, recordId) {
       changeLogRecords
-        .filter(r => r.fields[F_CL_MODULE]?.name === module && r.fields[F_CL_FIELD_NAME] === fieldName)
+        .filter(r => r.fields[F_CL_MODULE] === module && r.fields[F_CL_FIELD_NAME] === fieldName)
         .forEach(r => selectedChanges.delete(r.id));
       selectedChanges.add(recordId);
       // Recalculation hook — future phase

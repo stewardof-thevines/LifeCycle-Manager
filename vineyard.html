@@ -750,7 +750,7 @@
       vintageData = (data.records || []).map(r => ({
         id: r.id,
         year: r.fields[F_VINTAGE_YEAR] || '',
-        state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        state: r.fields[F_VINTAGE_STATUS] || 'Active'
       }));
       const currentYear = String(new Date().getFullYear());
       const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
@@ -1034,7 +1034,7 @@
     TASKS_MAP = {};
     (data.records || []).forEach(r => {
       const f = r.fields || r.cellValuesByFieldId || {};
-      const dept = (f[F_TASK_DEPT]?.name || f[F_TASK_DEPT] || 'Vineyard');
+      const dept = (f[F_TASK_DEPT] || 'Vineyard');
       // Map Airtable dept names to UI dept keys
       const deptKey = Object.keys(DEPT_MAP).find(k => DEPT_MAP[k] === dept) || dept;
       if (!TASKS_MAP[deptKey]) TASKS_MAP[deptKey] = [];

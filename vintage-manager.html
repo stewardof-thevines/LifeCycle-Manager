@@ -281,7 +281,7 @@
         vintageData = (data.records || []).map(r => ({
           id:    r.id,
           year:  r.fields[F_VINTAGE_YEAR] || '',
-          state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+          state: r.fields[F_VINTAGE_STATUS] || 'Active'
         }));
 
         const currentYear = String(new Date().getFullYear());
@@ -472,7 +472,7 @@
       vintageData = records.map(r => ({
         id:    r.id,
         year:  r.fields[F_VINTAGE_YEAR] || '',
-        state: r.fields[F_VINTAGE_STATUS]?.name || 'Active'
+        state: r.fields[F_VINTAGE_STATUS] || 'Active'
       }));
       renderCards(records);
     }
@@ -486,7 +486,7 @@
       container.innerHTML = records.map(r => {
         const year        = r.fields[F_VINTAGE_YEAR] || '—';
         const safeYear    = String(year).replace(/'/g, "\\'");
-        const status      = r.fields[F_VINTAGE_STATUS]?.name || 'Active';
+        const status      = r.fields[F_VINTAGE_STATUS] || 'Active';
         const statusLower = status.toLowerCase();
         const start       = formatDate(r.fields[F_HARVEST_START]);
         const end         = formatDate(r.fields[F_HARVEST_END]);
