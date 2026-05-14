@@ -671,13 +671,13 @@
         const ea = vintageData.find(v => v.state === 'Active');
         if (ea) {
           await fetch(PROXY, { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ id: ea.id, fields: { [F_VIN_STATUS]: 'Locked' } }] }) });
+            body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, recordId: ea.id, fields: { [F_VIN_STATUS]: 'Locked' } }) });
           ea.state = 'Locked';
         }
         const pr = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, records: [{ fields: { [F_VIN_YEAR]: currentYear, [F_VIN_STATUS]: 'Active' } }] }) });
+          body: JSON.stringify({ baseId: BASE_ID, tableId: TBL_VINTAGES, fields: { [F_VIN_YEAR]: currentYear, [F_VIN_STATUS]: 'Active' } }) });
         const pd = await pr.json();
-        if (pd.records?.[0]) vintageData.unshift({ id: pd.records[0].id, year: currentYear, state: 'Active' });
+        if (pd.id) vintageData.unshift({ id: pd.id, year: currentYear, state: 'Active' });
       }
       const cached = localStorage.getItem('lm_active_vintage') || currentYear;
       activeVintage = vintageData.find(v => v.year === cached) || vintageData.find(v => v.year === currentYear);
