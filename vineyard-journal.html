@@ -673,7 +673,7 @@
       vintageData = recs.map(r => ({
         id:    r.id,
         year:  r.fields[F_VIN_YEAR] || '',
-        state: r.fields[F_VIN_STATUS]?.name || 'Active'
+        state: r.fields[F_VIN_STATUS] || 'Active'
       }));
       const currentYear = String(new Date().getFullYear());
       const hasActive = vintageData.some(v => v.state === 'Active' && v.year === currentYear);
@@ -797,7 +797,7 @@
         .map(r => ({
         _id:     r.id,
         date:    r.fields[F_VL_DATE] || '',
-        type:    r.fields[F_VL_TYPE]?.name || '',
+        type:    r.fields[F_VL_TYPE]            || '',
         auto:    r.fields[F_VL_AUTO] || false,
         year:    r.fields[F_VL_YEAR] || 0,
         hi:      r.fields[F_VL_TEMP_HIGH] ?? null,
@@ -805,16 +805,16 @@
         rain:    r.fields[F_VL_RAIN]      ?? null,
         wind:    r.fields[F_VL_WIND]      ?? null,
         wxCode:  r.fields[F_VL_WX_CODE]   || 0,
-        pmLevel: r.fields[F_VL_PM_PRESSURE]?.name || '',
+        pmLevel: r.fields[F_VL_PM_PRESSURE]     || '',
         pmScore: r.fields[F_VL_PM_SCORE]  || 0,
         notes:   r.fields[F_VL_NOTES]     || '',
         sprayProd:   r.fields[F_VL_SPRAY_PROD]   || '',
         sprayRate:   r.fields[F_VL_SPRAY_RATE]   || '',
-        sprayMethod: r.fields[F_VL_SPRAY_METHOD]?.name || '',
-        sprayTarget: r.fields[F_VL_SPRAY_TARGET]?.name || '',
+        sprayMethod: r.fields[F_VL_SPRAY_METHOD] || '',
+        sprayTarget: r.fields[F_VL_SPRAY_TARGET] || '',
         blockIds:    r.fields[F_VL_BLOCKS]        || [],
-        category:    r.fields[F_VL_CATEGORY]?.name || '',
-        milestone:   r.fields[F_VL_MILESTONE]?.name || ''
+        category:    r.fields[F_VL_CATEGORY]    || '',
+        milestone:   r.fields[F_VL_MILESTONE]   || ''
       }));
 
       blocks = blockRecs.map(r => ({ id: r.id, name: r.fields[F_BLK_NAME] || r.id }));
