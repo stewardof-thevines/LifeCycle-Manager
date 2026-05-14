@@ -774,7 +774,7 @@
     try {
       const [logRecs, wx, blockRecs] = await Promise.all([
         airtableGet(TBL_VL, {
-          filterByFormula: `{${F_VL_YEAR}}=${vintageYear}`,
+          filterByFormula: `{Vintage Year}=${vintageYear}`,
           sort: [{ field: F_VL_DATE, direction: 'desc' }],
           maxRecords: 500
         }),
