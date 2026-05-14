@@ -16,8 +16,8 @@
 
 **Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
 
-Current version: `lifecycle-v21` (fix filterByFormula to use field name {Vintage Year} instead of field ID — Airtable filterByFormula requires field names not IDs; filter was silently returning 0 records since the beginning)
-Next version: `lifecycle-v22`
+Current version: `lifecycle-v22` (bypass filterByFormula entirely — fetch all TBL_VL records and filter client-side by year using String(r.fields[F_VL_YEAR]) === String(vintageYear); filterByFormula was silently returning 0 records even with field names)
+Next version: `lifecycle-v23`
 
 Without this bump, phones with the PWA installed will keep running the old cached version.
 

@@ -774,16 +774,17 @@
     try {
       const [logRecs, wx, blockRecs] = await Promise.all([
         airtableGet(TBL_VL, {
-          filterByFormula: `{Vintage Year}=${vintageYear}`,
           sort: [{ field: F_VL_DATE, direction: 'desc' }],
-          maxRecords: 500
+          maxRecords: 1000
         }),
         fetchWeather(),
         airtableGet(TBL_BLOCKS, { maxRecords: 100 })
       ]);
 
       wxData = wx;
-      logEntries = logRecs.map(r => ({
+      logEntries = logRecs
+        .filter(r => String(r.fields[F_VL_YEAR]) === String(vintageYear))
+        .map(r => ({
         _id:     r.id,
         date:    r.fields[F_VL_DATE] || '',
         type:    r.fields[F_VL_TYPE]?.name || '',
