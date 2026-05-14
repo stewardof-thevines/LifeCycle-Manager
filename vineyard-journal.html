@@ -534,13 +534,23 @@
 
   // ─── Proxy helpers ─────────────────────────────────────────────────────────
   async function airtableGet(tableId, opts = {}) {
-    const q = new URLSearchParams({ baseId: BASE_ID, tableId });
-    if (opts.filterByFormula) q.set('filterByFormula', opts.filterByFormula);
-    if (opts.sort)            q.set('sort', JSON.stringify(opts.sort));
-    if (opts.maxRecords)      q.set('maxRecords', String(opts.maxRecords));
-    const res = await fetch(`${PROXY}?${q}`);
-    if (!res.ok) throw new Error(`GET ${tableId} ${res.status}`);
-    return (await res.json()).records || [];
+    const results = [];
+    let offset = null;
+    const limit = opts.maxRecords ? Number(opts.maxRecords) : Infinity;
+    do {
+      const q = new URLSearchParams({ baseId: BASE_ID, tableId });
+      if (opts.filterByFormula) q.set('filterByFormula', opts.filterByFormula);
+      if (opts.sort)            q.set('sort', JSON.stringify(opts.sort));
+      if (opts.maxRecords)      q.set('maxRecords', String(opts.maxRecords));
+      if (offset)               q.set('offset', offset);
+      const res = await fetch(`${PROXY}?${q}`);
+      if (!res.ok) throw new Error(`GET ${tableId} ${res.status}`);
+      const data = await res.json();
+      results.push(...(data.records || []));
+      offset = data.offset || null;
+      if (results.length >= limit) break;
+    } while (offset);
+    return results;
   }
 
   async function airtablePost(tableId, fields) {
