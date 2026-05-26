@@ -588,25 +588,28 @@
     if (file.size > PHOTO_MAX_RAW_MB * 1024 * 1024) throw new Error('File too large');
 
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const { width: w, height: h } = bitmap;
-    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(w, h));
-    const tw = Math.round(w * scale);
-    const th = Math.round(h * scale);
+    try {
+      const { width: w, height: h } = bitmap;
+      const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(w, h));
+      const tw = Math.round(w * scale);
+      const th = Math.round(h * scale);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = tw;
-    canvas.height = th;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, tw, th);
-    bitmap.close?.();
+      const canvas = document.createElement('canvas');
+      canvas.width = tw;
+      canvas.height = th;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, tw, th);
 
-    return await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        b => b ? resolve(b) : reject(new Error('Resize produced no blob')),
-        'image/jpeg',
-        PHOTO_JPEG_QUAL
-      );
-    });
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          b => b ? resolve(b) : reject(new Error('Resize produced no blob')),
+          'image/jpeg',
+          PHOTO_JPEG_QUAL
+        );
+      });
+    } finally {
+      bitmap.close?.();
+    }
   }
 
   function blobToBase64(blob) {
@@ -615,6 +618,7 @@
       reader.onload = () => {
         // FileReader gives "data:image/jpeg;base64,XXXX" — strip the prefix
         const s = reader.result;
+        if (typeof s !== 'string') { reject(new Error('FileReader returned non-string')); return; }
         const comma = s.indexOf(',');
         resolve(comma >= 0 ? s.slice(comma + 1) : s);
       };
