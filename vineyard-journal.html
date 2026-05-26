@@ -1744,7 +1744,7 @@
     img.classList.add('loading');
     spin.classList.add('show');
     img.onload  = () => { img.classList.remove('loading'); spin.classList.remove('show'); };
-    img.onerror = () => { spin.classList.remove('show'); };
+    img.onerror = () => { img.classList.remove('loading'); spin.classList.remove('show'); };
     img.src = src;
     // Hide prev/next when there's only one photo
     document.querySelector('.lb-prev').style.display = lbPhotos.length > 1 ? '' : 'none';
