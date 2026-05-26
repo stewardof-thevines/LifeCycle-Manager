@@ -13,8 +13,14 @@
  * POST /api/airtable  { baseId, tableId, fields: { fieldId: value, ... } }
  *   → proxies to Airtable Create Record
  *
+ * POST /api/airtable  { action: 'uploadAttachment', baseId, recordId, fieldId, contentType, filename, file }
+ *   → proxies to Airtable Upload Attachment (content.airtable.com)
+ *
  * PATCH /api/airtable { baseId, tableId, recordId, fields: { ... } }
  *   → proxies to Airtable Update Record
+ *
+ * DELETE /api/airtable?baseId=...&tableId=...&recordId=...
+ *   → proxies to Airtable Delete Record
  */
 
 // ── Clerk JWT verification ───────────────────────────────────────────────
