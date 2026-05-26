@@ -1355,7 +1355,7 @@
     return `
       <div class="jphotos">
         <div class="jphoto-hero" onclick="event.stopPropagation();openLightbox('${e._id}',0)">
-          <img src="${thumbUrl}" alt=""/>
+          <img src="${thumbUrl}" alt="Photo from ${e.date}"/>
           ${moreCount > 0 ? `<div class="jphoto-more">+${moreCount} more</div>` : ''}
         </div>
       </div>`;
