@@ -522,6 +522,7 @@
   const F_VL_BLOCKS       = 'fld8J6sNcOrKyLEDX';
   const F_VL_CATEGORY     = 'fldZijaghrcnf0bXF';
   const F_VL_MILESTONE    = 'fldoQ7tKQ0kufgXIF';
+  const F_VL_PHOTOS       = 'fldrmN1se98qUfGos';
 
   // ─── App state ─────────────────────────────────────────────────────────────
   let logEntries  = [];
@@ -561,6 +562,18 @@
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body?.error?.message || body?.message || `POST ${tableId} ${res.status}`);
+    }
+    return await res.json();
+  }
+
+  async function airtablePatch(tableId, recordId, fields) {
+    const res = await fetch(PROXY, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: BASE_ID, tableId, recordId, fields })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error?.message || body?.message || `PATCH ${tableId} ${res.status}`);
     }
     return await res.json();
   }
@@ -814,7 +827,8 @@
         sprayTarget: r.fields[F_VL_SPRAY_TARGET] || '',
         blockIds:    r.fields[F_VL_BLOCKS]        || [],
         category:    r.fields[F_VL_CATEGORY]    || '',
-        milestone:   r.fields[F_VL_MILESTONE]   || ''
+        milestone:   r.fields[F_VL_MILESTONE]   || '',
+        photos:      r.fields[F_VL_PHOTOS]      || []
       }));
 
       blocks = blockRecs.map(r => ({ id: r.id, name: r.fields[F_BLK_NAME] || r.id }));
@@ -879,7 +893,8 @@
           _id: rec.id, date, type: 'Weather', auto: true, year: Number(vintageYear),
           hi, lo, rain, wind, wxCode: code, pmLevel: level, pmScore: score,
           notes: '', sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
-          blockIds: [], category: '', milestone: ''
+          blockIds: [], category: '', milestone: '',
+          photos: []
         });
       } catch (e) {
         console.warn('Auto-log failed for', date, e);
@@ -1225,7 +1240,8 @@
         _id: rec.id, date, type: 'Spray', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: product, sprayRate: rate, sprayMethod: method, sprayTarget: target,
-        blockIds, category: '', milestone: ''
+        blockIds, category: '', milestone: '',
+        photos: []
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
       toggleForm('spray-form');
@@ -1264,7 +1280,8 @@
         _id: rec.id, date, type: 'Observation', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
-        blockIds: [], category, milestone: ''
+        blockIds: [], category, milestone: '',
+        photos: []
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
       toggleForm('obs-form');
@@ -1301,7 +1318,8 @@
         _id: rec.id, date, type: 'Milestone', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
-        blockIds: [], category: 'Milestone', milestone: name
+        blockIds: [], category: 'Milestone', milestone: name,
+        photos: []
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
       renderLeftPanel();

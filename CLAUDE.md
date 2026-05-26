@@ -189,6 +189,7 @@ All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldI
 | `F_VL_BLOCKS` | `fld8J6sNcOrKyLEDX` | multipleRecordLinks | Links to TBL_BLOCKS |
 | `F_VL_CATEGORY` | `fldZijaghrcnf0bXF` | singleSelect | Entry category |
 | `F_VL_MILESTONE` | `fldoQ7tKQ0kufgXIF` | singleSelect | Bud Break / Cane Selection / Bloom / Fruit Set / Veraison / Harvest |
+| `F_VL_PHOTOS` | `fldrmN1se98qUfGos` | multipleAttachments | Photos on observation / spray / milestone entries |
 
 ### Phase 2 Tables
 | Constant | Table ID | Notes |
