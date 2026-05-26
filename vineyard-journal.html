@@ -573,7 +573,7 @@
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body?.error?.message || body?.message || `PATCH ${tableId} ${res.status}`);
+      throw new Error(body?.error?.message || body?.message || `PATCH ${tableId}/${recordId} ${res.status}`);
     }
     return await res.json();
   }
