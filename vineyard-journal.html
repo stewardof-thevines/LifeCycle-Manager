@@ -182,7 +182,6 @@
     .lf-thumb{position:relative;flex:0 0 auto;width:64px;height:64px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);}
     .lf-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
     .lf-thumb .lf-thumb-spin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:11px;}
-    .lf-thumb.removed{opacity:0.35;}
     .lf-thumb-x{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;border:none;font-size:10px;line-height:16px;text-align:center;cursor:pointer;padding:0;}
     .lf-add-photo{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;}
     .lf-add-photo:hover{background:rgba(255,255,255,0.13);color:#fff;}
@@ -677,7 +676,7 @@
   }
 
   // ─── Photo queues for the three forms ──────────────────────────────────────
-  // Each queue maps form-prefix → array of { id, blob, objectUrl, filename, uploading }
+  // Each queue maps form-prefix → array of { id, blob, objectUrl, filename }
   const photoQueues = { sf: [], of: [] };  // milestone queues are keyed by msf-<milestone-name>
 
   function getQueue(prefix) {
@@ -715,12 +714,14 @@
 
     for (const file of files) {
       const id = `p-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-      const placeholder = { id, blob: null, objectUrl: null, filename: file.name, uploading: false };
+      const placeholder = { id, blob: null, objectUrl: null, filename: file.name };
       q.push(placeholder);
       renderQueueStrip(prefix);
 
       try {
         const blob = await resizeImage(file);
+        // If user removed this placeholder via ✕ while resize was running, discard the blob.
+        if (q.indexOf(placeholder) < 0) continue;
         placeholder.blob = blob;
         placeholder.objectUrl = URL.createObjectURL(blob);
         placeholder.filename = `photo-${Date.now()}.jpg`;
