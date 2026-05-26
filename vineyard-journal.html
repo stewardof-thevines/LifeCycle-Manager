@@ -578,6 +578,72 @@
     return await res.json();
   }
 
+  // ─── Photo helpers ─────────────────────────────────────────────────────────
+  const PHOTO_MAX_EDGE   = 1920;
+  const PHOTO_JPEG_QUAL  = 0.85;
+  const PHOTO_MAX_RAW_MB = 25;
+
+  async function resizeImage(file) {
+    if (!file.type.startsWith('image/')) throw new Error('Photos only');
+    if (file.size > PHOTO_MAX_RAW_MB * 1024 * 1024) throw new Error('File too large');
+
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const { width: w, height: h } = bitmap;
+    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(w, h));
+    const tw = Math.round(w * scale);
+    const th = Math.round(h * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = tw;
+    canvas.height = th;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, tw, th);
+    bitmap.close?.();
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('Resize produced no blob')),
+        'image/jpeg',
+        PHOTO_JPEG_QUAL
+      );
+    });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // FileReader gives "data:image/jpeg;base64,XXXX" — strip the prefix
+        const s = reader.result;
+        const comma = s.indexOf(',');
+        resolve(comma >= 0 ? s.slice(comma + 1) : s);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function airtableUploadAttachment(recordId, blob, filename) {
+    const file = await blobToBase64(blob);
+    const res = await fetch(PROXY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'uploadAttachment',
+        baseId: BASE_ID,
+        recordId,
+        fieldId: F_VL_PHOTOS,
+        contentType: blob.type || 'image/jpeg',
+        filename,
+        file
+      })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error?.message || body?.message || `uploadAttachment ${res.status}`);
+    }
+    return await res.json();
+  }
+
   async function airtableDelete(tableId, recordId) {
     const q = new URLSearchParams({ baseId: BASE_ID, tableId, recordId });
     const res = await fetch(`${PROXY}?${q}`, { method: 'DELETE' });
