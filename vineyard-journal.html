@@ -675,6 +675,25 @@
     return await res.json();
   }
 
+  // Uploads all blobs in the given queue to the given record, sequentially.
+  // Returns the final Airtable record (so `photos` can be read off it).
+  // Calls onProgress(done, total) before each upload.
+  async function uploadQueueToRecord(recordId, prefix, onProgress) {
+    const q = getQueue(prefix);
+    const blobs = q.filter(p => p.blob);
+    let lastRecord = null;
+    for (let i = 0; i < blobs.length; i++) {
+      const p = blobs[i];
+      onProgress && onProgress(i, blobs.length);
+      const resp = await airtableUploadAttachment(recordId, p.blob, p.filename);
+      // The Upload Attachment endpoint returns `{ id, createdTime, fields: {...} }`
+      // similar to a regular record response.
+      lastRecord = resp;
+    }
+    onProgress && onProgress(blobs.length, blobs.length);
+    return lastRecord;
+  }
+
   // ─── Photo queues for the three forms ──────────────────────────────────────
   // Each queue maps form-prefix → array of { id, blob, objectUrl, filename }
   const photoQueues = { sf: [], of: [] };  // milestone queues are keyed by msf-<milestone-name>
@@ -1409,14 +1428,27 @@
     };
     if (blockIds.length > 0) fields[F_VL_BLOCKS] = blockIds;
 
+    const btn = document.querySelector('#spray-form .lf-save');
+    const origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
     try {
       const rec = await airtablePost(TBL_VL, fields);
+      const photoCount = getQueue('sf').filter(p => p.blob).length;
+      let finalPhotos = [];
+      if (photoCount > 0) {
+        const lastRec = await uploadQueueToRecord(rec.id, 'sf', (done, total) => {
+          btn.textContent = `Uploading ${done + 1} / ${total}…`;
+        });
+        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      }
       const entry = {
         _id: rec.id, date, type: 'Spray', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: product, sprayRate: rate, sprayMethod: method, sprayTarget: target,
         blockIds, category: '', milestone: '',
-        photos: []
+        photos: finalPhotos
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
       toggleForm('spray-form');
@@ -1424,11 +1456,15 @@
       document.getElementById('sf-rate').value = '';
       document.getElementById('sf-notes').value = '';
       document.querySelectorAll('#sf-blocks .block-check').forEach(el => el.classList.remove('on'));
+      clearQueue('sf');
       renderFeed();
-      showToast('Spray event logged');
+      showToast(photoCount > 0 ? `Spray logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : 'Spray event logged');
     } catch (e) {
       console.error(e);
-      showToast('Error saving spray log');
+      showToast(e.message || 'Error saving spray log');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
     }
   }
 
@@ -1449,29 +1485,47 @@
       [F_VL_NOTES]:    notes
     };
 
+    const btn = document.querySelector('#obs-form .lf-save');
+    const origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
     try {
       const rec = await airtablePost(TBL_VL, fields);
+      const photoCount = getQueue('of').filter(p => p.blob).length;
+      let finalPhotos = [];
+      if (photoCount > 0) {
+        const lastRec = await uploadQueueToRecord(rec.id, 'of', (done, total) => {
+          btn.textContent = `Uploading ${done + 1} / ${total}…`;
+        });
+        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      }
       const entry = {
         _id: rec.id, date, type: 'Observation', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
         blockIds: [], category, milestone: '',
-        photos: []
+        photos: finalPhotos
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
       toggleForm('obs-form');
       document.getElementById('of-notes').value = '';
+      clearQueue('of');
       renderFeed();
-      showToast('Observation saved');
+      showToast(photoCount > 0 ? `Observation saved with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : 'Observation saved');
     } catch (e) {
       console.error(e);
-      showToast('Error saving observation');
+      showToast(e.message || 'Error saving observation');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
     }
   }
 
   // ─── Milestone submit ──────────────────────────────────────────────────────
   async function submitMilestone(name) {
     const key   = name.replace(/ /g,'-');
+    const prefix = `msf-${key}`;
     const date  = document.getElementById(`msf-date-${key}`).value;
     const notes = document.getElementById(`msf-notes-${key}`).value.trim();
 
@@ -1487,22 +1541,37 @@
       [F_VL_NOTES]:     notes
     };
 
+    const btn = document.querySelector(`#msf-${key} .lf-save`);
+    const origLabel = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
     try {
       const rec = await airtablePost(TBL_VL, fields);
+      const photoCount = getQueue(prefix).filter(p => p.blob).length;
+      let finalPhotos = [];
+      if (photoCount > 0) {
+        const lastRec = await uploadQueueToRecord(rec.id, prefix, (done, total) => {
+          if (btn) btn.textContent = `Uploading ${done + 1} / ${total}…`;
+        });
+        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      }
       const entry = {
         _id: rec.id, date, type: 'Milestone', auto: false, year: Number(vintageYear),
         hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
         notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
         blockIds: [], category: 'Milestone', milestone: name,
-        photos: []
+        photos: finalPhotos
       };
       logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+      clearQueue(prefix);
       renderLeftPanel();
       renderFeed();
-      showToast(`${name} logged`);
+      showToast(photoCount > 0 ? `${name} logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : `${name} logged`);
     } catch (e) {
       console.error(e);
-      showToast('Error saving milestone');
+      showToast(e.message || 'Error saving milestone');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origLabel; }
     }
   }
 
