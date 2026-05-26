@@ -690,7 +690,6 @@
       // similar to a regular record response.
       lastRecord = resp;
     }
-    onProgress && onProgress(blobs.length, blobs.length);
     return lastRecord;
   }
 
@@ -1433,35 +1432,56 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
+    // Phase 1 — save the text record.
+    let rec;
     try {
-      const rec = await airtablePost(TBL_VL, fields);
-      const photoCount = getQueue('sf').filter(p => p.blob).length;
-      let finalPhotos = [];
-      if (photoCount > 0) {
-        const lastRec = await uploadQueueToRecord(rec.id, 'sf', (done, total) => {
-          btn.textContent = `Uploading ${done + 1} / ${total}…`;
-        });
-        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
-      }
-      const entry = {
-        _id: rec.id, date, type: 'Spray', auto: false, year: Number(vintageYear),
-        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
-        notes, sprayProd: product, sprayRate: rate, sprayMethod: method, sprayTarget: target,
-        blockIds, category: '', milestone: '',
-        photos: finalPhotos
-      };
-      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
-      toggleForm('spray-form');
-      document.getElementById('sf-product').value = '';
-      document.getElementById('sf-rate').value = '';
-      document.getElementById('sf-notes').value = '';
-      document.querySelectorAll('#sf-blocks .block-check').forEach(el => el.classList.remove('on'));
-      clearQueue('sf');
-      renderFeed();
-      showToast(photoCount > 0 ? `Spray logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : 'Spray event logged');
+      rec = await airtablePost(TBL_VL, fields);
     } catch (e) {
       console.error(e);
       showToast(e.message || 'Error saving spray log');
+      btn.disabled = false;
+      btn.textContent = origLabel;
+      return;
+    }
+
+    // Phase 2 — insert into local feed with no photos yet so the record is
+    // visible immediately, even if photo upload fails below.
+    const entry = {
+      _id: rec.id, date, type: 'Spray', auto: false, year: Number(vintageYear),
+      hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+      notes, sprayProd: product, sprayRate: rate, sprayMethod: method, sprayTarget: target,
+      blockIds, category: '', milestone: '',
+      photos: []
+    };
+    logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+    toggleForm('spray-form');
+    document.getElementById('sf-product').value = '';
+    document.getElementById('sf-rate').value = '';
+    document.getElementById('sf-notes').value = '';
+    document.querySelectorAll('#sf-blocks .block-check').forEach(el => el.classList.remove('on'));
+    renderFeed();
+
+    // Phase 3 — upload photos if any.
+    const photoCount = getQueue('sf').filter(p => p.blob).length;
+    if (photoCount === 0) {
+      clearQueue('sf');
+      btn.disabled = false;
+      btn.textContent = origLabel;
+      showToast('Spray event logged');
+      return;
+    }
+
+    try {
+      const lastRec = await uploadQueueToRecord(rec.id, 'sf', (done, total) => {
+        btn.textContent = `Uploading ${done + 1} / ${total}…`;
+      });
+      entry.photos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      renderFeed();
+      clearQueue('sf');
+      showToast(`Spray logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}`);
+    } catch (e) {
+      console.error(e);
+      showToast(`Spray logged, but a photo failed to upload: ${e.message || 'unknown error'}`);
     } finally {
       btn.disabled = false;
       btn.textContent = origLabel;
@@ -1490,32 +1510,53 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
+    // Phase 1 — save the text record.
+    let rec;
     try {
-      const rec = await airtablePost(TBL_VL, fields);
-      const photoCount = getQueue('of').filter(p => p.blob).length;
-      let finalPhotos = [];
-      if (photoCount > 0) {
-        const lastRec = await uploadQueueToRecord(rec.id, 'of', (done, total) => {
-          btn.textContent = `Uploading ${done + 1} / ${total}…`;
-        });
-        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
-      }
-      const entry = {
-        _id: rec.id, date, type: 'Observation', auto: false, year: Number(vintageYear),
-        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
-        notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
-        blockIds: [], category, milestone: '',
-        photos: finalPhotos
-      };
-      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
-      toggleForm('obs-form');
-      document.getElementById('of-notes').value = '';
-      clearQueue('of');
-      renderFeed();
-      showToast(photoCount > 0 ? `Observation saved with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : 'Observation saved');
+      rec = await airtablePost(TBL_VL, fields);
     } catch (e) {
       console.error(e);
       showToast(e.message || 'Error saving observation');
+      btn.disabled = false;
+      btn.textContent = origLabel;
+      return;
+    }
+
+    // Phase 2 — insert into local feed with no photos yet so the record is
+    // visible immediately, even if photo upload fails below.
+    const entry = {
+      _id: rec.id, date, type: 'Observation', auto: false, year: Number(vintageYear),
+      hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+      notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
+      blockIds: [], category, milestone: '',
+      photos: []
+    };
+    logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+    toggleForm('obs-form');
+    document.getElementById('of-notes').value = '';
+    renderFeed();
+
+    // Phase 3 — upload photos if any.
+    const photoCount = getQueue('of').filter(p => p.blob).length;
+    if (photoCount === 0) {
+      clearQueue('of');
+      btn.disabled = false;
+      btn.textContent = origLabel;
+      showToast('Observation saved');
+      return;
+    }
+
+    try {
+      const lastRec = await uploadQueueToRecord(rec.id, 'of', (done, total) => {
+        btn.textContent = `Uploading ${done + 1} / ${total}…`;
+      });
+      entry.photos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      renderFeed();
+      clearQueue('of');
+      showToast(`Observation saved with ${photoCount} photo${photoCount === 1 ? '' : 's'}`);
+    } catch (e) {
+      console.error(e);
+      showToast(`Observation saved, but a photo failed to upload: ${e.message || 'unknown error'}`);
     } finally {
       btn.disabled = false;
       btn.textContent = origLabel;
@@ -1544,34 +1585,58 @@
     const btn = document.querySelector(`#msf-${key} .lf-save`);
     const origLabel = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    const restoreBtn = () => { if (btn) { btn.disabled = false; btn.textContent = origLabel; } };
 
+    // Phase 1 — save the text record.
+    let rec;
     try {
-      const rec = await airtablePost(TBL_VL, fields);
-      const photoCount = getQueue(prefix).filter(p => p.blob).length;
-      let finalPhotos = [];
-      if (photoCount > 0) {
-        const lastRec = await uploadQueueToRecord(rec.id, prefix, (done, total) => {
-          if (btn) btn.textContent = `Uploading ${done + 1} / ${total}…`;
-        });
-        finalPhotos = lastRec?.fields?.[F_VL_PHOTOS] || [];
-      }
-      const entry = {
-        _id: rec.id, date, type: 'Milestone', auto: false, year: Number(vintageYear),
-        hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
-        notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
-        blockIds: [], category: 'Milestone', milestone: name,
-        photos: finalPhotos
-      };
-      logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
-      clearQueue(prefix);
-      renderLeftPanel();
-      renderFeed();
-      showToast(photoCount > 0 ? `${name} logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}` : `${name} logged`);
+      rec = await airtablePost(TBL_VL, fields);
     } catch (e) {
       console.error(e);
       showToast(e.message || 'Error saving milestone');
+      restoreBtn();
+      return;
+    }
+
+    // Phase 2 — insert into local feed with no photos yet so the milestone is
+    // visible immediately (and renderLeftPanel marks it ✓ done), even if
+    // photo upload fails below.
+    const entry = {
+      _id: rec.id, date, type: 'Milestone', auto: false, year: Number(vintageYear),
+      hi: null, lo: null, rain: null, wind: null, wxCode: 0, pmLevel: '', pmScore: 0,
+      notes, sprayProd: '', sprayRate: '', sprayMethod: '', sprayTarget: '',
+      blockIds: [], category: 'Milestone', milestone: name,
+      photos: []
+    };
+    logEntries = [entry, ...logEntries].sort((a,b) => b.date.localeCompare(a.date));
+    // renderLeftPanel re-renders the milestone list (the form-with-btn is replaced
+    // by a ✓-marked item), so `btn` becomes detached after this call. That's why
+    // restoreBtn is captured up top — it no-ops on the detached node.
+    renderLeftPanel();
+    renderFeed();
+
+    // Phase 3 — upload photos if any.
+    const photoCount = getQueue(prefix).filter(p => p.blob).length;
+    if (photoCount === 0) {
+      clearQueue(prefix);
+      restoreBtn();
+      showToast(`${name} logged`);
+      return;
+    }
+
+    try {
+      const lastRec = await uploadQueueToRecord(rec.id, prefix, (done, total) => {
+        if (btn) btn.textContent = `Uploading ${done + 1} / ${total}…`;
+      });
+      entry.photos = lastRec?.fields?.[F_VL_PHOTOS] || [];
+      renderFeed();
+      clearQueue(prefix);
+      showToast(`${name} logged with ${photoCount} photo${photoCount === 1 ? '' : 's'}`);
+    } catch (e) {
+      console.error(e);
+      showToast(`${name} logged, but a photo failed to upload: ${e.message || 'unknown error'}`);
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+      restoreBtn();
     }
   }
 
