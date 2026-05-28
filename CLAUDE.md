@@ -359,6 +359,7 @@ Completed:
 - ✅ Spray recommendation banner (find first HIGH pressure day, recommend spraying day before)
 - ✅ Vineyard tab bar added to `vineyard.html` and `vineyard-journal.html` (Blocks / Labor Log / Vineyard Journal)
 - ✅ Airtable VL table field IDs documented below
+- ✅ Photo attachments on Observation / Milestone / Spray — capture button, client-side resize to 1920px JPEG, sequential upload via new proxy uploadAttachment action, hero thumb + lightbox in feed, slide-over edit panel for full entry edits (deployed as lifecycle-v28, 2026-05-28)
 
 ### Nav Drawer Standardization — Complete (deployed as lifecycle-v14, 2026-04-08)
 - ✅ Replaced broken PascalCase nav drawers in `blending-lab.html`, `skus.html`, `finance.html`
