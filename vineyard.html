@@ -752,6 +752,20 @@
   </div>
 </div>
 
+<!-- LABOR LOG EDIT SLIDE-OVER -->
+<div class="lep-backdrop" id="lep-backdrop" onclick="closeLogEditPanel()"></div>
+<aside class="lep-panel" id="lep-panel" aria-hidden="true">
+  <div class="lep-header">
+    <div class="lep-title" id="lep-title">Edit Labor Entry</div>
+    <button class="lep-close" onclick="closeLogEditPanel()" aria-label="Close">✕</button>
+  </div>
+  <div class="lep-body" id="lep-body"></div>
+  <div class="lep-footer">
+    <button class="lep-cancel" onclick="closeLogEditPanel()">Cancel</button>
+    <button class="lep-save" id="lep-save" onclick="saveLogEditPanel()">Save Changes</button>
+  </div>
+</aside>
+
 <div class="toast" id="toast"></div>
 
 <script>
