@@ -1824,6 +1824,9 @@
     document.getElementById('edit-panel').classList.add('open');
     document.getElementById('edit-panel').setAttribute('aria-hidden', 'false');
     document.getElementById('edit-backdrop').classList.add('open');
+    // Idempotent — removing before adding prevents stacking if openEditPanel is
+    // ever called while the panel is already open.
+    document.removeEventListener('keydown', editPanelKeydown);
     document.addEventListener('keydown', editPanelKeydown);
   }
 
