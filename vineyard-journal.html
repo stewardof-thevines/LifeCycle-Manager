@@ -2033,53 +2033,66 @@
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
 
+    // Phase 1 — PATCH text + removal changes.
+    let updatedRec = null;
     try {
-      // 1. PATCH text + removal changes (only if there are any)
-      let updatedRec = null;
       if (Object.keys(diff).length > 0) {
         updatedRec = await airtablePatch(TBL_VL, editEntryId, diff);
       }
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Error saving changes');
+      saveBtn.disabled = false;
+      saveBtn.textContent = origLabel;
+      return;
+    }
 
-      // 2. Upload any newly added photos (sequential)
-      let finalPhotos = updatedRec?.fields?.[F_VL_PHOTOS] || survivors;
-      if (addedQueue.length > 0) {
+    // Phase 2 — apply the PATCHed text changes to the local entry immediately
+    // so the feed reflects what was just persisted, even if photo uploads fail.
+    const newEntry = { ...entry };
+    if (diff[F_VL_DATE]          !== undefined) newEntry.date        = diff[F_VL_DATE];
+    if (diff[F_VL_CATEGORY]      !== undefined) newEntry.category    = diff[F_VL_CATEGORY];
+    if (diff[F_VL_NOTES]         !== undefined) newEntry.notes       = diff[F_VL_NOTES];
+    if (diff[F_VL_SPRAY_PROD]    !== undefined) newEntry.sprayProd   = diff[F_VL_SPRAY_PROD];
+    if (diff[F_VL_SPRAY_RATE]    !== undefined) newEntry.sprayRate   = diff[F_VL_SPRAY_RATE];
+    if (diff[F_VL_SPRAY_METHOD]  !== undefined) newEntry.sprayMethod = diff[F_VL_SPRAY_METHOD];
+    if (diff[F_VL_SPRAY_TARGET]  !== undefined) newEntry.sprayTarget = diff[F_VL_SPRAY_TARGET];
+    if (diff[F_VL_BLOCKS]        !== undefined) newEntry.blockIds    = diff[F_VL_BLOCKS];
+    newEntry.photos = updatedRec?.fields?.[F_VL_PHOTOS] || survivors;
+    logEntries = logEntries.map(e => e._id === editEntryId ? newEntry : e)
+                           .sort((a,b) => b.date.localeCompare(a.date));
+    renderFeed();
+
+    // Phase 3 — upload any newly added photos (sequential).
+    if (addedQueue.length > 0) {
+      try {
+        let finalPhotos = newEntry.photos;
         for (let i = 0; i < addedQueue.length; i++) {
           saveBtn.textContent = `Uploading ${i + 1} / ${addedQueue.length}…`;
           const resp = await airtableUploadAttachment(editEntryId, addedQueue[i].blob, addedQueue[i].filename);
           finalPhotos = resp?.fields?.[F_VL_PHOTOS] || finalPhotos;
         }
+        newEntry.photos = finalPhotos;
+        renderFeed();
+      } catch (e) {
+        console.error(e);
+        // Text edits already visible in feed; just notify about the photo failure
+        // and leave the panel open so the user can retry.
+        showToast(`Saved, but a photo failed to upload: ${e.message || 'unknown error'}`);
+        saveBtn.disabled = false;
+        saveBtn.textContent = origLabel;
+        return;
       }
-
-      // 3. Reflect changes in local cache
-      const newEntry = { ...entry };
-      if (diff[F_VL_DATE]          !== undefined) newEntry.date        = diff[F_VL_DATE];
-      if (diff[F_VL_CATEGORY]      !== undefined) newEntry.category    = diff[F_VL_CATEGORY];
-      if (diff[F_VL_NOTES]         !== undefined) newEntry.notes       = diff[F_VL_NOTES];
-      if (diff[F_VL_SPRAY_PROD]    !== undefined) newEntry.sprayProd   = diff[F_VL_SPRAY_PROD];
-      if (diff[F_VL_SPRAY_RATE]    !== undefined) newEntry.sprayRate   = diff[F_VL_SPRAY_RATE];
-      if (diff[F_VL_SPRAY_METHOD]  !== undefined) newEntry.sprayMethod = diff[F_VL_SPRAY_METHOD];
-      if (diff[F_VL_SPRAY_TARGET]  !== undefined) newEntry.sprayTarget = diff[F_VL_SPRAY_TARGET];
-      if (diff[F_VL_BLOCKS]        !== undefined) newEntry.blockIds    = diff[F_VL_BLOCKS];
-      newEntry.photos = finalPhotos;
-      logEntries = logEntries.map(e => e._id === editEntryId ? newEntry : e)
-                             .sort((a,b) => b.date.localeCompare(a.date));
-
-      // 4. Close panel cleanly
-      saveBtn.disabled = false;
-      saveBtn.textContent = origLabel;
-      editOriginal = JSON.parse(JSON.stringify(newEntry));  // mark clean so close doesn't prompt
-      editRemovedPhotos = [];
-      clearQueue('ep');
-      closeEditPanel();
-
-      renderFeed();
-      showToast('Entry updated');
-    } catch (e) {
-      console.error(e);
-      saveBtn.disabled = false;
-      saveBtn.textContent = origLabel;
-      showToast(e.message || 'Error saving changes');
     }
+
+    // Phase 4 — close panel cleanly on full success.
+    saveBtn.disabled = false;
+    saveBtn.textContent = origLabel;
+    editOriginal = JSON.parse(JSON.stringify(newEntry));  // mark clean so close doesn't prompt
+    editRemovedPhotos = [];
+    clearQueue('ep');
+    closeEditPanel();
+    showToast('Entry updated');
   }
 </script>
 </body>
