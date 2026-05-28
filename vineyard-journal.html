@@ -1962,8 +1962,125 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function buildEditDiff() { return {}; } // Implemented in Task 10
-  function saveEditPanel() { /* Implemented in Task 10 */ }
+  function buildEditDiff() {
+    if (!editOriginal) return {};
+    const diff = {};
+    const get = id => {
+      const el = document.getElementById(id);
+      return el ? el.value : undefined;
+    };
+
+    const newDate = get('ep-date');
+    if (newDate !== undefined && newDate !== editOriginal.date) {
+      diff[F_VL_DATE] = newDate;
+    }
+
+    if (editOriginal.type === 'Observation') {
+      const newCategory = get('ep-category');
+      if (newCategory !== undefined && newCategory !== editOriginal.category) {
+        diff[F_VL_CATEGORY] = newCategory;
+      }
+      const newNotes = (get('ep-notes') ?? '').trim();
+      if (newNotes !== (editOriginal.notes || '')) {
+        diff[F_VL_NOTES] = newNotes;
+      }
+    }
+    else if (editOriginal.type === 'Milestone') {
+      const newNotes = (get('ep-notes') ?? '').trim();
+      if (newNotes !== (editOriginal.notes || '')) {
+        diff[F_VL_NOTES] = newNotes;
+      }
+    }
+    else if (editOriginal.type === 'Spray') {
+      const newProd   = (get('ep-product') ?? '').trim();
+      const newRate   = (get('ep-rate')    ?? '').trim();
+      const newMethod = get('ep-method');
+      const newTarget = get('ep-target');
+      const newNotes  = (get('ep-notes')   ?? '').trim();
+      if (newProd   !== (editOriginal.sprayProd   || '')) diff[F_VL_SPRAY_PROD]   = newProd;
+      if (newRate   !== (editOriginal.sprayRate   || '')) diff[F_VL_SPRAY_RATE]   = newRate;
+      if (newMethod !== (editOriginal.sprayMethod || '')) diff[F_VL_SPRAY_METHOD] = newMethod;
+      if (newTarget !== (editOriginal.sprayTarget || '')) diff[F_VL_SPRAY_TARGET] = newTarget;
+      if (newNotes  !== (editOriginal.notes       || '')) diff[F_VL_NOTES]        = newNotes;
+
+      const newBlockIds = Array.from(document.querySelectorAll('#ep-blocks .block-check.on')).map(el => el.dataset.id);
+      const origBlockIds = editOriginal.blockIds || [];
+      const sameBlocks = newBlockIds.length === origBlockIds.length && newBlockIds.every(id => origBlockIds.includes(id));
+      if (!sameBlocks) diff[F_VL_BLOCKS] = newBlockIds;
+    }
+
+    return diff;
+  }
+
+  async function saveEditPanel() {
+    if (!editEntryId || !editOriginal) return;
+    const entry = logEntries.find(e => e._id === editEntryId);
+    if (!entry) return;
+
+    const diff = buildEditDiff();
+    const addedQueue = getQueue('ep').filter(p => p.blob);
+    const removedIds = editRemovedPhotos.slice();
+    const survivors = (entry.photos || []).filter(p => !removedIds.includes(p.id));
+
+    // If a photo removal is needed, include the Photos field in the PATCH using
+    // the survivors list. Airtable removes any attachments not present.
+    if (removedIds.length > 0) {
+      diff[F_VL_PHOTOS] = survivors.map(p => ({ id: p.id }));
+    }
+
+    const saveBtn = document.getElementById('ep-save');
+    const origLabel = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      // 1. PATCH text + removal changes (only if there are any)
+      let updatedRec = null;
+      if (Object.keys(diff).length > 0) {
+        updatedRec = await airtablePatch(TBL_VL, editEntryId, diff);
+      }
+
+      // 2. Upload any newly added photos (sequential)
+      let finalPhotos = updatedRec?.fields?.[F_VL_PHOTOS] || survivors;
+      if (addedQueue.length > 0) {
+        for (let i = 0; i < addedQueue.length; i++) {
+          saveBtn.textContent = `Uploading ${i + 1} / ${addedQueue.length}…`;
+          const resp = await airtableUploadAttachment(editEntryId, addedQueue[i].blob, addedQueue[i].filename);
+          finalPhotos = resp?.fields?.[F_VL_PHOTOS] || finalPhotos;
+        }
+      }
+
+      // 3. Reflect changes in local cache
+      const newEntry = { ...entry };
+      if (diff[F_VL_DATE]          !== undefined) newEntry.date        = diff[F_VL_DATE];
+      if (diff[F_VL_CATEGORY]      !== undefined) newEntry.category    = diff[F_VL_CATEGORY];
+      if (diff[F_VL_NOTES]         !== undefined) newEntry.notes       = diff[F_VL_NOTES];
+      if (diff[F_VL_SPRAY_PROD]    !== undefined) newEntry.sprayProd   = diff[F_VL_SPRAY_PROD];
+      if (diff[F_VL_SPRAY_RATE]    !== undefined) newEntry.sprayRate   = diff[F_VL_SPRAY_RATE];
+      if (diff[F_VL_SPRAY_METHOD]  !== undefined) newEntry.sprayMethod = diff[F_VL_SPRAY_METHOD];
+      if (diff[F_VL_SPRAY_TARGET]  !== undefined) newEntry.sprayTarget = diff[F_VL_SPRAY_TARGET];
+      if (diff[F_VL_BLOCKS]        !== undefined) newEntry.blockIds    = diff[F_VL_BLOCKS];
+      newEntry.photos = finalPhotos;
+      logEntries = logEntries.map(e => e._id === editEntryId ? newEntry : e)
+                             .sort((a,b) => b.date.localeCompare(a.date));
+
+      // 4. Close panel cleanly
+      saveBtn.disabled = false;
+      saveBtn.textContent = origLabel;
+      editOriginal = JSON.parse(JSON.stringify(newEntry));  // mark clean so close doesn't prompt
+      editRemovedPhotos = [];
+      clearQueue('ep');
+      closeEditPanel();
+
+      renderFeed();
+      showToast('Entry updated');
+    } catch (e) {
+      console.error(e);
+      saveBtn.disabled = false;
+      saveBtn.textContent = origLabel;
+      showToast(e.message || 'Error saving changes');
+    }
+  }
 </script>
 </body>
 </html>
