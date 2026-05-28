@@ -328,6 +328,14 @@
     .ep-cancel{flex:0 0 auto;padding:10px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;}
     .ep-save{flex:1;padding:10px 16px;background:var(--grenadine);border:none;color:#fff;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;}
     .ep-save:disabled{opacity:0.55;cursor:default;}
+    /* Edit panel internals — reuse .lf-* but on the same dark surface */
+    .ep-field-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:4px;}
+    .ep-field{display:flex;flex-direction:column;}
+    .ep-existing-photos{display:flex;gap:6px;flex-wrap:wrap;}
+    .ep-existing-photo{position:relative;width:64px;height:64px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.08);}
+    .ep-existing-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+    .ep-existing-photo.removed{opacity:0.35;}
+    .ep-existing-photo .lf-thumb-x{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;border:none;font-size:10px;line-height:16px;text-align:center;cursor:pointer;padding:0;}
 
     /* Toast */
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:var(--cream);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:9px 18px;border-radius:8px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:999;}
@@ -1844,9 +1852,117 @@
     return Object.keys(buildEditDiff()).length > 0;
   }
 
-  // Placeholders — filled in by Tasks 9 and 10
-  function renderEditBody(_entry) { document.getElementById('ep-body').innerHTML = ''; }
-  function buildEditDiff() { return {}; }
+  function renderEditBody(entry) {
+    const body = document.getElementById('ep-body');
+    let fieldsHtml = '';
+
+    // Date — always editable
+    fieldsHtml += `
+      <div class="ep-field">
+        <div class="ep-field-label">Date</div>
+        <input type="date" class="lf-input" id="ep-date" value="${entry.date}"/>
+      </div>`;
+
+    if (entry.type === 'Observation') {
+      fieldsHtml += `
+        <div class="ep-field">
+          <div class="ep-field-label">Category</div>
+          <select class="lf-select" id="ep-category">
+            <option ${entry.category === 'Observation' ? 'selected' : ''}>Observation</option>
+            <option ${entry.category === 'Decision' ? 'selected' : ''}>Decision</option>
+          </select>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Notes</div>
+          <textarea class="lf-textarea" id="ep-notes">${escapeHtml(entry.notes || '')}</textarea>
+        </div>`;
+    }
+    else if (entry.type === 'Milestone') {
+      fieldsHtml += `
+        <div class="ep-field">
+          <div class="ep-field-label">Notes</div>
+          <textarea class="lf-textarea" id="ep-notes">${escapeHtml(entry.notes || '')}</textarea>
+        </div>`;
+    }
+    else if (entry.type === 'Spray') {
+      fieldsHtml += `
+        <div class="ep-field">
+          <div class="ep-field-label">Product</div>
+          <input type="text" class="lf-input" id="ep-product" value="${escapeHtml(entry.sprayProd || '')}"/>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Rate</div>
+          <input type="text" class="lf-input" id="ep-rate" value="${escapeHtml(entry.sprayRate || '')}"/>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Method</div>
+          <select class="lf-select" id="ep-method">
+            ${['Tractor Sprayer','Backpack','ATV Sprayer','Drone']
+              .map(o => `<option ${entry.sprayMethod === o ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Target</div>
+          <select class="lf-select" id="ep-target">
+            ${['Powdery Mildew','Botrytis','Downy Mildew','Insects','Nutrition','Other']
+              .map(o => `<option ${entry.sprayTarget === o ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Blocks</div>
+          <div class="block-checks" id="ep-blocks">
+            ${blocks.map(b => `<div class="block-check ${entry.blockIds.includes(b.id) ? 'on' : ''}" onclick="this.classList.toggle('on')" data-id="${b.id}">${b.name}</div>`).join('')}
+          </div>
+        </div>
+        <div class="ep-field">
+          <div class="ep-field-label">Notes</div>
+          <textarea class="lf-textarea" id="ep-notes">${escapeHtml(entry.notes || '')}</textarea>
+        </div>`;
+    }
+
+    // Photos — always editable
+    fieldsHtml += `
+      <div class="ep-field">
+        <div class="ep-field-label">Photos</div>
+        <div class="ep-existing-photos" id="ep-existing-photos">${renderExistingPhotos(entry.photos || [])}</div>
+        <div class="lf-photos-strip" id="ep-photos-strip" style="margin-top:6px;"></div>
+        <label class="lf-add-photo" style="margin-top:6px;">
+          📷 Add Photo
+          <input type="file" accept="image/*" multiple onchange="onPhotoSelect(event,'ep')"/>
+        </label>
+      </div>`;
+
+    body.innerHTML = fieldsHtml;
+  }
+
+  function renderExistingPhotos(photos) {
+    if (!photos.length) return '<div style="color:rgba(255,255,255,0.35);font-size:12px;">No photos yet</div>';
+    return photos.map(p => {
+      const removed = editRemovedPhotos.includes(p.id);
+      const thumbUrl = p.thumbnails?.small?.url || p.thumbnails?.large?.url || p.url || '';
+      return `
+        <div class="ep-existing-photo ${removed ? 'removed' : ''}" data-id="${p.id}">
+          <img src="${thumbUrl}" alt="Existing photo"/>
+          <button class="lf-thumb-x" onclick="toggleRemovePhoto('${p.id}')" title="${removed ? 'Restore' : 'Remove'}">${removed ? '↺' : '✕'}</button>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleRemovePhoto(attachmentId) {
+    const idx = editRemovedPhotos.indexOf(attachmentId);
+    if (idx >= 0) editRemovedPhotos.splice(idx, 1);
+    else editRemovedPhotos.push(attachmentId);
+    const entry = logEntries.find(e => e._id === editEntryId);
+    document.getElementById('ep-existing-photos').innerHTML = renderExistingPhotos(entry.photos || []);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function buildEditDiff() { return {}; } // Implemented in Task 10
   function saveEditPanel() { /* Implemented in Task 10 */ }
 </script>
 </body>
