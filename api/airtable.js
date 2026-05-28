@@ -13,8 +13,14 @@
  * POST /api/airtable  { baseId, tableId, fields: { fieldId: value, ... } }
  *   → proxies to Airtable Create Record
  *
+ * POST /api/airtable  { action: 'uploadAttachment', baseId, recordId, fieldId, contentType, filename, file }
+ *   → proxies to Airtable Upload Attachment (content.airtable.com)
+ *
  * PATCH /api/airtable { baseId, tableId, recordId, fields: { ... } }
  *   → proxies to Airtable Update Record
+ *
+ * DELETE /api/airtable?baseId=...&tableId=...&recordId=...
+ *   → proxies to Airtable Delete Record
  */
 
 // ── Clerk JWT verification ───────────────────────────────────────────────
@@ -112,9 +118,29 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST — create record ─────────────────────────────────────────────────
+  // ── POST — create record or uploadAttachment ─────────────────────────────
   if (req.method === 'POST') {
-    const { baseId, tableId, fields } = req.body || {};
+    const { baseId, tableId, fields, action, recordId, fieldId, contentType, filename, file } = req.body || {};
+
+    // ── uploadAttachment branch: forward to Airtable content API ───────────
+    if (action === 'uploadAttachment') {
+      if (!baseId || !recordId || !fieldId || !contentType || !filename || !file) {
+        return res.status(400).json({ error: 'baseId, recordId, fieldId, contentType, filename, file are required for uploadAttachment' });
+      }
+      try {
+        const airtableRes = await fetch(
+          `https://content.airtable.com/v0/${baseId}/${recordId}/${fieldId}/uploadAttachment`,
+          { method: 'POST', headers, body: JSON.stringify({ contentType, file, filename }) }
+        );
+        const data = await airtableRes.json();
+        if (!airtableRes.ok) return res.status(airtableRes.status).json(data);
+        return res.status(200).json(data);
+      } catch (e) {
+        return res.status(502).json({ error: 'Airtable upload failed', detail: e.message });
+      }
+    }
+
+    // ── Default branch: create record ──────────────────────────────────────
     if (!baseId || !tableId || !fields) {
       return res.status(400).json({ error: 'baseId, tableId, and fields are required' });
     }
