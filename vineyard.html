@@ -1497,8 +1497,10 @@
       body.innerHTML = '<div class="log-empty">No entries match this filter.</div>'; return;
     }
 
-    body.innerHTML = filtered.map(l => `
-      <div class="log-row">
+    body.innerHTML = filtered.map(l => {
+      const key = `${l.date}|${l.task}|${l.blockLabel}|${l.category}`;
+      return `
+      <div class="log-row" onclick="openLogEditPanel('${key}')">
         <div class="log-td muted">${fmtDate(l.date)}</div>
         <div class="log-td">${l.harvest ? '<span class="harvest-dot"></span>':''} ${l.task}</div>
         <div class="log-td bold">${l.blockLabel}${l.multi ? '<span class="multi-tag">Split</span>':''}</div>
@@ -1507,9 +1509,10 @@
         <div class="log-td"><span class="dept-tag ${deptClass(l.dept)}">${l.dept.split('/')[0]}</span></div>
         <div class="log-td cost">$${l.displayCost.toFixed(2)}</div>
         <div class="log-td" style="padding-right:0">
-          <button class="log-delete-btn" onclick="deleteLog('${l.date}|${l.task}|${l.blockLabel}|${l.category}', this)" title="Delete entry">✕</button>
+          <button class="log-delete-btn" onclick="event.stopPropagation();deleteLog('${key}', this)" title="Delete entry">✕</button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   function getTotalForKey(key) {
@@ -1695,6 +1698,38 @@
     document.getElementById('block-field-wrap').classList.add('visible');
     document.getElementById('harvest-toggle').style.display = '';
     hideSplitPreview();
+  }
+
+  // ─── Labor Log Edit Slide-Over ─────────────────────────────────────────────
+  let editLogKey       = null;
+  let editLogRecordIds = [];
+  let editLogOriginal  = null;
+  let editLogIsSplit   = false;
+  let editLogDept      = 'Vineyard';
+  let editLogHarvestOn = false;
+
+  function openLogEditPanel(key) {
+    console.log('openLogEditPanel:', key);
+    // Full body implemented in Task 4
+  }
+
+  function closeLogEditPanel() {
+    document.getElementById('lep-panel').classList.remove('open');
+    document.getElementById('lep-panel').setAttribute('aria-hidden', 'true');
+    document.getElementById('lep-backdrop').classList.remove('open');
+    document.removeEventListener('keydown', logEditPanelKeydown);
+    editLogKey = null;
+    editLogRecordIds = [];
+    editLogOriginal = null;
+    editLogIsSplit = false;
+  }
+
+  function logEditPanelKeydown(e) {
+    if (e.key === 'Escape') closeLogEditPanel();
+  }
+
+  function saveLogEditPanel() {
+    console.log('saveLogEditPanel: not implemented yet');
   }
 
   function showToast(msg, isError=false) {
