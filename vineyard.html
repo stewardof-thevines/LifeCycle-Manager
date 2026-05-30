@@ -1709,8 +1709,156 @@
   let editLogHarvestOn = false;
 
   function openLogEditPanel(key) {
-    console.log('openLogEditPanel:', key);
-    // Full body implemented in Task 4
+    // Find every log entry matching this composite key.
+    const matches = logs.filter(l => `${l.date}|${l.task}|${l.blockLabel}|${l.category}` === key);
+    if (!matches.length) return;
+
+    // The representative entry — date/task/category/workers/hours/notes are all identical
+    // across split records, so the first match is sufficient for pre-fill.
+    const rep = matches[0];
+
+    editLogKey       = key;
+    editLogRecordIds = matches.map(m => m.airtableId).filter(Boolean);
+    editLogOriginal  = JSON.parse(JSON.stringify(rep));
+    editLogIsSplit   = matches.length > 1;
+    editLogDept      = inferDeptKeyFromValue(rep.dept);
+    editLogHarvestOn = !!rep.harvest;
+
+    document.getElementById('lep-title').textContent = 'Edit Labor Entry';
+    renderLogEditBody(rep, matches);
+
+    document.getElementById('lep-panel').classList.add('open');
+    document.getElementById('lep-panel').setAttribute('aria-hidden', 'false');
+    document.getElementById('lep-backdrop').classList.add('open');
+
+    // Idempotent — remove first to avoid double-binding if open is called twice.
+    document.removeEventListener('keydown', logEditPanelKeydown);
+    document.addEventListener('keydown', logEditPanelKeydown);
+  }
+
+  // `rep.dept` is the display string (e.g. "Cellar/Productions"). Map back to the short key.
+  function inferDeptKeyFromValue(deptDisplay) {
+    const found = Object.keys(DEPT_MAP).find(k => DEPT_MAP[k] === deptDisplay);
+    return found || 'Vineyard';
+  }
+
+  function renderLogEditBody(rep, matches) {
+    const body = document.getElementById('lep-body');
+
+    // Provider options — built from RATES (same source as the new-entry form's dropdown).
+    const providerOpts = RATES.map(r => {
+      const selected = r.name === rep.category ? ' selected' : '';
+      return `<option value="${r.id}|${escapeHtmlLep(r.name)}"${selected}>${escapeHtmlLep(r.name)}</option>`;
+    }).join('');
+
+    // Department pills.
+    const deptKey = editLogDept;
+    const deptPills = ['Vineyard','Cellar','Admin','Sales','Events'].map(d =>
+      `<button class="lep-dept-pill ${d === deptKey ? 'active' : ''}" onclick="setLogEditDept(this,'${d}')">${d}</button>`
+    ).join('');
+
+    // Block field: read-only for split, dropdown for single. For single, we need to find
+    // the current block id to pre-select.
+    let blockHtml = '';
+    const isVineyard = deptKey === 'Vineyard';
+    if (isVineyard) {
+      if (editLogIsSplit) {
+        const blockList = matches.map(m => escapeHtmlLep(m.block)).join(', ');
+        blockHtml = `
+        <div class="lep-field" id="lep-block-wrap">
+          <div class="lep-field-label">Vineyard Block</div>
+          <div class="lep-readonly">Split across ${blockList}</div>
+          <div class="lep-hint">To change which blocks were worked, delete this entry and re-log.</div>
+        </div>`;
+      } else {
+        const currentBlock = BLOCKS.find(b => b.name === rep.block);
+        const blockOpts = BLOCKS.map(b =>
+          `<option value="${b.id}|${escapeHtmlLep(b.name)}" ${currentBlock && currentBlock.id === b.id ? 'selected' : ''}>${escapeHtmlLep(b.name)}</option>`
+        ).join('');
+        blockHtml = `
+        <div class="lep-field" id="lep-block-wrap">
+          <div class="lep-field-label">Vineyard Block</div>
+          <select class="lep-select" id="lep-block">${blockOpts}</select>
+        </div>`;
+      }
+    } else {
+      blockHtml = `<div class="lep-field" id="lep-block-wrap" style="display:none"></div>`;
+    }
+
+    // Task options — populated based on current department.
+    const taskOpts = (TASKS_MAP[deptKey] || []).map(t =>
+      `<option value="${t.id}|${escapeHtmlLep(t.name)}" ${t.name === rep.task ? 'selected' : ''}>${escapeHtmlLep(t.name)}</option>`
+    ).join('');
+
+    // Harvest toggle — only relevant for Vineyard dept.
+    const harvestHtml = `
+    <div class="lep-field" id="lep-harvest-wrap" style="display:${isVineyard ? '' : 'none'}">
+      <div class="lep-toggle ${editLogHarvestOn ? 'on' : ''}" id="lep-harvest" onclick="toggleLogEditHarvest()">
+        <div class="lep-toggle-switch"><div class="lep-toggle-knob"></div></div>
+        <div class="lep-toggle-label">Harvest Labor</div>
+      </div>
+    </div>`;
+
+    body.innerHTML = `
+    <div class="lep-field">
+      <div class="lep-field-label">Date</div>
+      <input type="date" class="lep-input" id="lep-date" value="${rep.date}"/>
+    </div>
+    <div class="lep-field">
+      <div class="lep-field-label">Labor Provider</div>
+      <select class="lep-select" id="lep-provider">${providerOpts}</select>
+    </div>
+    <div class="lep-field">
+      <div class="lep-field-label">Department</div>
+      <div class="lep-dept-pills">${deptPills}</div>
+    </div>
+    ${blockHtml}
+    <div class="lep-field">
+      <div class="lep-field-label">Task</div>
+      <select class="lep-select" id="lep-task">${taskOpts}</select>
+    </div>
+    <div class="lep-field">
+      <div class="lep-field-label">Workers</div>
+      <input type="number" class="lep-input" id="lep-workers" min="1" value="${rep.workers}"/>
+    </div>
+    <div class="lep-field">
+      <div class="lep-field-label">Hrs / Worker</div>
+      <input type="number" class="lep-input" id="lep-hours" min="0.5" step="0.5" value="${rep.hours}"/>
+    </div>
+    ${harvestHtml}
+    <div class="lep-field">
+      <div class="lep-field-label">Notes</div>
+      <textarea class="lep-textarea" id="lep-notes">${escapeHtmlLep(rep.notes || '')}</textarea>
+    </div>
+  `;
+  }
+
+  function escapeHtmlLep(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function setLogEditDept(el, deptKey) {
+    editLogDept = deptKey;
+    document.querySelectorAll('.lep-dept-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+
+    const isVineyard = deptKey === 'Vineyard';
+    document.getElementById('lep-block-wrap').style.display = isVineyard ? '' : 'none';
+    document.getElementById('lep-harvest-wrap').style.display = isVineyard ? '' : 'none';
+
+    // Repopulate task dropdown for the new dept.
+    const taskSel = document.getElementById('lep-task');
+    const currentTask = (taskSel.value || '').split('|')[1] || '';
+    taskSel.innerHTML = (TASKS_MAP[deptKey] || []).map(t =>
+      `<option value="${t.id}|${escapeHtmlLep(t.name)}" ${t.name === currentTask ? 'selected' : ''}>${escapeHtmlLep(t.name)}</option>`
+    ).join('');
+  }
+
+  function toggleLogEditHarvest() {
+    editLogHarvestOn = !editLogHarvestOn;
+    document.getElementById('lep-harvest').classList.toggle('on', editLogHarvestOn);
   }
 
   function closeLogEditPanel() {
