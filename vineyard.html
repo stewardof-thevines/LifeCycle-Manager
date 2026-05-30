@@ -1802,7 +1802,7 @@
     body.innerHTML = `
     <div class="lep-field">
       <div class="lep-field-label">Date</div>
-      <input type="date" class="lep-input" id="lep-date" value="${rep.date}"/>
+      <input type="date" class="lep-input" id="lep-date" value="${escapeHtmlLep(rep.date)}"/>
     </div>
     <div class="lep-field">
       <div class="lep-field-label">Labor Provider</div>
@@ -1845,8 +1845,33 @@
     el.classList.add('active');
 
     const isVineyard = deptKey === 'Vineyard';
-    document.getElementById('lep-block-wrap').style.display = isVineyard ? '' : 'none';
-    document.getElementById('lep-harvest-wrap').style.display = isVineyard ? '' : 'none';
+    const blockWrap   = document.getElementById('lep-block-wrap');
+    const harvestWrap = document.getElementById('lep-harvest-wrap');
+    blockWrap.style.display   = isVineyard ? '' : 'none';
+    harvestWrap.style.display = isVineyard ? '' : 'none';
+
+    // If switching TO Vineyard, ensure the block field is rendered. Split rows keep
+    // their read-only display; single rows need a select with all blocks (carrying
+    // the previously-selected block over, if any).
+    if (isVineyard) {
+      if (editLogIsSplit) {
+        // If the wrap is empty (rare — only if open started on a non-Vineyard rep
+        // which is impossible for a split entry, since splits are Vineyard-only —
+        // but defensively, leave existing markup alone if present).
+        if (!blockWrap.innerHTML.trim()) {
+          // No-op: split entries are always Vineyard, so we should not normally hit this.
+        }
+      } else {
+        const existingSel = document.getElementById('lep-block');
+        const currentVal  = existingSel ? existingSel.value : '';
+        const blockOpts = BLOCKS.map(b =>
+          `<option value="${b.id}|${escapeHtmlLep(b.name)}" ${currentVal && currentVal.startsWith(b.id + '|') ? 'selected' : ''}>${escapeHtmlLep(b.name)}</option>`
+        ).join('');
+        blockWrap.innerHTML = `
+        <div class="lep-field-label">Vineyard Block</div>
+        <select class="lep-select" id="lep-block">${blockOpts}</select>`;
+      }
+    }
 
     // Repopulate task dropdown for the new dept.
     const taskSel = document.getElementById('lep-task');
