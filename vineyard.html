@@ -89,7 +89,7 @@
     .log-table-wrap { background:var(--white); border-radius:14px; border:1px solid rgba(120,97,64,0.1); overflow:hidden; }
     .log-table-header { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:11px 20px; background:rgba(120,97,64,0.05); border-bottom:1px solid rgba(120,97,64,0.1); }
     .log-th { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(30,23,16,0.4); }
-    .log-row { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:13px 20px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; }
+    .log-row { display:grid; grid-template-columns:80px 1fr 140px 60px 60px 80px 80px 36px; padding:13px 20px; border-bottom:1px solid rgba(120,97,64,0.06); align-items:center; transition:background 0.15s; cursor:pointer; }
     .log-row:last-child { border-bottom:none; }
     .log-row:hover { background:rgba(120,97,64,0.03); }
     .log-delete-btn { opacity:0; width:26px; height:26px; border-radius:6px; background:rgba(212,71,32,0.08); border:none; cursor:pointer; color:var(--grenadine); font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
@@ -274,8 +274,6 @@
     .lep-toggle.on .lep-toggle-switch{background:var(--grenadine);}
     .lep-toggle.on .lep-toggle-knob{left:16px;}
     .lep-toggle-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,0.75);letter-spacing:0.06em;text-transform:uppercase;}
-    .log-row{cursor:pointer;}
-    .log-row:hover{background:rgba(0,0,0,0.02);}
 
     /* TOAST */
     .toast { position:fixed; bottom:28px; right:28px; color:#fff; padding:14px 20px; border-radius:10px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.06em; display:flex; align-items:center; gap:10px; box-shadow:0 8px 28px rgba(0,0,0,0.25); transform:translateY(80px); opacity:0; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index:999; }
@@ -1988,6 +1986,7 @@
     }
 
     if (Object.keys(diff).length === 0) {
+      editLogOriginal = null;
       closeLogEditPanel();
       return;
     }
