@@ -57,7 +57,16 @@ When you fix an item, move it to the **Fixed** section at the bottom with a date
 
 ---
 
-### 6. Labor log split-cost storage
+### 6. Department is derived from task, not stored — edge case in dept switching
+**Source:** Code review of Task 6 (commit `7e32142`), 2026-05-28
+**File:** `vineyard.html` — `guessDept`, `saveLogEditPanel`
+**What:** The log row's `dept` is never stored on the Airtable record; it's derived at load time by looking up the task in `TASKS_MAP` and mapping to `DEPT_MAP`. The edit panel's save flow therefore can't write a `F_LOG_DEPT` value — there isn't one. In practice this is fine: when the user changes the dept pill, `setLogEditDept` forces them to pick a new task from that dept's list, and the task write propagates the dept on next `loadLogs()`. The edge case is if the same task name exists in two depts (e.g. "Cleanup" lives under both Cellar and Admin) — switching the pill but landing on the same task name will silently keep the original dept after reload.
+**Risk:** Low — depends on task-name overlap across departments, which is rare in the current task library.
+**Fix path:** Either store dept explicitly on the log record (new Airtable field + write on save) or keep relying on task-derived dept and ensure task names are globally unique.
+
+---
+
+### 7. Labor log split-cost storage
 **Source:** 2026-05-28 brainstorm during labor-log edit-panel work
 **File:** `vineyard.html` — `submitLog`, `loadLogs`, `renderLogs`
 **What:** When labor is logged across multiple blocks (e.g. "All Pinot Noir"), each Airtable record stores the full `Workers × Hours` rather than a per-block share. As a result, on page reload the split row reappears as separate rows each showing the full cost, and totals sum incorrectly. Cost-split shares exist only in the JS session that created them.
