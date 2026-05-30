@@ -354,8 +354,12 @@ The proxy appends `returnFieldsByFieldId=true` to all GET requests — responses
 
 ## Known Issues
 
+Small deferred items surfaced during reviews are tracked in **`docs/superpowers/punch-list.md`** — that file is the running to-do list for nice-to-fix bugs that don't justify their own PR. Pick from there when starting a fresh session and looking for low-stakes hardening work.
+
+The two issues below are the larger ones called out in the main doc:
+
 - `index.html` dashboard stat blocks may show `—` if Airtable table IDs mismatch — needs live data wiring
-- **Labor log split-cost storage:** When labor is logged across multiple blocks (e.g. "All Pinot Noir"), each Airtable record stores the full `Workers × Hours` rather than a per-block share. As a result, on page reload the split row reappears as separate rows each showing the full cost, and totals sum incorrectly. Cost-split shares exist only in the JS session that created them. Fix path: write per-block scaled `hours` to each record (or store an explicit `shareFraction` field). Context: 2026-05-28 brainstorm during labor-log edit-panel work. Tracked in `docs/superpowers/punch-list.md`.
+- **Labor log split-cost storage:** When labor is logged across multiple blocks (e.g. "All Pinot Noir"), each Airtable record stores the full `Workers × Hours` rather than a per-block share. As a result, on page reload the split row reappears as separate rows each showing the full cost, and totals sum incorrectly. Cost-split shares exist only in the JS session that created them. Fix path: write per-block scaled `hours` to each record (or store an explicit `shareFraction` field). Context: 2026-05-28 brainstorm during labor-log edit-panel work. Also entry #7 in the punch list.
 
 ---
 
@@ -398,6 +402,20 @@ Completed:
 - ✅ Replaced broken PascalCase nav drawers in `blending-lab.html`, `skus.html`, `finance.html`
 - ✅ Added Vineyard Journal link to all 13 screens that had existing correct nav structure
 - ✅ All 16 screens now have current, correct nav drawer with Vineyard Journal included
+
+### Labor Log Edit Panel — Complete (deployed as lifecycle-v29, 2026-05-29)
+Plan documents:
+- `docs/superpowers/specs/2026-05-28-labor-log-edit-panel-design.md`
+- `docs/superpowers/plans/2026-05-28-labor-log-edit-panel.md`
+
+- ✅ Click any row in the Labor Log table on `vineyard.html` to open a slide-over edit panel (mirrors the vineyard-journal edit pattern)
+- ✅ All fields editable: date, provider, department, task, workers, hours, harvest toggle, notes
+- ✅ Single-block entries — Vineyard Block field is editable
+- ✅ Split entries (session-created multi-block) — Block field is read-only with the note: "To change which blocks were worked, delete this entry and re-log"
+- ✅ Dirty-check confirm on close (✕ / Cancel / backdrop / Escape)
+- ✅ Save PATCHes every Airtable record in the group, then re-pulls via `loadLogs()` so the formula `Total` field stays correct
+- ✅ Delete button still works; row click does NOT fire when deleting (`event.stopPropagation()`)
+- ⚠ Deferred items from review: tracked in `docs/superpowers/punch-list.md` (7 entries — pipe-in-name, dept fallback, partial state reset, hardcoded dept pill list, empty-BLOCKS guard, dept-derived-from-task, split-cost storage)
 
 ### Phase 3 — Not started
 Candidate work:
