@@ -5,6 +5,21 @@ Versions correspond to the service worker cache version (e.g. `lifecycle-v15`).
 
 ---
 
+## [v29] — 2026-05-29
+
+**Labor log click-to-edit**
+
+### Added
+- **`vineyard.html` Labor Log:** Click any logged labor row to open a slide-over edit panel. All fields editable (date, provider, department, task, workers, hours, harvest toggle, notes). Save PATCHes Airtable and refreshes the log table. Matches the vineyard-journal edit pattern.
+- For **single-block** entries, the Vineyard Block field is editable. For **session-created split entries** (e.g. "All Pinot Noir"), the Block field is read-only with the note: *"To change which blocks were worked, delete this entry and re-log."*
+- Dirty-check confirm-on-close: if any field changed, closing via ✕ / Cancel / backdrop / Escape prompts *"Discard unsaved changes?"*.
+
+### Docs
+- New `docs/superpowers/punch-list.md` tracks small deferred items surfaced during review (pipe-in-name corruption, dept fallback edge case, partial state reset on close, hardcoded dept pill list, empty-BLOCKS guard, dept-derived-from-task edge case, labor-log split-cost storage).
+- `CLAUDE.md` Known Issues now lists the labor log split-cost storage bug.
+
+---
+
 ## [v15] — 2026-04-20
 
 **Debug pass — nav gaps, manifest, stray script tag**

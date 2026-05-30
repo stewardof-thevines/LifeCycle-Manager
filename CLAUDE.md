@@ -14,12 +14,12 @@
 
 ## Service Worker Rule — CRITICAL
 
-**Every time CSS or JS changes are deployed, bump the service worker version in `sw.js`.**
+**Every time CSS or JS changes are deployed, bump `CACHE` in `sw.js` to the next version number.** The single source of truth is `sw.js:3` — don't track the version anywhere else, including here, or the two will drift.
 
-Current version: `lifecycle-v22` (bypass filterByFormula entirely — fetch all TBL_VL records and filter client-side by year using String(r.fields[F_VL_YEAR]) === String(vintageYear); filterByFormula was silently returning 0 records even with field names)
-Next version: `lifecycle-v23`
+Without this bump, phones with the PWA installed will keep running the old cached version. Reference your bump in the commit message rather than in a doc that goes stale.
 
-Without this bump, phones with the PWA installed will keep running the old cached version.
+### Service worker registration
+Every deployed screen should register the SW. The registration block belongs at the bottom of each HTML's main `<script>`. A page that doesn't register the SW won't kick off cache install, and the user must visit a different page that does before offline behavior works.
 
 ---
 
@@ -51,9 +51,8 @@ All files use **lowercase-hyphenated** naming. The old `PascalCase_version.html`
 | `inventory.html` | Dry goods & packaging stock, receive shipments, low-stock flags |
 | `labor-rates.html` | Labor rate categories, burdened rate calculator (live preview) |
 | `task-library.html` | Master task list by department, edit-in-panel |
-| `winery-app.html` | UI reference shell (not a nav destination) |
 | `api/airtable.js` | Vercel proxy — GET/POST/PATCH/DELETE |
-| `sw.js` | Service worker — cache `lifecycle-v14` |
+| `sw.js` | Service worker — bump version on every CSS/JS deploy |
 | `manifest.json` | PWA manifest |
 
 All 14 module screens include the **vintage topbar control** (pill + lock/unlock + state banners).
@@ -173,7 +172,7 @@ All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldI
 | `F_VL_DATE` | `fldFEM0tArQrVMYdY` | date | Log date |
 | `F_VL_TYPE` | `fldSJcOx7PuhWJhLG` | singleSelect | Weather / Observation / Spray / Milestone / General |
 | `F_VL_AUTO` | `fldD14IEkkiqlMADw` | checkbox | Auto-logged by system |
-| `F_VL_YEAR` | `fld2SgTTxQtZDhZ7X` | singleLineText | Vintage year |
+| `F_VL_YEAR` | `fld2SgTTxQtZDhZ7X` | number ⚠ | Vintage year. Schema looks numeric (v21 fix used `{Vintage Year}=2026` without quotes and that matched). Writes use `Number(vintageYear)`; reads use `String(...)===String(...)` to be format-safe. Verify against Airtable schema. |
 | `F_VL_TEMP_HIGH` | `fldlQgZs8elf5IQwj` | number | °F |
 | `F_VL_TEMP_LOW` | `fldbRftOfaA4zkJ0p` | number | °F |
 | `F_VL_RAIN` | `fldYHMFHZAyXbmbkU` | number | inches |
@@ -201,11 +200,11 @@ All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldI
 | `TBL_TASKS` | `tblmsz91HIoI4LjHs` | Pre-existing, richer schema — see below |
 
 ### Key Field IDs — TBL_VINTAGES (`tblJ8NBvXinvXpGPq`)
-**Note: "Vintage Year" is a text field (not number). "Status" is the state field (not "State").**
+**Note: "Status" is the state field (not "State"). "Vintage Year" behaves numerically — see ⚠ below.**
 | Field | ID | Type |
 |---|---|---|
-| Vintage Year | `fldgc54uvUaT7GwQX` | singleLineText |
-| Status | `fldho6518UjJmfRqX` | singleSelect (Active / Locked / Finalized) |
+| Vintage Year | `fldgc54uvUaT7GwQX` | number ⚠ (was previously doc'd as text; verify against Airtable schema) |
+| Status | `fldho6518UjJmfRqX` | singleSelect (Active / Locked / Finalized) — read as **string** |
 | Harvest Start Date | `fldYMgmK6fH2ZfNm6` | date |
 | Harvest End Date | `fldvNTmOxXCGNDWMf` | date |
 | Total Tons Target | `fldGiKHuV1nO6XkYa` | number |
@@ -259,12 +258,41 @@ All reads/writes go through `/api/airtable.js`. Always use `returnFieldsByFieldI
 
 ## Airtable Field ID Rules
 
-- Always use field IDs (`fldXXXXX`), never field names
-- Define them as constants at the top of each screen's `<script>` block
-- `singleSelect` fields return objects — always unwrap `.name`: `field?.name || ''`
-- Linked record fields return arrays of record IDs — check `Array.isArray()` before accessing
-- Use `FIND('${id}', ARRAYJOIN({LinkedField}))` for filtering by linked record ID in `filterByFormula` — the `=` operator does not work for linked fields
-- Re-pull schema if data isn't loading — field IDs change when fields are deleted and recreated
+The proxy forces `returnFieldsByFieldId=true` on every GET, so **response keys are field IDs**. But the **values** keep their natural shapes — `returnFieldsByFieldId` does not wrap them in `{id, name, color}` objects. Get the shapes wrong and every read silently produces `undefined` and falls through to defaults.
+
+### Always
+
+- Define field IDs as constants at the top of each screen's `<script>` block. Never use field names in JS lookups (`r.fields['Some Name']`).
+- Re-pull schema if data isn't loading — field IDs change when a field is deleted and recreated in Airtable.
+
+### Response value shapes (under `returnFieldsByFieldId=true`)
+
+| Field type | Value shape | Correct read | Wrong (silently undefined) |
+|---|---|---|---|
+| `singleLineText`, `multilineText`, `richText` | string | `r.fields[F_X] \|\| ''` | — |
+| `number`, `currency`, `percent`, `rating` | number | `r.fields[F_X] ?? 0` | — |
+| `checkbox` | boolean (or absent → `undefined`) | `!!r.fields[F_X]` | — |
+| `date`, `dateTime` | ISO string | `r.fields[F_X] \|\| ''` | — |
+| **`singleSelect`** | **string** (the option name) | `r.fields[F_X] \|\| ''` | `r.fields[F_X]?.name` ← **wrong** |
+| **`multipleSelects`** | **array of strings** | `r.fields[F_X] \|\| []` | `r.fields[F_X].map(o => o.name)` ← **wrong** |
+| **`multipleRecordLinks`** | **array of record-ID strings** | `(r.fields[F_X] \|\| []).forEach(recId => ...)` | `r.fields[F_X][0].id` / `.name` ← **wrong** |
+| `multipleAttachments` | array of `{id, url, filename, ...}` objects | `(r.fields[F_X] \|\| [])[0]?.url` | — |
+| **`lookup`, `rollup`** | **array** of the underlying values (even for single matches) | `Array.isArray(v) ? v[0] : v` | `r.fields[F_X]` directly ← may be array |
+| **`formula`** | the formula's underlying type (number → number, text → string) | match by formula return type | — |
+| **`createdTime`, `lastModifiedTime`** | ISO string | `r.fields[F_X] \|\| ''` | — |
+| Empty / unset field | **key omitted from `r.fields` entirely** | always default: `r.fields[F_X] \|\| 0` | reading `.length` / `.map` without guard ← throws |
+
+### Writes
+
+- The proxy expects the **flat single-record shape**: `{ baseId, tableId, fields: {...} }` for POST, `{ baseId, tableId, recordId, fields: {...} }` for PATCH. **Do not** send Airtable's batch shape `{ records: [{...}] }` — the proxy will 400. Always go through the local `airtableGet/Post/Patch/Delete` helpers; raw `fetch(PROXY, ...)` calls are the bug pattern that broke vintage state on every screen in v22–v26.
+- Write `singleSelect` / `multipleSelects` as strings / string-arrays (option names). Linked records: array of record-ID strings.
+- Number fields: send numbers (`Number(x)`), not strings. Text fields styled like years (`F_VL_YEAR`, `F_VINTAGE_YEAR`) are still text in the schema — coerce explicitly on read with `String(r.fields[F_X])` if comparing to a string.
+
+### `filterByFormula` (Airtable formula language, evaluated on Airtable's side)
+
+- **Uses field NAMES, not field IDs**, even when the proxy forces `returnFieldsByFieldId=true`. `{Vintage Year}=2026` ✅ — `{fldgc54uvUaT7GwQX}=2026` ❌ (silently 0 rows).
+- For **linked-record fields**, use `FIND('${recordId}', ARRAYJOIN({LinkedFieldName}))` — the `=` operator does not match linked-record arrays.
+- If a filter unexpectedly returns 0 rows, suspect this first. Bypass with client-side filtering when in doubt (vineyard-journal does this for `F_VL_YEAR`).
 
 ---
 
@@ -317,12 +345,17 @@ DELETE { baseId, tableId, recordId }
 
 The proxy appends `returnFieldsByFieldId=true` to all GET requests — responses use field IDs, not names.
 
+### Proxy env vars (Vercel project settings)
+- `AIRTABLE_API_KEY` — Airtable PAT. Required. Without it the proxy returns 500.
+- `ALLOWED_ORIGIN` — CORS allowlist. Defaults to `https://life-cycle-manager.vercel.app`. **When the custom domain lands, update this** or the new origin's `fetch` calls will be CORS-blocked silently from the browser side.
+- `CLERK_SECRET_KEY` — used by `verifyClerkToken`. Currently dead code (auth call site is commented out in the proxy). If Clerk is re-enabled on the custom domain, set this in Vercel and uncomment the call site.
+
 ---
 
 ## Known Issues
 
 - `index.html` dashboard stat blocks may show `—` if Airtable table IDs mismatch — needs live data wiring
-- Clerk auth scaffold exists in `login.disabled.html` — do not activate until custom domain is purchased
+- **Labor log split-cost storage:** When labor is logged across multiple blocks (e.g. "All Pinot Noir"), each Airtable record stores the full `Workers × Hours` rather than a per-block share. As a result, on page reload the split row reappears as separate rows each showing the full cost, and totals sum incorrectly. Cost-split shares exist only in the JS session that created them. Fix path: write per-block scaled `hours` to each record (or store an explicit `shareFraction` field). Context: 2026-05-28 brainstorm during labor-log edit-panel work. Tracked in `docs/superpowers/punch-list.md`.
 
 ---
 
@@ -371,7 +404,6 @@ Candidate work:
 - Vintage-aware data filtering in each module (Vineyard, Harvest, Cellar, etc.) — currently modules show all records regardless of vintage
 - Financial dashboard real recalculation from change-log entries (currently UI is wired but recalc is a stub)
 - Date range filtering across all modules
-- `manifest.json` start_url fix (still points to old PascalCase filename)
 
 ---
 
