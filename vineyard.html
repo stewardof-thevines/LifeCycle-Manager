@@ -1886,7 +1886,45 @@
     document.getElementById('lep-harvest').classList.toggle('on', editLogHarvestOn);
   }
 
+  function logEditPanelIsDirty() {
+    if (!editLogOriginal) return false;
+    const orig = editLogOriginal;
+
+    const getVal = id => {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    };
+
+    if (getVal('lep-date') !== orig.date) return true;
+
+    const provName = (getVal('lep-provider').split('|')[1] || '');
+    if (provName !== orig.category) return true;
+
+    if (editLogDept !== inferDeptKeyFromValue(orig.dept)) return true;
+
+    // Block — only check for single-block entries.
+    if (!editLogIsSplit && editLogDept === 'Vineyard') {
+      const blockName = (getVal('lep-block').split('|')[1] || '');
+      if (blockName !== orig.block) return true;
+    }
+
+    const taskName = (getVal('lep-task').split('|')[1] || '');
+    if (taskName !== orig.task) return true;
+
+    if (parseFloat(getVal('lep-workers')) !== orig.workers) return true;
+    if (parseFloat(getVal('lep-hours'))   !== orig.hours)   return true;
+
+    if (editLogDept === 'Vineyard' && editLogHarvestOn !== !!orig.harvest) return true;
+
+    if ((getVal('lep-notes') || '').trim() !== (orig.notes || '').trim()) return true;
+
+    return false;
+  }
+
   function closeLogEditPanel() {
+    if (logEditPanelIsDirty()) {
+      if (!confirm('Discard unsaved changes?')) return;
+    }
     document.getElementById('lep-panel').classList.remove('open');
     document.getElementById('lep-panel').setAttribute('aria-hidden', 'true');
     document.getElementById('lep-backdrop').classList.remove('open');
