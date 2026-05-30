@@ -1977,7 +1977,7 @@
     if (taskName !== orig.task)                        diff[F_LOG_TASK]    = [taskId];
     if (newWorkers !== orig.workers)                   diff[F_LOG_WORKERS] = newWorkers;
     if (newHours   !== orig.hours)                     diff[F_LOG_HOURS]   = newHours;
-    if (newNotes !== (orig.notes || ''))               diff[F_LOG_NOTES]   = newNotes;
+    if (newNotes !== (orig.notes || '').trim())        diff[F_LOG_NOTES]   = newNotes;
     // Harvest only applies for Vineyard. If dept changed away from Vineyard, force false.
     const newHarvest = isVineyard ? editLogHarvestOn : false;
     if (newHarvest !== !!orig.harvest)                 diff[F_LOG_HARVEST] = newHarvest;
