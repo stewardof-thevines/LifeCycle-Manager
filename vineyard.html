@@ -1939,8 +1939,82 @@
     if (e.key === 'Escape') closeLogEditPanel();
   }
 
-  function saveLogEditPanel() {
-    console.log('saveLogEditPanel: not implemented yet');
+  async function saveLogEditPanel() {
+    if (!editLogOriginal || !editLogRecordIds.length) return;
+
+    const getVal = id => document.getElementById(id)?.value || '';
+
+    // Pull form values.
+    const newDate    = getVal('lep-date');
+    const newProvRaw = getVal('lep-provider');           // "id|name"
+    const newTaskRaw = getVal('lep-task');               // "id|name"
+    const newWorkers = parseFloat(getVal('lep-workers'));
+    const newHours   = parseFloat(getVal('lep-hours'));
+    const newNotes   = (getVal('lep-notes') || '').trim();
+    const newDeptKey = editLogDept;
+    const isVineyard = newDeptKey === 'Vineyard';
+    const newBlockRaw = isVineyard && !editLogIsSplit ? getVal('lep-block') : '';
+
+    // Required-field validation.
+    if (!newDate || !newProvRaw || !newTaskRaw || !newWorkers || !newHours) {
+      showToast('Please fill in all required fields.', true);
+      return;
+    }
+    if (isVineyard && !editLogIsSplit && !newBlockRaw) {
+      showToast('Block is required for Vineyard entries.', true);
+      return;
+    }
+
+    const [provId, provName] = newProvRaw.split('|');
+    const [taskId, taskName] = newTaskRaw.split('|');
+    const [blockId]          = newBlockRaw.split('|');
+
+    // Build diff (Airtable field-id keys, only changed values).
+    const orig = editLogOriginal;
+    const diff = {};
+    if (newDate !== orig.date)                         diff[F_LOG_DATE]    = newDate;
+    if (provName !== orig.category)                    diff[F_LOG_CATEGORY] = [provId];
+    if (taskName !== orig.task)                        diff[F_LOG_TASK]    = [taskId];
+    if (newWorkers !== orig.workers)                   diff[F_LOG_WORKERS] = newWorkers;
+    if (newHours   !== orig.hours)                     diff[F_LOG_HOURS]   = newHours;
+    if (newNotes !== (orig.notes || ''))               diff[F_LOG_NOTES]   = newNotes;
+    // Harvest only applies for Vineyard. If dept changed away from Vineyard, force false.
+    const newHarvest = isVineyard ? editLogHarvestOn : false;
+    if (newHarvest !== !!orig.harvest)                 diff[F_LOG_HARVEST] = newHarvest;
+    // Block — only for single-block entries that stayed (or became) Vineyard.
+    if (!editLogIsSplit && isVineyard && blockId) {
+      const origBlockId = BLOCKS.find(b => b.name === orig.block)?.id;
+      if (blockId !== origBlockId) diff[F_LOG_BLOCKS] = [blockId];
+    }
+
+    if (Object.keys(diff).length === 0) {
+      closeLogEditPanel();
+      return;
+    }
+
+    // Disable save button.
+    const saveBtn = document.getElementById('lep-save');
+    const origLabel = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      // PATCH every Airtable record in the group with the same diff.
+      await Promise.all(editLogRecordIds.map(id => airtablePatch(T_LOGS, id, diff)));
+      showToast('Entry updated.');
+      // Force a re-pull so the Airtable formula Total reflects new workers/hours.
+      await loadLogs();
+      // Snap dirty check to clean before closing (loadLogs replaces `logs` array).
+      editLogOriginal = null;
+      closeLogEditPanel();
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Save failed — check proxy.', true);
+    } finally {
+      // Reset button on both success and failure so the next open shows the right label.
+      saveBtn.disabled = false;
+      saveBtn.textContent = origLabel;
+    }
   }
 
   function showToast(msg, isError=false) {
